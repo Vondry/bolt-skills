@@ -1,0 +1,24 @@
+{% extends 'helper-pages/_helper_template_with_master.twig' %}
+
+{% set title = '404 – Stránka nenalezena' %}
+{% set origin = app.request.scheme ~ '://' ~ app.request.host %}
+{% set path = app.request.pathinfo %}
+
+{% block head %}
+    {{ include('helper-pages/_helper_scene_styles.twig') }}
+{% endblock head %}
+
+{% block main %}
+    {{ include('helper-pages/_helper_scene.twig', {
+        code: '404',
+        eyebrow: 'Chyba 404 · Stránka nenalezena',
+        heading: 'Tuto stránku se nám nepodařilo najít',
+        lead: 'Odkaz je nejspíš zastaralý nebo obsahuje překlep. Zkuste se vrátit na úvodní stránku — a pokud jste hledali něco konkrétního, ozvěte se nám.',
+        field_key: 'Požadovaná adresa',
+        field_val: origin ~ '<strong>' ~ path|e('html') ~ '</strong>',
+        buttons: [
+            { label: 'Zpět na úvod', href: '/', variant: 'primary' },
+            { label: 'Kontakt', href: '/kontakt', variant: 'secondary' }
+        ]
+    }) }}
+{% endblock main %}

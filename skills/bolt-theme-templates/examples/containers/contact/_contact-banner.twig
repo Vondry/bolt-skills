@@ -1,0 +1,33 @@
+{#
+  Smart Container: Compact Contact CTA Banner
+  A lighter alternative to _contact-section.twig for the end of listing and detail pages:
+  one sentence and a single button to the contact page (or the #kontakt section).
+
+  Props:
+    - href (string|optional): CTA target (default: '/kontakt')
+
+  Translation keys: contact.banner_title, contact.banner_text, contact.banner_cta
+#}
+
+<section aria-labelledby="contact-banner-title" class="py-section">
+    <div class="wrapper px-edge">
+        <div class="bg-night text-night-ink rounded-md p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div class="max-w-xl">
+                <h2 id="contact-banner-title" class="font-display text-section font-semibold tracking-tight">
+                    {{ __('contact.banner_title') }}
+                </h2>
+                <p class="mt-3 text-lead text-night-ink-2">
+                    {{ __('contact.banner_text') }}
+                </p>
+            </div>
+            <div class="shrink-0 flex flex-wrap gap-4">
+                {% include 'components/ui/button.twig' with {
+                    label: __('contact.banner_cta'),
+                    href: href|default('/kontakt'),
+                    variant: 'primary',
+                    size: 'lg'
+                } %}
+            </div>
+        </div>
+    </div>
+</section>

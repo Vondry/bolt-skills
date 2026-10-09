@@ -1,0 +1,26 @@
+{#
+  record.twig — generic fallback for ContentTypes without their own record_template.
+  Bolt uses it when a ContentType's record_template is missing. Never point it at one
+  specific ContentType's page; dedicated pages live in pages/<name>/<name>.record.twig.
+#}
+{% extends 'partials/_master.twig' %}
+{% import 'macros.twig' as macros %}
+
+{% block main %}
+    <article class="wrapper px-edge py-section">
+        <div class="flex items-start justify-between gap-4">
+            <h1 class="font-display text-section text-ink">{{ macros.typo(record|title) }}</h1>
+            {{ macros.edit(record) }}
+        </div>
+
+        {% if record|image %}
+            <img src="{{ record|thumbnail(1200, 675, 'crop') }}"
+                 alt="{{ (record|image).alt|default(record|title) }}"
+                 class="mt-8 w-full h-auto aspect-video object-cover rounded-sm">
+        {% endif %}
+
+        <div class="cms-redactor mt-8 max-w-3xl">
+            <p>{{ record|excerpt(600) }}</p>
+        </div>
+    </article>
+{% endblock main %}

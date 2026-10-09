@@ -1,0 +1,33 @@
+{#
+  500 — Internal Server Error.
+  Rendered in APP_ENV=prod mode when an unexpected exception occurs.
+
+  CRITICAL: Kept strictly simple and static. DO NOT call {% setcontent %} or
+  rely on database queries here — if the database or cache is failing, any query
+  will throw a secondary fatal error!
+
+  That is also why it extends the STANDALONE layout: the with-master layout renders the
+  header and footer containers (menu_array(), possibly setcontent), which would fail
+  together with whatever caused the error.
+#}
+{% extends 'helper-pages/_helper_template_without_master.twig' %}
+
+{% set title = '500 – Došlo k chybě' %}
+
+{% block head %}
+    {{ include('helper-pages/_helper_scene_styles.twig') }}
+{% endblock head %}
+
+{% block mainHelper %}
+    {{ include('helper-pages/_helper_scene.twig', {
+        code: '500',
+        eyebrow: 'Chyba 500 · Chyba serveru',
+        heading: 'Něco se pokazilo na naší straně',
+        lead: 'Omlouváme se — stránku se nepodařilo načíst. Chyba není na vaší straně. Zkuste požadavek zopakovat za okamžik.',
+        buttons: [
+            { label: 'Zkusit znovu', href: app.request.uri, variant: 'primary' },
+            { label: 'Zpět na úvod', href: '/', variant: 'secondary' }
+        ],
+        note: 'Pokud potíže přetrvávají, kontaktujte prosím správce webu.'
+    }) }}
+{% endblock mainHelper %}

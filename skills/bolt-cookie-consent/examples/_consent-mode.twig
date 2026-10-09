@@ -1,0 +1,102 @@
+{#
+  partials/_consent-mode.twig — Google Consent Mode v2 defaults and tracking loaders.
+  Included in <head> of partials/_master.twig BEFORE any other tracking script.
+  IDs come from theme.yaml:  analytics: { ga4_id: 'G-…', sklik_id: 123456 }
+
+  Two Consent Mode variants (decide in the site plan, describe the choice in the privacy policy):
+
+    basic (default, strict opt-in)  gtag.js and Sklik's rc.js are NOT loaded before consent.
+                                    js/src/cookie-consent.ts calls window.loadAnalytics() /
+                                    window.loadSklik() once the visitor grants analytics / marketing
+                                    consent (and on every later visit with stored consent).
+    advanced                        gtag.js loads on every visit with all storage denied and sends
+                                    cookieless pings until consent (rc.js sends consent=0 hits).
+                                    Set analytics.consent_mode: 'advanced' in theme.yaml.
+                                    This transmits data (IP, user agent) to Google before consent;
+                                    many authorities regard that as requiring consent too.
+
+  The stored consent record (localStorage 'bolt-cookie-consent', version 1) is read here so
+  returning visitors start with their previous choice.
+#}
+{% set ga4_id = config.get('theme/analytics/ga4_id') %}
+{% set sklik_id = config.get('theme/analytics/sklik_id') %}
+{% set consent_mode = config.get('theme/analytics/consent_mode')|default('basic') %}
+
+{% if ga4_id or sklik_id %}
+<script>
+    (function () {
+        var STORAGE_KEY = 'bolt-cookie-consent';
+        var CONSENT_VERSION = 1;
+        var GA_ID = {{ ga4_id|default('')|json_encode|raw }};
+        var MODE = {{ consent_mode|json_encode|raw }};
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        window.gtag = gtag;
+
+        var analytics = false;
+        var marketing = false;
+        try {
+            var stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            if (stored.version === CONSENT_VERSION) {
+                analytics = stored.analytics === true;
+                marketing = stored.marketing === true;
+            }
+        } catch (e) {}
+
+        gtag('consent', 'default', {
+            analytics_storage: analytics ? 'granted' : 'denied',
+            ad_storage: marketing ? 'granted' : 'denied',
+            ad_user_data: marketing ? 'granted' : 'denied',
+            ad_personalization: marketing ? 'granted' : 'denied'
+        });
+        gtag('set', 'ads_data_redaction', true);
+
+        var loaded = false;
+        window.loadAnalytics = function () {
+            if (loaded || !GA_ID) return;
+            loaded = true;
+            gtag('js', new Date());
+            gtag('config', GA_ID, {
+                allow_ad_personalization_signals: false,
+                allow_google_signals: false
+            });
+            var s = document.createElement('script');
+            s.async = true;
+            s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+            document.head.appendChild(s);
+        };
+
+        // Advanced mode loads immediately (denied until consent); basic mode only with consent.
+        if (MODE === 'advanced' || analytics) {
+            window.loadAnalytics();
+        }
+
+        {% if sklik_id %}
+        // Seznam Sklik retargeting: the consent flag is sent with every hit;
+        // js/src/cookie-consent.ts updates it and re-sends after a decision.
+        window.retargetingConf = { rtgId: {{ sklik_id|json_encode|raw }}, consent: marketing ? 1 : 0 };
+
+        var sklikLoaded = false;
+        window.loadSklik = function () {
+            if (sklikLoaded) return;
+            sklikLoaded = true;
+            var r = document.createElement('script');
+            r.async = true;
+            r.src = 'https://c.seznam.cz/js/rc.js';
+            r.onload = function () {
+                if (window.rc && window.rc.retargetingHit) {
+                    window.rc.retargetingHit(window.retargetingConf);
+                }
+            };
+            document.head.appendChild(r);
+        };
+
+        // Same rule as analytics: basic mode loads rc.js only with marketing consent.
+        if (MODE === 'advanced' || marketing) {
+            window.loadSklik();
+        }
+        {% endif %}
+    })();
+</script>
+{% endif %}

@@ -1,0 +1,219 @@
+{#
+  Isolated scoped styling for error and helper scenes.
+  Shipped per page inside <style> rather than bundled into the main CSS app bundle.
+  Zero Tailwind utility classes needed — keeps the production bundle lightweight.
+#}
+<style>
+    /* Stretch into whatever height is available under the site header */
+    body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    body > main {
+        flex: 1 0 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .helper-standalone-page {
+        background-color: var(--color-canvas, var(--color-surface, #f8fafc));
+        color: var(--color-ink, #0f172a);
+        font-family: var(--font-body, system-ui, -apple-system, sans-serif);
+    }
+
+    .helper-standalone-main {
+        flex: 1 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+    }
+
+    .helper-scene {
+        flex: 1 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3.5rem 1rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    @media (min-width: 64rem) {
+        .helper-scene {
+            padding: 6rem 1rem;
+        }
+    }
+
+    .helper-container {
+        width: 100%;
+        max-width: 48rem;
+        margin-inline: auto;
+    }
+
+    .helper-card {
+        position: relative;
+        background-color: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-stroke, rgba(0, 0, 0, 0.08));
+        border-radius: var(--radius-lg, 1rem);
+        padding: clamp(2rem, 5vw, 3.5rem);
+        overflow: hidden;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Oversized watermark status code behind text — never intercepts clicks */
+    .helper-ghost {
+        position: absolute;
+        right: 1.5rem;
+        bottom: -0.5rem;
+        font-family: var(--font-display, var(--font-mono, inherit));
+        font-size: clamp(6rem, 3rem + 16vw, 13rem);
+        font-weight: 700;
+        line-height: 1;
+        color: var(--color-accent, currentColor);
+        opacity: 0.05;
+        user-select: none;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .helper-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.25rem;
+    }
+
+    .helper-eyebrow {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--color-accent, #64748b);
+    }
+
+    .helper-heading {
+        margin: 0;
+        font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+        color: var(--color-ink, #0f172a);
+    }
+
+    .helper-lead {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--color-ink-2, #475569);
+        max-width: 36rem;
+    }
+
+    .helper-field {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        border-top: 1px solid var(--color-stroke, rgba(0, 0, 0, 0.08));
+        border-bottom: 1px solid var(--color-stroke, rgba(0, 0, 0, 0.08));
+        padding-block: 0.85rem;
+        font-size: 0.875rem;
+    }
+
+    .helper-field-key {
+        color: var(--color-ink-3, #94a3b8);
+        font-size: 0.8rem;
+    }
+
+    .helper-field-val {
+        font-family: var(--font-mono, monospace);
+        color: var(--color-ink, #1e293b);
+        overflow-wrap: anywhere;
+    }
+
+    .helper-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding-top: 0.5rem;
+    }
+
+    .helper-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.65rem 1.4rem;
+        border-radius: var(--radius-md, 0.5rem);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+    }
+
+    .helper-btn--primary {
+        background-color: var(--color-accent, #0f172a);
+        color: #ffffff;
+    }
+
+    .helper-btn--primary:hover {
+        opacity: 0.9;
+    }
+
+    .helper-btn--secondary {
+        background-color: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+        color: var(--color-ink, #0f172a);
+        border: 1px solid var(--color-stroke, rgba(0, 0, 0, 0.1));
+    }
+
+    .helper-btn--secondary:hover {
+        background-color: var(--color-stroke, rgba(0, 0, 0, 0.08));
+    }
+
+    .helper-note {
+        margin: 0;
+        font-size: 0.8125rem;
+        line-height: 1.5;
+        color: var(--color-ink-3, #64748b);
+        max-width: 36rem;
+    }
+
+    /* Animated progress bar for maintenance page */
+    .helper-progress {
+        width: 100%;
+        max-width: 20rem;
+        height: 0.25rem;
+        border-radius: 9999px;
+        background-color: var(--color-stroke, rgba(0, 0, 0, 0.08));
+        overflow: hidden;
+        margin-block: 0.25rem;
+    }
+
+    .helper-progress::after {
+        content: "";
+        display: block;
+        height: 100%;
+        width: 40%;
+        border-radius: inherit;
+        background-color: var(--color-accent, #0f172a);
+        animation: helper-progress-anim 2.2s ease-in-out infinite;
+    }
+
+    @keyframes helper-progress-anim {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(250%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .helper-progress::after {
+            animation: none;
+            width: 100%;
+        }
+    }
+</style>

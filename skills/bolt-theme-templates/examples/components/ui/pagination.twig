@@ -1,0 +1,66 @@
+{#
+  Pure Component: Accessible Pagination — a template for Bolt's pager() function.
+
+  Usage (records is the Pagerfanta object Bolt passes to listing templates):
+    {{ pager(records, template = 'components/ui/pagination.twig') }}
+
+  pager() provides: records, route, routeParams, surround (default 3), class ('pagination'),
+  previous_link_class, next_link_class. Links keep the current route, its parameters
+  (including _locale) and the query string, and only change `page`.
+
+  Styling: the `.pagination` rules from bolt-tailwind-theme (li a, li.active a,
+  a[aria-current], li[disabled]).
+
+  Translation keys: a11y.pagination, pager.previous, pager.next
+#}
+
+{% if records.haveToPaginate|default(false) %}
+    {% set current = records.currentPage %}
+    {% set last = records.nbPages %}
+    {% set start = max(current - surround, 1) %}
+    {% set end = min(current + surround, last) %}
+
+    <nav aria-label="{{ __('a11y.pagination') }}" class="my-12">
+        <ul class="{{ class|default('pagination') }}">
+            {% if records.hasPreviousPage %}
+                <li class="{{ previous_link_class|default('previous') }}">
+                    <a href="{{ path(route, routeParams|merge({ page: records.previousPage })) }}" rel="prev" aria-label="{{ __('pager.previous') }}">
+                        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </a>
+                </li>
+            {% endif %}
+
+            {% if start > 1 %}
+                <li><a href="{{ path(route, routeParams|merge({ page: 1 })) }}">1</a></li>
+                {% if start > 2 %}
+                    <li disabled aria-hidden="true"><a>…</a></li>
+                {% endif %}
+            {% endif %}
+
+            {% for page in start..end %}
+                <li {% if page == current %}class="active"{% endif %}>
+                    <a href="{{ path(route, routeParams|merge({ page: page })) }}" {% if page == current %}aria-current="page"{% endif %}>{{ page }}</a>
+                </li>
+            {% endfor %}
+
+            {% if end < last %}
+                {% if end < last - 1 %}
+                    <li disabled aria-hidden="true"><a>…</a></li>
+                {% endif %}
+                <li><a href="{{ path(route, routeParams|merge({ page: last })) }}">{{ last }}</a></li>
+            {% endif %}
+
+            {% if records.hasNextPage %}
+                <li class="{{ next_link_class|default('next') }}">
+                    <a href="{{ path(route, routeParams|merge({ page: records.nextPage })) }}" rel="next" aria-label="{{ __('pager.next') }}">
+                        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}

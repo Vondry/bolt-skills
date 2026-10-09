@@ -1,0 +1,106 @@
+{#
+  Smart Container: Footer Navigation & Columns
+  Retrieves menu columns via `menu_array('footer')` from `config/bolt/menu.yaml`
+  (top-level items are column headings, their `submenu:` lists are the links).
+  Renders the brand column (logo, bio, phone, e-mail from theme.yaml), social links
+  from theme.yaml, and the legal bottom bar.
+
+  "Nastavení cookies" re-opens the consent banner (bolt-cookie-consent listens to
+  [data-cookie-settings]); it is shown only when theme.yaml lists a tracking ID
+  (analytics.ga4_id or analytics.sklik_id).
+
+  Translation keys: footer.socials, footer.rights, footer.privacy, footer.cookie_settings
+#}
+
+{% set footer_columns = menu_array('footer')|default([]) %}
+{% set socials = config.get('theme/socials')|default([])|filter(url => url is not empty) %}
+{# Tracking IDs from theme.yaml (analytics.*); add further IDs here when the site uses more trackers. #}
+{% set has_tracking = config.get('theme/analytics/ga4_id') or config.get('theme/analytics/sklik_id') %}
+
+<footer class="bg-night text-night-ink-2 border-t border-night-stroke">
+    <div class="wrapper px-edge py-16 flex flex-col gap-12">
+
+        {# Top section: Brand / Bio + Link Columns #}
+        <div class="flex flex-col lg:flex-row items-start justify-between gap-12">
+
+            {# Brand summary column #}
+            <div class="flex flex-col gap-4 max-w-sm">
+                {% include 'components/brand/logo.twig' ignore missing with { class: 'h-8 w-auto text-night-ink', tone: 'light' } %}
+                <p class="text-sm leading-relaxed">
+                    {{ config.get('theme/contact/bio')|default(config.get('general/payoff')|default('')) }}
+                </p>
+
+                {# Contact quick info #}
+                <div class="flex flex-col gap-1 text-sm">
+                    {% if config.get('theme/contact/phone') %}
+                        <a href="tel:{{ config.get('theme/contact/phone')|replace({' ': ''}) }}" class="hover:text-night-ink transition-colors">
+                            {{ config.get('theme/contact/phone') }}
+                        </a>
+                    {% endif %}
+                    {% if config.get('theme/contact/email') %}
+                        <a href="mailto:{{ config.get('theme/contact/email') }}" class="hover:text-night-ink transition-colors">
+                            {{ config.get('theme/contact/email') }}
+                        </a>
+                    {% endif %}
+                </div>
+
+                {# Social links from theme.yaml (socials: { facebook: url, … }) #}
+                {% if socials|length > 0 %}
+                    <ul class="flex flex-wrap items-center gap-4 pt-2" aria-label="{{ __('footer.socials') }}">
+                        {% for network, url in socials %}
+                            <li>
+                                <a href="{{ url }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="text-xs uppercase tracking-wider hover:text-night-ink transition-colors">
+                                    {{ network }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            {# Footer Navigation Columns #}
+            <div class="flex flex-wrap gap-10 sm:gap-16">
+                {% for column in footer_columns %}
+                    <div class="flex flex-col gap-4 min-w-35">
+                        <h3 class="font-semibold text-sm uppercase tracking-wider text-night-ink">
+                            {{ column.label }}
+                        </h3>
+                        <ul class="flex flex-col gap-2.5 list-none m-0 p-0 text-sm">
+                            {% for item in column.submenu|default([]) %}
+                                <li>
+                                    <a href="{{ locale_link(item.uri|default(item.link)) }}"
+                                       class="hover:text-night-ink transition-colors">
+                                        {{ item.label }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Bottom Bar: Copyright & Legal links #}
+        <div class="pt-8 border-t border-night-stroke flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-night-ink-3">
+            <p>© {{ 'now'|date('Y') }} {{ config.get('general/sitename') }}. {{ __('footer.rights') }}</p>
+
+            <ul class="flex flex-wrap items-center gap-6 list-none m-0 p-0">
+                <li>
+                    <a href="{{ locale_link('/zasady-ochrany-osobnich-udaju') }}" class="hover:text-night-ink transition-colors">
+                        {{ __('footer.privacy') }}
+                    </a>
+                </li>
+                {% if has_tracking %}
+                    <li>
+                        <button type="button" data-cookie-settings class="hover:text-night-ink transition-colors cursor-pointer">
+                            {{ __('footer.cookie_settings') }}
+                        </button>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,6 @@
+# Compose environment snippet for compose.yaml / docker-compose.yml
+services:
+  database:
+    # ...
+    environment:
+      TZ: "Europe/Prague"

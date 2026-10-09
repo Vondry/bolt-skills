@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="cs">
+  <file id="messages.cs">
+    <!-- bolt-menu: units used by the header and footer containers. Merge into translations/messages.<locale>.xlf with scripts/merge-xliff.php. -->
+    <!-- Header container (containers/header/_menu.twig) -->
+    <unit id="nav_main_label" name="nav.main_label"><segment><source>nav.main_label</source><target>Hlavní navigace</target></segment></unit>
+    <unit id="nav_open_menu" name="nav.open_menu"><segment><source>nav.open_menu</source><target>Otevřít navigaci</target></segment></unit>
+    <unit id="nav_close_menu" name="nav.close_menu"><segment><source>nav.close_menu</source><target>Zavřít navigaci</target></segment></unit>
+    <unit id="nav_mobile_label" name="nav.mobile_label"><segment><source>nav.mobile_label</source><target>Mobilní navigace</target></segment></unit>
+    <unit id="nav_menu" name="nav.menu"><segment><source>nav.menu</source><target>Menu</target></segment></unit>
+    <!-- Footer container (containers/footer/_footer.twig) -->
+    <unit id="footer_socials" name="footer.socials"><segment><source>footer.socials</source><target>Sociální sítě</target></segment></unit>
+    <unit id="footer_rights" name="footer.rights"><segment><source>footer.rights</source><target>Všechna práva vyhrazena.</target></segment></unit>
+    <unit id="footer_privacy" name="footer.privacy"><segment><source>footer.privacy</source><target>Zásady ochrany osobních údajů</target></segment></unit>
+    <unit id="footer_cookie_settings" name="footer.cookie_settings"><segment><source>footer.cookie_settings</source><target>Nastavení cookies</target></segment></unit>
+  </file>
+</xliff>

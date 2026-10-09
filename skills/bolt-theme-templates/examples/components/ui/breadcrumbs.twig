@@ -1,0 +1,43 @@
+{#
+  Pure Component: Accessible Breadcrumbs (schema.org BreadcrumbList)
+  Rules: Zero setcontent.
+
+  Props:
+    - items (array): List of { label, href (optional) }; the last item is the current page
+    - class (string|optional): Extra classes
+
+  Translation keys: a11y.breadcrumbs, nav.home
+#}
+
+{% if items is defined and items|length > 0 %}
+    <nav aria-label="{{ __('a11y.breadcrumbs') }}" class="text-xs text-ink-3 py-3 {{ class|default('') }}">
+        <ol class="flex flex-wrap items-center gap-1.5 list-none m-0 p-0" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="flex items-center gap-1.5">
+                <a href="{{ locale_link('/') }}" itemprop="item" class="hover:text-accent transition-colors">
+                    <span itemprop="name">{{ __('nav.home') }}</span>
+                </a>
+                <meta itemprop="position" content="1">
+                <svg viewBox="0 0 24 24" class="size-3 text-ink-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/>
+                </svg>
+            </li>
+
+            {% for item in items %}
+                <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="flex items-center gap-1.5">
+                    {% if item.href is defined and not loop.last %}
+                        <a href="{{ locale_link(item.href) }}" itemprop="item" class="hover:text-accent transition-colors">
+                            <span itemprop="name">{{ item.label }}</span>
+                        </a>
+                        <meta itemprop="position" content="{{ loop.index + 1 }}">
+                        <svg viewBox="0 0 24 24" class="size-3 text-ink-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/>
+                        </svg>
+                    {% else %}
+                        <span itemprop="name" class="text-ink font-medium" aria-current="page">{{ item.label }}</span>
+                        <meta itemprop="position" content="{{ loop.index + 1 }}">
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+    </nav>
+{% endif %}

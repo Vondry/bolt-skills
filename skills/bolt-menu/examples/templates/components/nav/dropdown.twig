@@ -1,0 +1,40 @@
+{#
+  Pure Component: Accessible Navigation Dropdown
+  Behaviour comes from js/src/menu.ts (bolt-theme-init): click or ArrowDown opens the
+  panel, Escape or a click outside closes it, `aria-expanded` and `inert` stay in sync.
+  The panel uses `.dropdown` (overflow: hidden; height: 0; height transition) from the
+  Tailwind source; padding and borders sit on the inner element so the height animates.
+
+  Props:
+    - id (string): Unique identifier for the panel (aria-controls / data-dropdown-toggle)
+    - label (string): Trigger button text
+    - submenu (array): List of items with { label, uri, link }
+    - is_active (bool|optional): Whether the parent or any child item is active
+#}
+{% set dd_id = id|default('submenu-' ~ random()) %}
+
+<li class="relative">
+    <button type="button"
+            data-dropdown-toggle="{{ dd_id }}"
+            aria-expanded="false"
+            aria-controls="{{ dd_id }}"
+            class="inline-flex items-center gap-1.5 px-3 py-2 font-medium text-base cursor-pointer transition-colors duration-200 {{ is_active|default(false) ? 'text-accent font-semibold' : 'text-ink hover:text-accent' }}">
+        <span>{{ label }}</span>
+        <svg viewBox="0 0 24 24" class="rotate-svg size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
+        </svg>
+    </button>
+
+    <div id="{{ dd_id }}" class="dropdown absolute top-full left-0 min-w-52 z-50" inert>
+        <ul class="mt-2 flex flex-col list-none py-2 bg-canvas border border-stroke shadow-xl rounded-sm">
+            {% for sub in submenu|default([]) %}
+                <li>
+                    <a href="{{ locale_link(sub.uri|default(sub.link)) }}"
+                       class="block px-4 py-2.5 text-sm font-normal text-ink-2 hover:text-accent hover:bg-surface transition-colors">
+                        {{ sub.label }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</li>

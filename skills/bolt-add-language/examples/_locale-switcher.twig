@@ -1,0 +1,78 @@
+{#
+  partials/_locale-switcher.twig — Language switcher (dropdown).
+  Included by bolt-menu's header container twice: { mobile: false } in the desktop bar and
+  { mobile: true } at the bottom of the mobile drawer (different dropdown ids).
+
+  - Endonyms remain recognizable even when the visitor cannot read the current interface
+    language (references/endonyms.md). Keep this map aligned with `app_locales` in
+    config/services.yaml — add one line per locale.
+  - The default locale has no URL prefix; every other locale is /<code>/… (Bolt's routing).
+  - Query parameters are preserved here; the URL hash is not sent to the server and is
+    re-appended client-side by js/src/locale-switcher.ts ([data-locale-switch]), which also
+    keeps the scroll position across the switch.
+  - The dropdown is driven by js/src/menu.ts ([data-dropdown-toggle] + .dropdown panel).
+
+  Props:
+    - mobile (bool|optional): drawer instance (opens upwards, separate id)
+
+  Translation keys: locale.switch
+#}
+{% set locales = {
+    'cs': 'Čeština',
+    'en': 'English',
+} %}
+
+{% set default_locale = app.request.defaultLocale %}
+{% set current_locale = app.request.locale %}
+{% set current_path = app.request.pathinfo %}
+{% set dropdown_id = mobile|default(false) ? 'locale-dropdown-mobile' : 'locale-dropdown-desktop' %}
+
+{# Strip any locale prefix to get the clean base path that is re-prefixed per target locale. #}
+{% set base_path = current_path %}
+{% for locale_code in locales|keys %}
+    {% if locale_code != default_locale and current_path starts with '/' ~ locale_code ~ '/' %}
+        {% set base_path = current_path|slice(locale_code|length + 1) %}
+    {% elseif locale_code != default_locale and current_path == '/' ~ locale_code %}
+        {% set base_path = '/' %}
+    {% endif %}
+{% endfor %}
+
+{% set query = app.request.queryString ? '?' ~ app.request.queryString : '' %}
+
+<div class="relative" data-locale-selector>
+    <button type="button"
+            data-dropdown-toggle="{{ dropdown_id }}"
+            aria-expanded="false"
+            aria-controls="{{ dropdown_id }}"
+            aria-label="{{ __('locale.switch') }}"
+            class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-ink-2 hover:text-ink transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <span class="font-semibold">{{ current_locale }}</span>
+        <svg class="rotate-svg size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+            <path d="m6 9 6 6 6-6"/>
+        </svg>
+    </button>
+
+    <div id="{{ dropdown_id }}"
+         class="dropdown absolute min-w-36 z-50 {{ mobile|default(false) ? 'left-0 bottom-full mb-3' : 'right-0 top-full mt-3' }}"
+         inert>
+        <div class="bg-canvas border border-stroke shadow-lg">
+            {% for code, name in locales %}
+                {# Default locale has no prefix; others get a /locale prefix. The homepage becomes
+                   /en/ — Bolt's homepage_locale route is '/{_locale}/' (with the trailing slash). #}
+                {% set locale_url = (code == default_locale ? base_path : '/' ~ code ~ base_path) ~ query %}
+                <a href="{{ locale_url }}"
+                   data-locale-switch
+                   hreflang="{{ code }}"
+                   lang="{{ code }}"
+                   {% if code == current_locale %}aria-current="page"{% endif %}
+                   class="block px-4 py-2.5 text-sm transition-colors border-b border-stroke last:border-0 focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-ink {{ code == current_locale ? 'font-semibold text-accent bg-accent-soft' : 'text-ink-2 hover:text-ink hover:bg-surface' }}">
+                    {{ name }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>

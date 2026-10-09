@@ -1,0 +1,9 @@
+# Timezone configuration snippet for config/bolt/config.yaml
+
+# Set the timezone to be used on the website. For a list of valid timezone
+# settings, see: http://php.net/manual/en/timezones.php
+timezone: Europe/Prague
+
+# Default date formatting used across Twig's |date (without parameters),
+# |localdate, the Bolt Admin panel, and API serialization.
+date_format: 'j. n. Y H:i'

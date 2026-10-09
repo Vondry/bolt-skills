@@ -1,0 +1,383 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ *
+ *  Scanning configuration
+ * ------------------------------------------------------------------ */
+
+/* Scan for TW CSS classes in translation files and Bolt menu config */
+@source "../../../../../translations";
+@source "../../../../../config/bolt/menu.yaml";
+
+/* SAFEGUARD: css/index.css is this file's own build output; without this,
+   every class ever built stays alive indefinitely in subsequent builds. */
+@source not "../index.css";
+
+/* SAFEGUARD: Ignore markdown files documenting old class names */
+@source not "../../README.md";
+
+/* Helper/error pages ship their own scoped styles (bolt-helper-pages) */
+@source not "../../helper-pages";
+
+/* ------------------------------------------------------------------ *
+ *  Design tokens  —  Tailwind v4 @theme inline
+ * ------------------------------------------------------------------ */
+@theme inline {
+    /* Breakpoints */
+    --breakpoint-2xs: 24rem;       /* 384px */
+    --breakpoint-xs: 36rem;        /* 576px */
+    --breakpoint-menu: 62rem;      /* Point where desktop nav replaces mobile burger */
+    --breakpoint-3xl: 112.5rem;    /* 1800px */
+
+    /* Typography families */
+    --font-display: 'Source Serif 4', ui-serif, Georgia, serif;
+    --font-body: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+    /* Themed Surface & Ink scale (light mode baseline) */
+    --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
+    --color-surface-2: var(--surface-2);
+    --color-ink: var(--ink);
+    --color-ink-2: var(--ink-2);
+    /* Lightest ink for labels/meta. Must clear WCAG AA (>= 4.5:1) on surface and canvas */
+    --color-ink-3: var(--ink-3);
+    --color-stroke: var(--stroke);
+
+    /* Brand / Accent colors */
+    --color-accent: #1d4ed8;
+    --color-accent-hover: #1e40af;
+    --color-accent-soft: #dbeafe;
+    --color-accent-ink: #ffffff;
+    --color-accent-ink-2: #bfdbfe;
+
+    /* Dark Zone (fixed near-black palette for footer / dark bands) */
+    --color-night: #0f172a;
+    --color-night-deep: #020617;
+    --color-night-stroke: #1e293b;
+    --color-night-ink: #ffffff;
+    --color-night-ink-2: #cbd5e1;
+    --color-night-ink-3: #94a3b8;
+
+    /* Header height & layout offset */
+    --spacing-header: 4.5rem;      /* Drives sticky header height and anchor scroll margins */
+
+    /* Fluid typography curves clamp(min, val + vw, max) */
+    --text-hero: clamp(2.25rem, 1.5rem + 3vw, 4rem);
+    --text-section: clamp(1.75rem, 1rem + 2.5vw, 2.75rem);
+    --text-card: clamp(1.125rem, 0.95rem + 0.7vw, 1.375rem);
+
+    /* Copy type scale: 11 / 13 / 15 / 17 */
+    --text-micro: 0.6875rem;       /* 11px — uppercase labels, badges */
+    --text-meta: 0.8125rem;        /* 13px — meta, captions, compact buttons */
+    --text-body: 0.9375rem;        /* 15px — primary body text */
+    --text-lead: 1.0625rem;        /* 17px — lead paragraph */
+
+    /* Motion easing */
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Keyframe animations */
+    --animate-fade-in: fade-in 0.5s ease-in-out;
+    --animate-dialog: dialog 0.3s ease-in-out;
+    --animate-skeleton: skeleton 1.8s ease-in-out infinite;
+
+    @keyframes fade-in {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+    }
+    @keyframes dialog {
+        0% { opacity: 0.2; transform: translateY(-15%); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes skeleton {
+        0%, 100% { background-color: var(--color-ink-200, #e2e8f0); }
+        50% { background-color: var(--color-ink-100, #f1f5f9); }
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Root Palette Variables & Contrast Targets
+ * ------------------------------------------------------------------ */
+:root {
+    --hairline: 0.0625rem; /* 1px in rem so whole UI scales with browser root font */
+
+    --canvas: #ffffff;
+    --surface: #f8fafc;
+    --surface-2: #f1f5f9;
+    --ink: #0f172a;
+    --ink-2: #475569;
+    --ink-3: #5b6b80;      /* 5.44:1 on --canvas, 5.2:1 on --surface, 4.97:1 on --surface-2 (WCAG AA) */
+    --stroke: #e2e8f0;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Base Layer: Resets, Font-Faces, Anchor Offsets
+ * ------------------------------------------------------------------ */
+@layer base {
+    *, ::after, ::before, ::backdrop, ::file-selector-button {
+        border-color: var(--color-stroke, currentColor);
+    }
+
+    html {
+        color: var(--color-ink);
+        background-color: var(--color-canvas);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply font-body bg-canvas text-ink flex flex-col min-h-screen;
+    }
+
+    /* Anchor target offset for sticky header */
+    :where([id]) {
+        scroll-margin-top: var(--spacing-header);
+    }
+
+    /* Focus visible accessible outline */
+    :focus-visible {
+        outline: 0.125rem solid var(--color-accent);
+        outline-offset: 0.1875rem;
+    }
+
+    ::selection {
+        background-color: var(--color-accent);
+        color: #ffffff;
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Repeating Layout Utilities
+ * ------------------------------------------------------------------ */
+
+/* Centered content container capping at artboard width (1440px) */
+@utility wrapper {
+    @apply mx-auto w-full max-w-360;
+}
+
+/* Horizontal page padding matching desktop edge gutter */
+@utility px-edge {
+    @apply px-6 sm:px-10 lg:px-20;
+}
+
+/* Vertical section rhythm */
+@utility py-section {
+    @apply py-12 lg:py-16;
+}
+
+/* Hide scrollbar while keeping horizontal swipe rows scrollable */
+@utility no-scrollbar {
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Consecutive sections of same background drop adjacent padding */
+section:where(.bg-canvas) + section:where(.bg-canvas) > .wrapper,
+section:where(.bg-surface) + section:where(.bg-surface) > .wrapper {
+    padding-top: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Repeating Typography & Accents Utilities
+ * ------------------------------------------------------------------ */
+
+@utility eyebrow {
+    @apply font-body uppercase text-micro font-medium tracking-[0.12em] text-ink-3;
+}
+
+@utility mono {
+    @apply font-mono uppercase text-xs tracking-wider;
+}
+
+@utility badge {
+    @apply inline-flex items-center gap-1.5 font-mono uppercase text-xs tracking-wider px-2.5 py-0.5 rounded-full;
+}
+
+@utility tag {
+    @apply inline-flex items-center text-xs px-2.5 py-1 rounded bg-surface-2 text-ink-2;
+}
+
+@utility text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Decorative accent line preceding eyebrow */
+.eyebrow-rule {
+    @apply inline-block h-0.25 w-6 shrink-0 bg-accent;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Repeating Button & Link Utilities
+ * ------------------------------------------------------------------ */
+
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm font-body text-body font-medium px-6 py-3 transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50;
+}
+
+@utility btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-hover;
+}
+
+@utility btn-secondary {
+    @apply btn border border-ink text-ink hover:bg-ink hover:text-canvas;
+}
+
+@utility btn-outline {
+    @apply btn border-ink text-ink hover:bg-ink hover:text-canvas;
+    border-width: var(--hairline);
+    border-style: solid;
+}
+
+@utility btn-ghost {
+    @apply btn bg-transparent text-ink hover:text-accent hover:bg-surface;
+}
+
+/* Inverted button pair for dark accent bands */
+@utility btn-on-accent {
+    @apply btn bg-white text-accent hover:bg-accent-soft;
+}
+
+@utility btn-on-accent-outline {
+    @apply btn border-white/40 text-white hover:bg-white/10;
+    border-width: var(--hairline);
+    border-style: solid;
+}
+
+/* Bordered content card */
+@utility card {
+    @apply rounded-sm bg-canvas;
+    border: var(--hairline) solid var(--color-stroke);
+}
+
+/* Inline link with sliding arrow */
+@utility link-arrow {
+    @apply inline-flex items-center gap-1.5 font-body text-meta font-medium text-accent transition-colors hover:text-ink;
+}
+
+.link-arrow svg {
+    transition: transform 0.3s var(--ease-out-soft);
+}
+
+@media (hover: hover) {
+    .link-arrow:hover svg {
+        transform: translateX(0.25rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .link-arrow svg {
+        transition: none;
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Bolt Pager Styling
+ * ------------------------------------------------------------------ */
+.pagination {
+    @apply flex flex-wrap items-center justify-center gap-2 m-0 p-0;
+    list-style: none;
+}
+.pagination li a {
+    @apply inline-flex h-9 min-w-9 items-center justify-center px-3 font-mono text-xs tracking-widest border border-stroke text-ink-2 transition-colors duration-200;
+}
+.pagination li a:hover {
+    @apply border-ink text-ink;
+}
+.pagination li.active a,
+.pagination li a[aria-current] {
+    @apply border-ink bg-ink text-canvas;
+}
+.pagination li[disabled],
+.pagination li[disabled] a {
+    @apply opacity-40 pointer-events-none;
+}
+
+/* ------------------------------------------------------------------ *
+ *  CMS Redactor Rich-Text Typography Wrapper
+ * ------------------------------------------------------------------ */
+@layer components {
+    .cms-redactor, .cms-article {
+        ul, ol {
+            list-style: initial;
+            @apply m-0 pl-5;
+        }
+
+        a {
+            @apply text-accent underline underline-offset-[0.125rem] transition-colors hover:text-ink;
+        }
+
+        :where(p, ul, ol, blockquote, pre, h2, h3, h4, h5)
+        + :where(p, ul, ol, blockquote, pre, h2, h3, h4, h5) {
+            @apply mt-4;
+        }
+
+        h2, h3, h4, h5 {
+            @apply font-display text-card font-medium text-ink;
+        }
+
+        :where(p, ul, ol, blockquote, pre) + :where(h2, h3, h4, h5) {
+            @apply mt-7;
+        }
+
+        blockquote {
+            @apply pl-5 text-ink;
+            border-left: var(--hairline) solid var(--color-accent);
+        }
+
+        strong, b {
+            @apply font-semibold text-ink;
+        }
+
+        em, i {
+            font-style: italic;
+        }
+
+        small {
+            @apply text-meta text-ink-3;
+        }
+
+        pre {
+            @apply overflow-x-auto rounded-sm bg-surface p-4 text-meta;
+        }
+    }
+
+    /* Redactor on dark accent band */
+    .cms-redactor-on-accent {
+        a {
+            @apply text-white hover:text-accent-ink-2;
+        }
+        h2, h3, h4, h5, strong, b, blockquote {
+            @apply text-white;
+        }
+        blockquote {
+            border-left-color: var(--color-accent-ink-2);
+        }
+        small {
+            @apply text-accent-ink-2;
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Mobile Menu Dropdown & Accordion Polish
+ * ------------------------------------------------------------------ */
+.dropdown {
+    overflow: hidden;
+    height: 0;
+    transition: height 0.15s ease-in-out;
+    max-width: calc(100vw - 2rem);
+}
+
+.rotate-svg {
+    transition: transform 0.3s ease;
+}
+
+button[aria-expanded="true"] .rotate-svg {
+    transform: rotate(180deg);
+}
+
+[data-dropdown-toggle] > * {
+    pointer-events: none;
+}

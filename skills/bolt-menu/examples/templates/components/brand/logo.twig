@@ -1,0 +1,26 @@
+{#
+  Pure Component: Brand Logo
+  Renders the logo image configured in theme.yaml, or the site name as text when no
+  logo is configured (useful right after scaffolding).
+
+    # theme.yaml
+    logo:
+      default: 'img/logo/logo.svg'        # relative to the theme folder
+      light: 'img/logo/logo-light.svg'    # variant for dark backgrounds (footer, hero)
+
+  Props:
+    - class (string|optional): Classes for the <img> / text (e.g. 'h-8 w-auto')
+    - tone (string|optional): 'dark' (default, for light backgrounds) | 'light'
+    - alt (string|optional): Alternative text (default: general/sitename). Pass alt: ''
+        when the surrounding link already carries an aria-label.
+#}
+{% set sitename = config.get('general/sitename') %}
+{% set src = tone|default('dark') == 'light'
+    ? config.get('theme/logo/light')|default(config.get('theme/logo/default'))
+    : config.get('theme/logo/default') %}
+
+{% if src %}
+    <img src="{{ asset(src) }}" alt="{{ alt is defined ? alt : sitename }}" class="{{ class|default('h-8 w-auto') }}">
+{% else %}
+    <span class="font-display text-lg font-semibold tracking-tight {{ class|default('') }}">{{ sitename }}</span>
+{% endif %}

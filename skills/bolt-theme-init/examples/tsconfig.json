@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "es6",
+    "allowJs": true,
+    "strict": true,
+    "alwaysStrict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "rootDir": "js/src",
+    "outDir": "js"
+  },
+  "include": ["js/**/*.ts"],
+  "exclude": ["node_modules"]
+}

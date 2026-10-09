@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="cs">
+  <file id="messages.cs">
+    <!-- bolt-theme-templates: units used by components/, containers/ and pages/. Merge into translations/messages.<locale>.xlf with scripts/merge-xliff.php. -->
+    <!-- Shared UI components (components/ui/) -->
+    <unit id="nav_home" name="nav.home"><segment><source>nav.home</source><target>Domů</target></segment></unit>
+    <unit id="a11y_breadcrumbs" name="a11y.breadcrumbs"><segment><source>a11y.breadcrumbs</source><target>Drobečková navigace</target></segment></unit>
+    <unit id="a11y_pagination" name="a11y.pagination"><segment><source>a11y.pagination</source><target>Stránkování</target></segment></unit>
+    <unit id="pager_previous" name="pager.previous"><segment><source>pager.previous</source><target>Předchozí stránka</target></segment></unit>
+    <unit id="pager_next" name="pager.next"><segment><source>pager.next</source><target>Následující stránka</target></segment></unit>
+    <unit id="card_read_more" name="card.read_more"><segment><source>card.read_more</source><target>Detail</target></segment></unit>
+    <unit id="card_edit" name="card.edit"><segment><source>card.edit</source><target>Upravit</target></segment></unit>
+    <unit id="section_show_all" name="section.show_all"><segment><source>section.show_all</source><target>Zobrazit vše</target></segment></unit>
+    <unit id="empty_title" name="empty.title"><segment><source>empty.title</source><target>Nenalezeny žádné záznamy</target></segment></unit>
+    <unit id="empty_message" name="empty.message"><segment><source>empty.message</source><target>V této kategorii se momentálně nenachází žádný obsah.</target></segment></unit>
+    <!-- Contact containers (containers/contact/) -->
+    <unit id="contact_eyebrow" name="contact.eyebrow"><segment><source>contact.eyebrow</source><target>Máte dotaz nebo poptávku?</target></segment></unit>
+    <unit id="contact_title" name="contact.title"><segment><source>contact.title</source><target>Spojte se s námi</target></segment></unit>
+    <unit id="contact_description" name="contact.description"><segment><source>contact.description</source><target>Rádi s vámi zkonzultujeme vaše požadavky, připravíme cenovou nabídku na míru nebo vám ukážeme vzorky na naší pobočce.</target></segment></unit>
+    <unit id="contact_phone_label" name="contact.phone_label"><segment><source>contact.phone_label</source><target>Telefon</target></segment></unit>
+    <unit id="contact_email_label" name="contact.email_label"><segment><source>contact.email_label</source><target>E-mail</target></segment></unit>
+    <unit id="contact_reply_time" name="contact.reply_time"><segment><source>contact.reply_time</source><target>Odpovídáme zpravidla do 24 hodin</target></segment></unit>
+    <unit id="contact_address_label" name="contact.address_label"><segment><source>contact.address_label</source><target>Kde nás najdete</target></segment></unit>
+    <unit id="contact_banner_title" name="contact.banner_title"><segment><source>contact.banner_title</source><target>Máte zájem o spolupráci?</target></segment></unit>
+    <unit id="contact_banner_text" name="contact.banner_text"><segment><source>contact.banner_text</source><target>Napište nám nebo zavolejte. Rádi s vámi probereme vaše požadavky a navrhneme optimální řešení.</target></segment></unit>
+    <unit id="contact_banner_cta" name="contact.banner_cta"><segment><source>contact.banner_cta</source><target>Kontaktujte nás</target></segment></unit>
+    <!-- Homepage (pages/homepage/, containers/products/) -->
+    <unit id="hero_eyebrow" name="hero.eyebrow"><segment><source>hero.eyebrow</source><target>Prvotřídní kvalita &amp; servis</target></segment></unit>
+    <unit id="hero_primary_cta" name="hero.primary_cta"><segment><source>hero.primary_cta</source><target>Prozkoumat nabídku</target></segment></unit>
+    <unit id="hero_contact_cta" name="hero.contact_cta"><segment><source>hero.contact_cta</source><target>Kontaktujte nás</target></segment></unit>
+    <unit id="homepage_featured_eyebrow" name="homepage.featured_eyebrow"><segment><source>homepage.featured_eyebrow</source><target>Doporučujeme</target></segment></unit>
+    <unit id="homepage_featured_title" name="homepage.featured_title"><segment><source>homepage.featured_title</source><target>Vybrané produkty</target></segment></unit>
+    <unit id="homepage_all_products" name="homepage.all_products"><segment><source>homepage.all_products</source><target>Všechny produkty</target></segment></unit>
+    <!-- Products (pages/product/) -->
+    <unit id="products_title" name="products.title"><segment><source>products.title</source><target>Katalog produktů</target></segment></unit>
+    <unit id="products_eyebrow" name="products.eyebrow"><segment><source>products.eyebrow</source><target>Naše nabídka</target></segment></unit>
+    <unit id="products_perex" name="products.perex"><segment><source>products.perex</source><target>Vyberte si ze širokého sortimentu našich certifikovaných produktů a řešení.</target></segment></unit>
+    <unit id="products_empty_title" name="products.empty_title"><segment><source>products.empty_title</source><target>Žádné produkty nenalezeny</target></segment></unit>
+    <unit id="products_empty_message" name="products.empty_message"><segment><source>products.empty_message</source><target>V této kategorii momentálně nejsou k dispozici žádné položky.</target></segment></unit>
+    <unit id="products_no_image" name="products.no_image"><segment><source>products.no_image</source><target>Bez obrázku</target></segment></unit>
+    <unit id="products_technical_specs" name="products.technical_specs"><segment><source>products.technical_specs</source><target>Technické parametry</target></segment></unit>
+    <unit id="products_inquire_cta" name="products.inquire_cta"><segment><source>products.inquire_cta</source><target>Nezávazně poptat</target></segment></unit>
+    <unit id="products_in_stock" name="products.in_stock"><segment><source>products.in_stock</source><target>Skladem (%count% ks)</target></segment></unit>
+    <unit id="products_on_request" name="products.on_request"><segment><source>products.on_request</source><target>Na dotaz</target></segment></unit>
+  </file>
+</xliff>

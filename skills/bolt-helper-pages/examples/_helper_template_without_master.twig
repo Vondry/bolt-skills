@@ -1,0 +1,38 @@
+{#
+  Standalone base layout for 503 (maintenance) and 500 (server error): no header, footer,
+  menu or database access — only the compiled CSS/JS and the helper scene.
+#}
+<!DOCTYPE html>
+<html lang="{{ htmllang() }}">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="{{ config.get('general/sitename') }}">
+
+    <title>{{ title|default('Probíhá údržba · ' ~ config.get('general/sitename')) }}</title>
+    <meta name="robots" content="noindex, follow">
+
+    {# Bolt registers the active theme as the default asset package (also on error pages),
+       so asset() resolves to /theme/<theme>/…; ?v= busts long-lived caches (bolt-asset-caching). #}
+    <link rel="stylesheet" href="{{ asset('css/index.css') }}?v={{ theme.assets_version|default('1.0') }}">
+    <script defer src="{{ asset('js/app.js') }}?v={{ theme.assets_version|default('1.0') }}"></script>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/favicon/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('img/favicon/favicon-48x48.png') }}" sizes="48x48">
+    <link rel="shortcut icon" href="{{ asset('img/favicon/favicon.ico') }}">
+    <meta name="theme-color" content="#ffffff">
+
+    {% block head %}
+        {# Injected per-page styles or scripts #}
+    {% endblock head %}
+</head>
+<body class="helper-standalone-page">
+
+<main class="helper-standalone-main">
+    {% block mainHelper %}
+    {% endblock mainHelper %}
+</main>
+
+</body>
+</html>

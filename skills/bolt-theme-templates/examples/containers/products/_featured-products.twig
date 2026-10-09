@@ -1,0 +1,49 @@
+{#
+  Smart Container: Featured Products
+  Fetches the newest published products and renders them as cards. Used by the
+  homepage; any page can include it (it owns its own query, so pages stay free of setcontent).
+
+  Props:
+    - limit (int|optional): Number of products (default: 3)
+    - contenttype (string|optional): ContentType slug (default: 'products')
+
+  Translation keys: homepage.featured_eyebrow, homepage.featured_title, homepage.all_products
+#}
+{% import 'macros.twig' as macros %}
+
+{# setcontent throws for an unknown ContentType, so check that it is defined first. #}
+{% set ct_slug = contenttype|default('products') %}
+{% set featured_products = [] %}
+{% if config.get('contenttypes/' ~ ct_slug) %}
+    {% setcontent featured_products = ct_slug limit (limit|default(3)) %}
+{% endif %}
+
+{% if featured_products is not empty %}
+    <section aria-labelledby="featured-products-title" class="py-section">
+        <div class="wrapper px-edge">
+            {% include 'components/ui/section-header.twig' with {
+                title: __('homepage.featured_title'),
+                title_id: 'featured-products-title',
+                eyebrow: __('homepage.featured_eyebrow'),
+                layout: 'split',
+                link: { label: __('homepage.all_products'), href: '/produkty' }
+            } %}
+
+            <ul role="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for item in featured_products %}
+                    <li class="flex">
+                        {% include 'components/ui/card.twig' with {
+                            title: item|title,
+                            href: item|link,
+                            image: item.image|default(null),
+                            badge: item.category|default(null),
+                            description: item.perex|default(item.teaser|default(null)),
+                            price: item.price is defined and item.price ? macros.formatPrice(item.price) : null,
+                            edit_url: item|edit_link
+                        } %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+{% endif %}

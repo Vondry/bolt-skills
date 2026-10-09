@@ -1,0 +1,21 @@
+security:
+  firewalls:
+    # Stateless firewall for static assets and generated thumbnails.
+    # CRITICAL: `thumbs` must be included here so thumbnail requests bypass Symfony's
+    # stateful main firewall; otherwise, Symfony's SessionListener rewrites Glide's
+    # public 1-year Cache-Control to "private, max-age=0" and browsers re-download every thumbnail.
+    dev:
+      pattern: ^/(_(profiler|wdt)|css|images|js|thumbs)/
+      security: false
+
+    api:
+      pattern: ^/api
+      http_basic: ~
+      login_throttling: ~
+
+    main:
+      pattern: ^/
+      user_checker: Bolt\Security\UserChecker
+      switch_user: { role: CAN_SWITCH_USER }
+      entry_point: Bolt\Security\AuthenticationEntryPointRedirector
+      login_throttling: ~

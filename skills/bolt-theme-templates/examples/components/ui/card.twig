@@ -1,0 +1,88 @@
+{#
+  Pure Component: UI Card (Product / Blog / Service / Reference item)
+  Rules: Zero setcontent. Composes pure components (picture, badge).
+
+  Props:
+    - title (string): Card headline
+    - href (string): Link target (passed through locale_link)
+    - image (Bolt image field|string|optional): Card image
+    - badge (string|optional): Category or status text, rendered with components/ui/badge.twig
+    - badge_markup (Markup|optional): Pre-rendered badge, e.g. a page-scoped component:
+        badge_markup: include('pages/product/components/stock-badge.twig', { stock: item.stock })
+    - description (string|optional): Excerpt / summary (HTML is stripped)
+    - price (string|optional): Pre-formatted price, e.g. macros.formatPrice(item.price)
+    - edit_url (string|optional): Bolt admin edit URL (item|edit_link — empty for visitors)
+    - class (string|optional): Extra wrapper classes
+
+  The whole card is clickable through a stretched link on the title: the overlay
+  (`absolute inset-0`) needs the `relative` on <article> to stay inside the card.
+
+  Translation keys: card.read_more, card.edit
+#}
+{% import 'macros.twig' as macros %}
+
+<article class="card relative flex flex-col group overflow-hidden {{ class|default('') }}">
+    {# Admin quick edit button (above the stretched link) #}
+    {% if edit_url is defined and edit_url is not empty %}
+        <div class="absolute top-3 right-3 z-20">
+            <a href="{{ edit_url }}"
+               class="inline-flex items-center px-2 py-0.5 text-xs font-semibold text-ink bg-surface rounded-sm border border-stroke hover:bg-surface-2 shadow-xs">
+                ✏️ {{ __('card.edit') }}
+            </a>
+        </div>
+    {% endif %}
+
+    {% if image is defined and image is not empty %}
+        <div class="relative overflow-hidden aspect-16/10 bg-surface">
+            {% include 'components/ui/picture.twig' with {
+                image: image,
+                alt: title,
+                aspect: 'aspect-16/10',
+                class: 'group-hover:scale-105'
+            } %}
+        </div>
+    {% endif %}
+
+    {% if (badge is defined and badge is not empty) or (badge_markup is defined and badge_markup is not empty) %}
+        <div class="absolute top-3 left-3 z-10">
+            {% if badge_markup is defined and badge_markup is not empty %}
+                {{ badge_markup|raw }}
+            {% else %}
+                {% include 'components/ui/badge.twig' with {
+                    label: badge,
+                    variant: 'accent',
+                    size: 'sm'
+                } %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="flex-1 p-6 flex flex-col justify-between gap-4">
+        <div class="flex flex-col gap-2">
+            <h3 class="font-display text-card font-semibold text-ink group-hover:text-accent transition-colors">
+                <a href="{{ locale_link(href) }}" class="focus:outline-none">
+                    <span class="absolute inset-0" aria-hidden="true"></span>
+                    {{ macros.typo(title) }}
+                </a>
+            </h3>
+
+            {% if description is defined and description is not empty %}
+                <p class="text-body text-ink-2 line-clamp-3 leading-relaxed">
+                    {{ description|striptags }}
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="pt-2 flex items-center justify-between text-sm font-semibold">
+            {% if price is defined and price is not empty %}
+                <span class="text-base font-bold text-accent">{{ price }}</span>
+            {% endif %}
+            <span class="link-arrow">
+                {{ __('card.read_more') }}
+                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/>
+                </svg>
+            </span>
+        </div>
+    </div>
+</article>

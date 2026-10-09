@@ -1,0 +1,64 @@
+{#
+  Pure Component: Responsive Picture / Image
+  Rules: Zero setcontent. Purely presentational.
+
+  Props:
+    - image (Bolt image field|string): Pass the image field (record.image); a string is
+        treated as a filename / public URL
+    - alt (string|optional): Image alternative text (default: the field's alt or title)
+    - width (int|optional): Intrinsic width
+    - height (int|optional): Intrinsic height
+    - loading (string|optional): 'lazy' | 'eager' (default: 'lazy')
+    - class (string|optional): CSS classes for the <img> element
+    - aspect (string|optional): Aspect ratio class e.g. 'aspect-16/9', 'aspect-4/3', 'aspect-square'
+    - pswp (bool|optional): Render the picture as a PhotoSwipe 5 slide link. Wrap the
+        pictures of one gallery in <div class="photoswipe-gallery"> (js/src/photoswipe.ts).
+
+  Intrinsic dimensions (needed by PhotoSwipe and for layout stability):
+    1. width/height props, if given;
+    2. the media library entry (image|media — a database read, no disk access);
+    3. image_dimensions() from bolt-runtime-extensions — only for images without a media
+       entry (static theme assets, filenames set without picking from the library).
+#}
+
+{% set img_url = image.path is defined ? image.path : (image ~ '') %}
+{% set img_alt = alt|default(image.alt|default(image.title|default(''))) %}
+{% set img_width = width|default(null) %}
+{% set img_height = height|default(null) %}
+
+{% if img_width is empty or img_height is empty %}
+    {% set media = image.path is defined ? image|media : null %}
+    {% if media and media.width %}
+        {% set img_width = media.width %}
+        {% set img_height = media.height %}
+    {% elseif pswp|default(false) %}
+        {% set dims = image_dimensions(img_url) %}
+        {% set img_width = dims.width %}
+        {% set img_height = dims.height %}
+    {% endif %}
+{% endif %}
+
+{% set img_tag %}
+    <img src="{{ image|thumbnail(1200, 800) }}"
+         srcset="{{ image|thumbnail(600, 400) }} 600w, {{ image|thumbnail(1200, 800) }} 1200w"
+         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+         alt="{{ img_alt }}"
+         loading="{{ loading|default('lazy') }}"
+         decoding="async"
+         {% if img_width %}width="{{ img_width }}"{% endif %}
+         {% if img_height %}height="{{ img_height }}"{% endif %}
+         class="w-full h-full object-cover transition-transform duration-500 {{ class|default('') }}">
+{% endset %}
+
+<picture class="block overflow-hidden {{ aspect|default('') }}">
+    {% if pswp|default(false) and img_width and img_height %}
+        <a href="{{ img_url }}"
+           class="photoswipe-gallery__link block w-full h-full"
+           data-pswp-width="{{ img_width }}"
+           data-pswp-height="{{ img_height }}">
+            {{ img_tag }}
+        </a>
+    {% else %}
+        {{ img_tag }}
+    {% endif %}
+</picture>

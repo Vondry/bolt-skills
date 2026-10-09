@@ -1,0 +1,39 @@
+# Menu configuration: Single-page landing with anchor navigation
+#
+# Labels are defined per-locale; Bolt resolves the active locale in Twig.
+# Anchor links MUST start with '/#' so they resolve from subpages (e.g. privacy policy)
+# while scrolling smoothly without page reload when on the homepage.
+# Every '/#…' anchor needs a matching section id on the homepage (id="sluzby", …).
+main:
+  - label: { cs: 'Úvod', en: 'Home' }
+    link: /
+  - label: { cs: 'Služby', en: 'Services' }
+    link: /#sluzby
+  - label: { cs: 'Jak pracujeme', en: 'How we work' }
+    link: /#postup
+  - label: { cs: 'Reference', en: 'References' }
+    link: /#reference
+  - label: { cs: 'Tým', en: 'Team' }
+    link: /#tym
+  - label: { cs: 'Kontakt', en: 'Contact' }
+    link: /#kontakt
+    class: cta
+
+# Footer navigation links
+footer:
+  - label: { cs: 'Navigace', en: 'Navigation' }
+    submenu:
+      - label: { cs: 'Úvod', en: 'Home' }
+        link: /
+      - label: { cs: 'Služby', en: 'Services' }
+        link: /#sluzby
+      - label: { cs: 'Reference', en: 'References' }
+        link: /#reference
+      - label: { cs: 'Kontakt', en: 'Contact' }
+        link: /#kontakt
+  - label: { cs: 'Právní informace', en: 'Legal' }
+    submenu:
+      - label: { cs: 'Zásady ochrany osobních údajů', en: 'Privacy Policy' }
+        link: /zasady-ochrany-osobnich-udaju
+      - label: { cs: 'Obchodní podmínky', en: 'Terms of Service' }
+        link: /obchodni-podminky

@@ -1,0 +1,33 @@
+{#
+  Pure Component: UI Badge / Chip
+  Rules: Zero setcontent. Purely presentational.
+
+  Props:
+    - label (string): Badge text
+    - variant (string|optional): 'accent' | 'neutral' | 'success' | 'warning' (default: 'accent')
+        'brand' and 'ink' are accepted as aliases of 'accent' and 'neutral'.
+        'success' / 'warning' use Tailwind's emerald / amber on purpose (status colours
+        are not part of the brand palette).
+    - size (string|optional): 'sm' | 'md' (default: 'md')
+    - class (string|optional): Additional classes
+#}
+
+{% set variant_map = {
+    'accent':  'bg-accent-soft text-accent border border-accent/20',
+    'neutral': 'bg-surface text-ink-2 border border-stroke',
+    'success': 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    'warning': 'bg-amber-50 text-amber-700 border border-amber-200'
+} %}
+{% set aliases = { 'brand': 'accent', 'ink': 'neutral' } %}
+{% set variant_key = aliases[variant|default('accent')]|default(variant|default('accent')) %}
+{% set variant_styles = variant_map[variant_key]|default(variant_map['accent']) %}
+
+{% set size_map = {
+    'sm': 'text-micro px-2 py-0.5 font-medium tracking-wide',
+    'md': 'text-xs px-2.5 py-1 font-semibold tracking-wider uppercase'
+} %}
+{% set size_styles = size_map[size|default('md')]|default(size_map['md']) %}
+
+<span class="inline-flex items-center justify-center rounded-full leading-none {{ variant_styles }} {{ size_styles }} {{ class|default('') }}">
+    {{ label }}
+</span>

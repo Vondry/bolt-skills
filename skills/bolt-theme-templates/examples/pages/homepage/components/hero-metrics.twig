@@ -1,0 +1,24 @@
+{#
+  Page-Scoped Pure Component: Hero Metrics (key numbers under the hero)
+  Scope: Exclusive to pages/homepage/ — keeps the root components/ folder clean.
+  Rules: Zero setcontent. Data comes from the homepage record.
+
+  Props:
+    - items (iterable): list of { value, label }, e.g. a `metrics` collection on the homepage
+      singleton:  metrics: { type: collection, fields: { metric: { type: set, fields:
+                  { value: { type: text }, label: { type: text, localize: true } } } } }
+      Example data: { value: '10+ let', label: 'Zkušenosti' }, { value: '150+', label: 'Klientů' },
+                    { value: '99 %', label: 'Spokojenost' }
+    - class (string|optional)
+#}
+
+{% if items is defined and items|length > 0 %}
+    <dl class="grid grid-cols-2 sm:grid-cols-3 gap-6 pt-6 border-t border-stroke {{ class|default('') }}">
+        {% for item in items %}
+            <div>
+                <dt class="eyebrow">{{ item.label }}</dt>
+                <dd class="font-display text-section font-semibold text-accent mt-1">{{ item.value }}</dd>
+            </div>
+        {% endfor %}
+    </dl>
+{% endif %}

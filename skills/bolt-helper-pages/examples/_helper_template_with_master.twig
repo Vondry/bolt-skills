@@ -1,0 +1,17 @@
+{% extends 'partials/_master.twig' %}
+
+{#
+  Base layout for error pages (404, 403) where the application is working
+  and visitors benefit from preserving the site's header, navigation, and footer.
+  The 500 page uses the standalone layout instead (no header/footer, no database).
+  Extends partials/_master.twig (bolt-theme-init) and fills its seo / head / main blocks.
+#}
+
+{% block seo %}
+    <title>{{ title|default('Chyba · ' ~ config.get('general/sitename')) }}</title>
+    <meta name="robots" content="noindex, follow">
+{% endblock seo %}
+
+{% block main %}
+    {# Child templates override this block #}
+{% endblock main %}

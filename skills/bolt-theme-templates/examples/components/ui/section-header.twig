@@ -1,0 +1,62 @@
+{#
+  Pure Component: Section Header (eyebrow, heading, lead, optional link)
+  Rules: Zero setcontent. All data passed via parameters.
+  Wire it to its section with aria-labelledby="{{ title_id }}".
+
+  Props:
+    - title (string): Section heading
+    - title_id (string|optional): HTML id of the heading, for aria-labelledby on the section
+    - eyebrow (string|optional): Small kicker label above the heading
+    - lead (string|Markup|optional): Intro paragraph
+    - layout (string|optional): 'stacked' (default) | 'split' | 'center'
+    - link (object|optional): { label, href } — rendered as a secondary button ('split' layout)
+    - heading_level (int|optional): 2 (default) or 1 for page titles
+    - class (string|optional)
+
+  Translation keys: section.show_all (default label of the link)
+#}
+{% import 'macros.twig' as macros %}
+
+{% set layout = layout|default('stacked') %}
+{% set tag = heading_level|default(2) == 1 ? 'h1' : 'h2' %}
+
+{% set heading %}
+    {% if eyebrow is defined and eyebrow is not empty %}
+        <p class="eyebrow mb-2">{{ eyebrow }}</p>
+    {% endif %}
+    <{{ tag }} {% if title_id is defined %}id="{{ title_id }}"{% endif %}
+        class="font-display text-section font-semibold tracking-tight text-ink">
+        {{ macros.typo(title) }}
+    </{{ tag }}>
+    {% if lead is defined and lead is not empty %}
+        <p class="mt-3 text-lead text-ink-2">{{ lead|raw }}</p>
+    {% endif %}
+{% endset %}
+
+{% if layout == 'center' %}
+    <div class="max-w-3xl mx-auto text-center mb-10 {{ class|default('') }}">
+        {{ heading }}
+    </div>
+
+{% elseif layout == 'split' %}
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10 {{ class|default('') }}">
+        <div class="max-w-2xl">
+            {{ heading }}
+        </div>
+        {% if link is defined and link.href is defined %}
+            <div class="shrink-0">
+                {% include 'components/ui/button.twig' with {
+                    label: link.label|default(__('section.show_all')),
+                    href: link.href,
+                    variant: 'secondary'
+                } %}
+            </div>
+        {% endif %}
+    </div>
+
+{% else %}
+    {# stacked (default) #}
+    <div class="max-w-2xl mb-8 {{ class|default('') }}">
+        {{ heading }}
+    </div>
+{% endif %}

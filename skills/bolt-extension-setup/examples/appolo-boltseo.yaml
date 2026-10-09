@@ -1,0 +1,25 @@
+# Configuration file for appolodev/bolt-seo
+# Placed in config/extensions/appolo-boltseo.yaml
+
+title_separator: "|"
+title_postfix: ''
+
+title_length: 70
+description_length: 158
+keywords_length: 255
+
+# Automatic fallback field resolution when a record's SEO field is empty:
+fields:
+  slug: [ 'slug' ]
+  title: [ 'title', 'name', 'heading' ]
+  description: [ 'introduction', 'teaser', 'description', 'hero_subtitle' ]
+  keywords: [ ]
+  image: [ 'image', 'main_image', 'photo' ]
+
+default:
+  title: ""
+  description: ""
+  keywords: ""
+  ogtype: "website"
+
+meta_robots: "index, follow"

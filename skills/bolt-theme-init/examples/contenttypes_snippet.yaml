@@ -1,0 +1,40 @@
+# config/bolt/contenttypes.yaml
+# Example: Products ContentType bound to the product listing and detail pages.
+# The templates themselves are shipped by bolt-theme-templates (pages/product/).
+# Number fields use `type: number` — Bolt has no `integer` field type.
+
+products:
+  name: Produkty
+  singular_name: Produkt
+  fields:
+    title:
+      type: text
+      class: large
+      required: true
+    slug:
+      type: slug
+      uses: [ title ]
+    teaser:
+      type: textarea
+      height: 100px
+    body:
+      type: redactor
+    image:
+      type: image
+    price:
+      type: number
+      label: 'Cena v Kč'
+    stock:
+      type: number
+      default: 0
+      label: 'Skladová zásoba'
+  show_in_menu: true
+  icon_many: 'fa:boxes-stacked'
+  icon_one: 'fa:box'
+  # Thin root entrypoints (product.twig / product.record.twig extend pages/product/…);
+  # pointing directly at 'pages/product/product.twig' works as well.
+  listing_template: product.twig
+  record_template: product.record.twig
+  default_status: published
+  order: -id
+  records_per_page: 9

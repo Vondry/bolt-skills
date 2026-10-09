@@ -1,0 +1,20 @@
+{#
+  Page-Scoped Pure Component: Stock Badge
+  Scope: products pages (pages/product/). Uses Tailwind's emerald on purpose: availability
+  is a status colour, not part of the brand palette.
+
+  Props:
+    - stock (int|null): Number of items in stock
+
+  Translation keys: products.in_stock (with %count%), products.on_request
+#}
+{% if stock is defined and stock > 0 %}
+    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span class="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden="true"></span>
+        {{ __('products.in_stock', { '%count%': stock }) }}
+    </span>
+{% else %}
+    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface text-ink-2 border border-stroke">
+        {{ __('products.on_request') }}
+    </span>
+{% endif %}

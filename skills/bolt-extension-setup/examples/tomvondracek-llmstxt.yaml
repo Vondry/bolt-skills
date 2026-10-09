@@ -1,0 +1,14 @@
+# Configuration file for tomvondracek/bolt-llms-txt
+# Placed in config/extensions/tomvondracek-llmstxt.yaml
+
+# Master switch. `false` makes /llms.txt return 404.
+enabled: true
+
+# Twig template rendered at /llms.txt in the active theme.
+template: '@theme/extensions/llms.txt.twig'
+
+# Locale the file is rendered in (records, translations, dates). Empty = default locale.
+locale: en
+
+# Cache lifetime in seconds.
+max_age: 3600

@@ -1,0 +1,337 @@
+---
+name: bolt-contenttypes
+description: >-
+  Use this skill whenever you need to create, modify, or validate ContentTypes
+  and fields in Bolt CMS (config/bolt/contenttypes.yaml). Enforces strict best practices:
+  no raw html fields (use redactor or article), mandatory order: -id on singletons,
+  viewless resource blocks, collection/set structuring, and multilingual consistency.
+---
+
+# Bolt CMS ContentTypes & Fields Standard
+
+Defining ContentTypes in Bolt CMS (`config/bolt/contenttypes.yaml`) controls the data architecture, admin editing interface, and database relationships of your website. Failing to follow Bolt CMS architectural conventions can lead to uneditable records, broken singletons, layout regressions, or localization errors.
+
+This skill provides the official standards, required rules, and an automated verification script for creating, refactoring, and validating Bolt CMS ContentTypes.
+
+---
+
+## The Golden Rules of Bolt ContentTypes
+
+### 1. Rich Text: Never Use `type: html`
+> [!WARNING]
+> Do **NOT** use `type: html`.
+
+* **Why:** In Bolt CMS 5.x/6.x, `type: html` is a generic WYSIWYG HTML field (CKEditor-based in the admin) that accepts arbitrary markup, including inline styles and pasted HTML from other sites, and can even allow Twig (`allow_twig`). Content entered there drifts from the theme's design system and breaks layouts. `redactor` (and `article` for long-form content) give editors a controlled toolbar whose output the theme styles through `.cms-redactor` / `.cms-article`, and keep all rich-text fields consistent.
+* **Standard Rich Text (`type: redactor`):**
+  Use `type: redactor` (provided by `bolt/redactor`) for standard editorial rich text: introductions, body copy, descriptions, teasers, and sections.
+* **Structured Long-Form Content (`type: article`):**
+  Use `type: article` (provided by `bolt/article`) for complex, long-form editorial content (such as blog posts, case studies, news articles) where authors construct articles with imperavi modular blocks (headings, quotes, media embeds, multi-column snippets).
+* **Structured Repeating Data:**
+  If content has discrete fields (e.g., FAQ questions/answers, team members, timeline items), do not ask editors to format HTML. Model them cleanly with `type: collection` and `type: set`.
+
+```yaml
+# ❌ INCORRECT (Do not use raw html)
+content:
+  type: html
+  height: 300px
+
+# ✅ CORRECT for standard body/intro copy
+introduction:
+  type: redactor
+  label: "Úvodní text"
+  localize: true
+
+# ✅ CORRECT for structured long-form articles
+body:
+  type: article
+  label: "Obsah článku"
+  required: true
+  localize: true
+```
+
+---
+
+### 2. Singleton ContentTypes: Always Add `order: -id`
+> [!IMPORTANT]
+> Official Bolt Documentation: [Making a Singleton ContentType](https://docs.boltcms.io/5.2/howto/singleton-contenttype) recommends `sort: -id` (the older name of `order`).  
+> House rule: every ContentType with `singleton: true` **MUST** declare `order: -id`.
+
+* **Why:** In Bolt CMS, setting `singleton: true` limits backend editors to one record in the admin panel. However, when fetched in Twig templates via `{% setcontent page = 'homepage' %}` or `{% setcontent settings = 'settings' %}`, Bolt queries the database table. If records have been created, deleted, or re-saved over time, auto-incremented database IDs increase. Bolt's default order is `-createdAt`, which depends on an editable date; `order: -id` makes Bolt **always return the most recently created record (highest ID)**, regardless of how dates were edited, so stale records are never fetched.
+
+#### A. Routable Singletons (e.g. Homepage)
+Singletons that serve a dedicated front-end route:
+```yaml
+homepage:
+  name: Domovská stránka
+  singular_name: Domovská stránka
+  singleton: true
+  order: -id                       # <-- MANDATORY
+  viewless: false
+  record_template: index.twig
+  locales: [ 'cs', 'en' ]
+  fields:
+    <<: [ *common_fields, *seo_field ]
+    hero_title:
+      type: text
+      localize: true
+      required: true
+```
+
+#### B. Data Container / Settings Singletons (e.g. Site Settings, Footer, Contact Info)
+Singletons that only supply data to templates across the site and do NOT have their own URL route:
+* Set `viewless: true` (disables single-record public URL `/settings/1`)
+* Set `default_status: published` (new records are immediately active)
+* Set `searchable: false`
+```yaml
+site_settings:
+  name: Nastavení webu
+  singular_name: Nastavení webu
+  singleton: true
+  order: -id                       # <-- MANDATORY
+  viewless: true                   # No standalone public route
+  default_status: published        # Automatically published
+  searchable: false
+  locales: [ 'cs', 'en' ]
+  fields:
+    company_name:
+      type: text
+      required: true
+    contact_email:
+      type: email
+      required: true
+    phone:
+      type: text
+```
+
+---
+
+### 3. Resource & Block ContentTypes
+> [!NOTE]
+> Official Bolt Documentation: [Making a Resource ContentType](https://docs.boltcms.io/5.2/howto/resource-contenttype)
+
+Resource ContentTypes store reusable snippets, 404 page content, header teasers, or sidebar callouts that are loaded into other templates via `{% setcontent block = 'blocks/slug' %}`:
+* Set `viewless: true`
+* Set `default_status: published`
+* Set `searchable: false`
+* Optionally set `show_on_dashboard: false` if editors rarely touch them directly.
+
+```yaml
+blocks:
+  name: Bloky
+  singular_name: Blok
+  viewless: true
+  default_status: published
+  searchable: false
+  show_on_dashboard: false
+  icon_one: "fa:cube"
+  icon_many: "fa:cubes"
+  fields:
+    title:
+      type: text
+      required: true
+      localize: true
+    slug:
+      type: slug
+      uses: [ title ]
+    content:
+      type: redactor
+      localize: true
+```
+
+---
+
+### 4. Sets & Collections vs Legacy Repeaters
+> [!NOTE]
+> Official Bolt Documentation: [Transform Bolt 3 repeaters to Bolt 5 sets and collections](https://docs.boltcms.io/5.2/howto/transform-repeaters-to-sets-and-collections)
+
+In Bolt 5+, the legacy `repeater` field type is replaced by two distinct field types:
+* `type: set`: Groups a fixed composite set of fields together under one parent key (e.g., a button with `label` and `href`).
+* `type: collection`: Allows editors to add, reorder, and remove multiple items (e.g., list of FAQ items, slides, features).
+
+```yaml
+# A repeating list of CTA buttons
+buttons:
+  type: collection
+  label: "Tlačítka"
+  fields:
+    button:
+      type: set
+      fields:
+        label:
+          type: text
+          label: "Text tlačítka"
+          localize: true
+          required: true
+        href:
+          type: text
+          label: "Odkaz / URL"
+          required: true
+        variant:
+          type: select
+          values: { primary: "Primární", secondary: "Sekundární" }
+          default: primary
+```
+
+---
+
+### 5. Multilingual Parity & The "Required Field" Trap
+> [!CAUTION]
+> If a ContentType defines `locales: [...]`, any field marked `required: true` **MUST** also declare `localize: true` (with the exception of non-localized routing slugs or template selectors).
+>
+> **Why?** When an editor switches to a secondary language in the Bolt backend, Bolt validates required fields for that locale. If a required field lacks `localize: true`, the editor cannot input a value for that locale, resulting in validation failure and an inability to save the translation!
+
+Ensure multilingual ContentTypes adhere to:
+1. `locales: [ ... ]` only contains codes registered in `config/services.yaml` (`app_locales`).
+2. Translatable text/content fields declare `localize: true`.
+3. If `required: true` is set on a content field (including `title` in common field nodes), `localize: true` is strictly present.
+
+---
+
+### 6. DRY Architecture with YAML Anchors (`__nodes`)
+Bolt's ContentType parser (`src/Configuration/Parser/ContentTypesParser.php`) explicitly ignores any top-level YAML keys starting with double underscores `__`.
+
+Define reusable field clusters under `__nodes` and compose them into ContentTypes using the YAML merge syntax (`<<: [ *common_fields, *seo_field ]`):
+
+```yaml
+__nodes:
+  common_fields: &common_fields
+    title:
+      type: text
+      group: meta
+      label: "Název / Title"
+      localize: true
+      required: true
+    slug:
+      type: slug
+      uses: [ title ]
+      group: meta
+
+  seo_field: &seo_field
+    seo:
+      type: seo
+      group: seo
+      localize: true
+
+  image_field: &image_field
+    image:
+      type: image
+      label: "Hlavní obrázek"
+      group: content
+```
+
+---
+
+## Verification & Automated Linting
+
+To inspect your ContentTypes configuration against all aforementioned standards, run the verification script:
+
+```bash
+vendor/vondry/bolt-skills/skills/bolt-contenttypes/scripts/verify.sh
+```
+
+### What the script validates:
+1. **YAML Syntax:** Executes `bin/console lint:yaml config/bolt/contenttypes.yaml --parse-tags`.
+2. **Forbidden `html` Fields:** Recursively flags any field, set, or collection using `type: html` and suggests `redactor` or `article`.
+3. **Singleton Ordering:** Flags any `singleton: true` ContentType missing `order: -id`.
+4. **Deprecated `repeater`:** Flags legacy `type: repeater` and advises migrating to `collection` + `set`.
+5. **Multilingual Required Fields:** Flags fields with `required: true` lacking `localize: true` in localized ContentTypes.
+6. **Valid Slugs:** Verifies all `type: slug` fields define the `uses` mapping.
+7. **Permitted Locales:** Verifies ContentType `locales` are declared in `app_locales`.
+
+---
+
+## Complete Reference Template
+
+Here is a complete, production-ready blueprint demonstrating all rules together:
+
+```yaml
+# config/bolt/contenttypes.yaml
+
+__nodes:
+  common_fields: &common_fields
+    title:
+      type: text
+      group: meta
+      label: "Název"
+      localize: true
+      required: true
+    slug:
+      type: slug
+      uses: [ title ]
+      group: meta
+
+  seo_field: &seo_field
+    seo:
+      type: seo
+      group: seo
+      localize: true
+
+# 1. Routable Singleton
+homepage:
+  name: Domovská stránka
+  singular_name: Domovská stránka
+  singleton: true
+  order: -id
+  viewless: false
+  record_template: index.twig
+  locales: [ 'cs', 'en' ]
+  fields:
+    <<: [ *common_fields, *seo_field ]
+    hero_title:
+      type: text
+      localize: true
+      required: true
+    hero_intro:
+      type: redactor
+      localize: true
+
+# 2. Viewless Settings Singleton
+settings:
+  name: Nastavení webu
+  singular_name: Nastavení webu
+  singleton: true
+  order: -id
+  viewless: true
+  default_status: published
+  searchable: false
+  locales: [ 'cs', 'en' ]
+  fields:
+    phone:
+      type: text
+    email:
+      type: email
+
+# 3. Viewless Reusable Blocks
+blocks:
+  name: Bloky
+  singular_name: Blok
+  viewless: true
+  default_status: published
+  searchable: false
+  show_on_dashboard: false
+  fields:
+    <<: [ *common_fields ]
+    content:
+      type: redactor
+      localize: true
+
+# 4. Standard Routable Articles with Redactor & Article
+articles:
+  name: Články
+  singular_name: Článek
+  locales: [ 'cs', 'en' ]
+  listing_template: pages/articles/articles.twig          # pages/<name>/<name>.twig (Integration Contract)
+  record_template: pages/articles/articles.record.twig   # pages/<name>/<name>.record.twig
+  order: -createdAt
+  fields:
+    <<: [ *common_fields, *seo_field ]
+    teaser:
+      type: redactor
+      label: "Perex článku"
+      localize: true
+    body:
+      type: article
+      label: "Obsah článku"
+      localize: true
+      required: true
+```

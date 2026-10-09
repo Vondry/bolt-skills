@@ -1,0 +1,65 @@
+{#
+  partials/_master.twig — the single layout shell of the theme.
+
+  Every page orchestrator, static page and the 404/403 helper pages extend this file
+  and fill {% block main %}. Other skills plug into the named blocks and partials:
+
+    seo      bolt-extension-setup (AppoloDev/bolt-seo); helper and static pages override it
+    head     page-specific additions (helper scene styles, carousel CSS, preloads)
+    header   bolt-menu: containers/header/_menu.twig (navigation, CTA, locale switcher, mobile menu)
+    main     page content
+    footer   bolt-menu: containers/footer/_footer.twig (columns, legal links, cookie settings)
+    scripts  page-specific scripts
+
+  Partials owned by other skills are included with `ignore missing`, so the shell
+  renders as soon as bolt-theme-init has run and fills in as later skills add them.
+#}
+<!DOCTYPE html>
+<html lang="{{ htmllang() }}" class="scroll-smooth antialiased">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {# https://github.com/AppoloDev/bolt-seo #}
+    {% block seo %}
+        <title>{{ seo.title() }}</title>
+        {{ seo.metatags() }}
+    {% endblock seo %}
+
+    {# bolt-cookie-consent: Google Consent Mode v2 defaults — must run before any tracking script. #}
+    {% include 'partials/_consent-mode.twig' ignore missing %}
+
+    {# Bolt registers the active theme as the default asset package, so asset() paths are
+       relative to public/theme/<theme>/. Bump assets_version in theme.yaml on every release
+       (bolt-asset-caching serves CSS/JS with long-lived cache headers). #}
+    <link rel="stylesheet" href="{{ asset('css/index.css') }}?v={{ theme.assets_version|default('1.0') }}">
+    <script defer src="{{ asset('js/app.js') }}?v={{ theme.assets_version|default('1.0') }}"></script>
+
+    {% block head %}{% endblock head %}
+</head>
+<body class="flex min-h-screen flex-col bg-canvas text-ink font-body selection:bg-accent selection:text-accent-ink">
+
+    {# a11y skip link for keyboard and screen-reader users #}
+    <a href="#obsah"
+       class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-accent focus:text-accent-ink focus:font-semibold focus:rounded-sm focus:outline-none">
+        {{ __('a11y.skip_to_content') }}
+    </a>
+
+    {% block header %}
+        {% include 'containers/header/_menu.twig' ignore missing %}
+    {% endblock header %}
+
+    <main id="obsah" class="flex-1 focus:outline-none" tabindex="-1">
+        {% block main %}{% endblock main %}
+    </main>
+
+    {% block footer %}
+        {% include 'containers/footer/_footer.twig' ignore missing %}
+    {% endblock footer %}
+
+    {# bolt-cookie-consent: opt-in banner (present only when the site uses tracking). #}
+    {% include 'partials/_cookie-banner.twig' ignore missing %}
+
+    {% block scripts %}{% endblock scripts %}
+</body>
+</html>

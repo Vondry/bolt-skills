@@ -1,0 +1,78 @@
+{#- llms.txt (https://llmstxt.org) — served at /llms.txt by tomvondracek/bolt-llms-txt
+    Placed in: public/theme/<theme_name>/extensions/llms.txt.twig
+
+    Layout follows the llmstxt.org specification:
+    1. H1 title (# Sitename)
+    2. A single-line blockquote (> Summary)
+    3. Markdown body describing the project, services, and contacts (NO H2/H3 headings here)
+    4. H2 sections (## Section Name) containing ONLY bullet items in "- [Title](URL): Description" format.
+       The reference parser fails on any other line inside an H2 section.
+    5. An optional ## Optional section for secondary resources and sitemap.
+
+    Field names match the bolt-contenttypes blueprint: `homepage` singleton (hero_title,
+    hero_intro), `settings` singleton (email, phone) and `articles` (teaser). Contact
+    fallbacks come from theme.yaml (contact.*). Adapt the names to the site's ContentTypes.
+
+    Autoescaping is off for .txt templates; every CMS value goes through html_to_text,
+    markdown_label or markdown_url. Variables: today (Y-m-d), now, baseUrl, locale.
+-#}
+{%- autoescape false -%}
+{#- setcontent throws for an unknown ContentType: query only the ones the site defines. -#}
+{%- set homepage = null -%}
+{%- set settings = null -%}
+{%- set articles = [] -%}
+{%- if config.get('contenttypes/homepage') -%}{%- setcontent homepage = 'homepage' -%}{%- endif -%}
+{%- if config.get('contenttypes/settings') -%}{%- setcontent settings = 'settings' -%}{%- endif -%}
+{#- `page 1`, so `?page=` in the URL can never select another page of records. -#}
+{%- if config.get('contenttypes/articles') -%}{%- setcontent articles = 'articles' limit 50 page 1 -%}{%- endif -%}
+{#- `??` keeps the template working when a singleton record does not exist yet. -#}
+{%- set email = (settings.email ?? '')|default(config.get('theme/contact/email')) -%}
+{%- set phone = (settings.phone ?? '')|default(config.get('theme/contact/phone')) -%}
+{%- set hero_title = homepage.hero_title ?? '' -%}
+{%- set hero_intro = homepage.hero_intro ?? '' -%}
+{%- set address = config.get('theme/contact/address') -%}
+
+{%- set summary = (hero_intro|default(hero_title)|default(config.get('general/payoff')))|html_to_text(200) -%}
+
+# {{ config.get('general/sitename')|html_to_text }}
+
+{% if summary is not empty %}
+> {{ summary }}
+
+{% endif %}
+This file is generated from the website's content management system; the facts below are what the website showed on {{ today }}.
+
+{% if hero_title is not empty %}
+**About:**
+- {{ hero_title|html_to_text }}
+{% endif %}
+
+{% if email or phone or address %}
+**Contact:**
+{% if email %}
+- Email: {{ email|html_to_text }}
+{% endif %}
+{% if phone %}
+- Phone: {{ phone|html_to_text }}
+{% endif %}
+{% if address %}
+- Address: {{ address|html_to_text }}
+{% endif %}
+{% endif %}
+
+## Website pages
+
+- [Homepage]({{ baseUrl }}/): the website's main page.
+
+{% if articles is not empty %}
+## Articles
+
+{% for article in articles %}
+- [{{ article|title|markdown_label }}]({{ article|link(true) }}){{ article.teaser is defined and article.teaser is not empty ? ': ' ~ article.teaser|html_to_text(200) }}
+{% endfor %}
+
+{% endif %}
+## Optional
+
+- [Sitemap]({{ baseUrl }}/sitemap.xml): XML sitemap of all published pages.
+{% endautoescape %}

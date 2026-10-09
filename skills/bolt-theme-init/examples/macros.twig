@@ -1,0 +1,60 @@
+{#
+  Theme Macros.
+  Reusable helper functions for typography, price formatting, admin edit links, and external links.
+  Import with: {% import 'macros.twig' as macros %}
+#}
+
+{# Admin quick edit button — rendered only for logged-in editors (edit_link is empty otherwise). #}
+{% macro edit(content, label = "✏️ Upravit") %}
+    {% if content|edit_link %}
+        <a href="{{ content|edit_link }}"
+           class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-ink bg-surface rounded-sm border border-stroke hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent shadow-xs z-50 print:hidden transition-colors"
+           title="Upravit v administraci Bolt">
+            <span>{{ label }}</span>
+        </a>
+    {% endif %}
+{% endmacro %}
+
+{#
+  Czech typography glue: a non-breaking space after one-letter prepositions and
+  conjunctions (a, i, k, o, s, u, v, z) and the ampersand, so they never end a line.
+
+  The text is escaped first and the replacement inserts the HTML entity &nbsp;.
+  Do not write ' ' here: Twig string literals do not support \u escapes, so it
+  would render literally as "u00A0".
+#}
+{% macro typo(text) %}
+    {{- text|e|replace({
+        ' a ': ' a&nbsp;',
+        ' i ': ' i&nbsp;',
+        ' k ': ' k&nbsp;',
+        ' o ': ' o&nbsp;',
+        ' s ': ' s&nbsp;',
+        ' u ': ' u&nbsp;',
+        ' v ': ' v&nbsp;',
+        ' z ': ' z&nbsp;',
+        ' A ': ' A&nbsp;',
+        ' I ': ' I&nbsp;',
+        ' K ': ' K&nbsp;',
+        ' O ': ' O&nbsp;',
+        ' S ': ' S&nbsp;',
+        ' U ': ' U&nbsp;',
+        ' V ': ' V&nbsp;',
+        ' Z ': ' Z&nbsp;',
+        ' &amp; ': ' &amp;&nbsp;'
+    })|raw -}}
+{% endmacro %}
+
+{# Czech currency formatting: 1290 → "1 290 Kč" #}
+{% macro formatPrice(price) %}
+    {{- price|number_format(0, '', ' ') ~ ' Kč' -}}
+{% endmacro %}
+
+{# Link attributes with external detection: external links open in a new tab safely. #}
+{% macro linkAttributes(href) %}
+    {% set is_external = href starts with 'http://' or href starts with 'https://' or href starts with '//' %}
+    href="{{ is_external ? href : locale_link(href) }}"
+    {% if is_external %}
+        target="_blank" rel="noopener noreferrer"
+    {% endif %}
+{% endmacro %}

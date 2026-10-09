@@ -1,0 +1,42 @@
+{#
+  Pure Component: Empty State
+  Rules: Zero setcontent.
+
+  Props:
+    - message (string|optional): Description of the empty state (default: empty.message)
+    - title (string|optional): Heading (default: empty.title)
+    - icon (string|optional): SVG or icon
+    - action_label (string|optional): Button text
+    - action_href (string|optional): Button link
+
+  Translation keys: empty.title, empty.message
+#}
+
+<div class="py-16 px-6 text-center flex flex-col items-center justify-center max-w-md mx-auto">
+    <div class="size-16 rounded-full bg-surface text-ink-3 flex items-center justify-center mb-4">
+        {% if icon is defined and icon is not empty %}
+            {{ icon|raw }}
+        {% else %}
+            <svg viewBox="0 0 24 24" class="size-8" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+            </svg>
+        {% endif %}
+    </div>
+
+    <h3 class="text-lg font-semibold text-ink mb-1">
+        {{ title|default(__('empty.title')) }}
+    </h3>
+
+    <p class="text-sm text-ink-2 mb-6">
+        {{ message|default(__('empty.message')) }}
+    </p>
+
+    {% if action_label is defined and action_href is defined %}
+        {% include 'components/ui/button.twig' with {
+            label: action_label,
+            href: action_href,
+            variant: 'outline',
+            size: 'sm'
+        } %}
+    {% endif %}
+</div>

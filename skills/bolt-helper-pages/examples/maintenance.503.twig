@@ -1,0 +1,28 @@
+{#
+  503 — Planned Maintenance.
+  Uses the standalone layout (_helper_template_without_master.twig): while the site
+  is under maintenance, navigation links and public forms may fail, so the page
+  presents direct contact channels instead.
+#}
+{% extends 'helper-pages/_helper_template_without_master.twig' %}
+
+{% set title = 'Probíhá údržba webu' %}
+
+{% block head %}
+    {{ include('helper-pages/_helper_scene_styles.twig') }}
+{% endblock head %}
+
+{% block mainHelper %}
+    {{ include('helper-pages/_helper_scene.twig', {
+        code: '503',
+        eyebrow: 'Odstávka · Plánovaná údržba',
+        heading: 'Právě provádíme údržbu webu',
+        lead: 'Omlouváme se za dočasné omezení. Web brzy opět poběží na plný výkon. Děkujeme za vaši trpělivost.',
+        progress: true,
+        buttons: [
+            { label: 'info@example.com', href: 'mailto:info@example.com', variant: 'primary' },
+            { label: '+420 123 456 789', href: 'tel:+420123456789', variant: 'secondary' }
+        ],
+        note: 'V případě naléhavých dotazů nás prosím kontaktujte telefonicky nebo e-mailem.'
+    }) }}
+{% endblock mainHelper %}

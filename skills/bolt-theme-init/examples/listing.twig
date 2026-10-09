@@ -1,0 +1,34 @@
+{#
+  listing.twig — generic fallback for ContentType listings without their own listing_template.
+  Dedicated listings live in pages/<name>/<name>.twig.
+#}
+{% extends 'partials/_master.twig' %}
+{% import 'macros.twig' as macros %}
+
+{% block main %}
+    <section class="wrapper px-edge py-section">
+        <h1 class="font-display text-section text-ink">
+            {{ contenttype.name|default(records|first ? (records|first).definition.name : '') }}
+        </h1>
+
+        <ul role="list" class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {% for item in records %}
+                <li class="card relative p-6">
+                    <h2 class="font-display text-card text-ink">
+                        <a href="{{ item|link }}" class="focus:outline-none">
+                            <span class="absolute inset-0" aria-hidden="true"></span>
+                            {{ macros.typo(item|title) }}
+                        </a>
+                    </h2>
+                    <p class="mt-2 text-body text-ink-2">{{ item|excerpt(160) }}</p>
+                </li>
+            {% else %}
+                <li class="text-ink-2">{{ __('listing.empty') }}</li>
+            {% endfor %}
+        </ul>
+
+        {# Bolt's pager() reads the Pagerfanta `records`; bolt-theme-templates ships a styled
+           template: pager(records, template = 'components/ui/pagination.twig') #}
+        {{ pager(records) }}
+    </section>
+{% endblock main %}

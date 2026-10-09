@@ -1,0 +1,31 @@
+# config/services.yaml snippet for bolt-runtime-extensions
+
+parameters:
+  locale: cs
+  app_locales: cs|en
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+    bind:
+      $locales: '%app_locales%'
+      $defaultLocale: '%locale%'
+      $projectDir: '%kernel.project_dir%'
+
+  # Auto-registers all App\ classes in src/
+  App\:
+    resource: '../src/*'
+    exclude:
+      - ../src/DependencyInjection/
+      - ../src/Entity/
+      - ../src/Exception/
+      - ../src/Kernel.php
+
+  # Explicit service configuration for LocaleLinkExtension
+  App\LocaleLinkExtension:
+    arguments:
+      $appLocales: '%app_locales%'
+      $defaultLocale: '%locale%'
+    tags: [ 'twig.extension' ]

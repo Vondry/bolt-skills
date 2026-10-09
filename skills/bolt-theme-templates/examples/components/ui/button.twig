@@ -1,0 +1,64 @@
+{#
+  Pure Component: UI Button
+  Rules: Zero setcontent. Purely presentational.
+
+  Props:
+    - label (string): Button label text
+    - href (string|optional): If provided, renders an <a> link, else <button>.
+        Internal paths go through locale_link(); external URLs (http://, https://, //)
+        open in a new tab with rel="noopener noreferrer"; tel:/mailto: stay as they are.
+    - variant (string|optional): 'primary' | 'secondary' | 'dark' | 'outline' | 'light-outline' | 'ghost' (default: 'primary')
+        'light-outline' is the outline variant for dark backgrounds (hero, night bands).
+    - size (string|optional): 'sm' | 'md' | 'lg' (default: 'md')
+    - icon (string|optional): Raw SVG or icon name
+    - icon_position (string|optional): 'left' | 'right' (default: 'right')
+    - type (string|optional): 'button' | 'submit' (default: 'button')
+    - class (string|optional): Additional Tailwind classes
+    - disabled (bool|optional): Disabled state
+    - aria_label (string|optional): Accessibility label
+
+  Classes come from the design tokens of bolt-tailwind-theme (accent, ink, surface, stroke,
+  night). Variant and size maps hold full static class strings so Tailwind can scan them.
+#}
+
+{% set base_styles = "inline-flex items-center justify-center font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:pointer-events-none" %}
+
+{% set variant_map = {
+    'primary':       'bg-accent hover:bg-accent-hover text-accent-ink shadow-sm focus-visible:outline-accent',
+    'secondary':     'bg-surface hover:bg-surface-2 text-ink border border-stroke focus-visible:outline-ink',
+    'dark':          'bg-night hover:bg-night-deep text-night-ink shadow-sm focus-visible:outline-night',
+    'outline':       'bg-transparent border border-stroke hover:border-ink text-ink focus-visible:outline-ink',
+    'light-outline': 'bg-transparent border border-night-ink/30 hover:border-night-ink hover:bg-night-ink/10 text-night-ink focus-visible:outline-night-ink',
+    'ghost':         'bg-transparent hover:bg-surface text-ink-2 hover:text-ink focus-visible:outline-ink'
+} %}
+{% set variant_styles = variant_map[variant|default('primary')]|default(variant_map['primary']) %}
+
+{% set size_map = {
+    'sm': 'text-xs px-3 py-1.5 rounded-sm gap-1.5',
+    'md': 'text-sm px-5 py-2.5 rounded-sm gap-2',
+    'lg': 'text-base px-6 py-3.5 rounded-md gap-2.5'
+} %}
+{% set size_styles = size_map[size|default('md')]|default(size_map['md']) %}
+
+{% set full_classes = [base_styles, variant_styles, size_styles, class|default('')]|join(' ')|trim %}
+
+{% if href is defined and href is not empty %}
+    {% set is_external = href starts with 'http://' or href starts with 'https://' or href starts with '//' %}
+    <a href="{{ is_external ? href : locale_link(href) }}"
+       class="{{ full_classes }}"
+       {% if is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+       {% if aria_label is defined %}aria-label="{{ aria_label }}"{% endif %}>
+        {% if icon is defined and icon_position|default('right') == 'left' %}{{ icon|raw }}{% endif %}
+        <span>{{ label }}</span>
+        {% if icon is defined and icon_position|default('right') == 'right' %}{{ icon|raw }}{% endif %}
+    </a>
+{% else %}
+    <button type="{{ type|default('button') }}"
+            class="{{ full_classes }}"
+            {% if disabled|default(false) %}disabled{% endif %}
+            {% if aria_label is defined %}aria-label="{{ aria_label }}"{% endif %}>
+        {% if icon is defined and icon_position|default('right') == 'left' %}{{ icon|raw }}{% endif %}
+        <span>{{ label }}</span>
+        {% if icon is defined and icon_position|default('right') == 'right' %}{{ icon|raw }}{% endif %}
+    </button>
+{% endif %}

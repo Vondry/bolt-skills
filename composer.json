@@ -1,0 +1,30 @@
+{
+    "name": "vondry/bolt-skills",
+    "description": "Collection of AI agent skills, workflows, and runbooks for Bolt CMS",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Tomáš Vondráček",
+            "homepage": "https://github.com/Vondry"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "composer-plugin-api": "^2.0"
+    },
+    "require-dev": {
+        "composer/composer": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vondry\\BoltSkills\\": "src/"
+        }
+    },
+    "extra": {
+        "class": "Vondry\\BoltSkills\\Plugin",
+        "antigravity": {
+            "skills": "skills"
+        }
+    }
+}

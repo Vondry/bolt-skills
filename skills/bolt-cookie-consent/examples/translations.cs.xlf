@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="cs">
+  <file id="messages.cs">
+    <!-- Cookie Banner Units -->
+    <unit id="cookie_title" name="cookie.title"><segment><source>cookie.title</source><target>Nastavení cookies</target></segment></unit>
+    <unit id="cookie_text" name="cookie.text"><segment><source>cookie.text</source><target>Používáme cookies k zajištění správného fungování webu, měření návštěvnosti a personalizaci reklam. Souhlas můžete kdykoliv změnit v patičce webu.</target></segment></unit>
+    <unit id="cookie_details" name="cookie.details"><segment><source>cookie.details</source><target>Podrobnosti</target></segment></unit>
+    <unit id="cookie_reject" name="cookie.reject"><segment><source>cookie.reject</source><target>Odmítnout vše</target></segment></unit>
+    <unit id="cookie_accept" name="cookie.accept"><segment><source>cookie.accept</source><target>Přijmout vše</target></segment></unit>
+    <unit id="cookie_customize" name="cookie.customize"><segment><source>cookie.customize</source><target>Nastavení</target></segment></unit>
+    <unit id="cookie_save" name="cookie.save"><segment><source>cookie.save</source><target>Uložit nastavení</target></segment></unit>
+    <unit id="cookie_always_active" name="cookie.always_active"><segment><source>cookie.always_active</source><target>Vždy aktivní</target></segment></unit>
+    <unit id="cookie_nec_title" name="cookie.necessary.title"><segment><source>cookie.necessary.title</source><target>Nezbytné technické cookies</target></segment></unit>
+    <unit id="cookie_nec_desc" name="cookie.necessary.desc"><segment><source>cookie.necessary.desc</source><target>Zajišťují základní funkce a bezpečnost webu. Nelze je deaktivovat.</target></segment></unit>
+    <unit id="cookie_ana_title" name="cookie.analytics.title"><segment><source>cookie.analytics.title</source><target>Analytické cookies</target></segment></unit>
+    <unit id="cookie_ana_desc" name="cookie.analytics.desc"><segment><source>cookie.analytics.desc</source><target>Pomáhají nám porozumět chování návštěvníků a vylepšovat web (Google Analytics).</target></segment></unit>
+    <unit id="cookie_mkt_title" name="cookie.marketing.title"><segment><source>cookie.marketing.title</source><target>Marketingové cookies</target></segment></unit>
+    <unit id="cookie_mkt_desc" name="cookie.marketing.desc"><segment><source>cookie.marketing.desc</source><target>Slouží k měření účinnosti reklam a retargetingu (Seznam Sklik, Meta).</target></segment></unit>
+    <unit id="footer_cookie_settings" name="footer.cookie_settings"><segment><source>footer.cookie_settings</source><target>Nastavení cookies</target></segment></unit>
+
+    <!-- Privacy Policy Units -->
+    <unit id="priv_title" name="privacy.title"><segment><source>privacy.title</source><target>Zásady ochrany osobních údajů</target></segment></unit>
+    <unit id="priv_updated" name="privacy.last_updated"><segment><source>privacy.last_updated</source><target>Poslední aktualizace: 2026</target></segment></unit>
+    <unit id="priv_ctrl_h" name="privacy.controller.heading"><segment><source>privacy.controller.heading</source><target>1. Správce údajů</target></segment></unit>
+    <unit id="priv_ctrl_lbl" name="privacy.controller.label"><segment><source>privacy.controller.label</source><target>Správce:</target></segment></unit>
+    <unit id="priv_ctrl_txt" name="privacy.controller.text"><segment><source>privacy.controller.text</source><target>Provozovatel webu, IČO a sídlo dle kontaktů na webu.</target></segment></unit>
+    <unit id="priv_contacts_lbl" name="privacy.contacts.label"><segment><source>privacy.contacts.label</source><target>Kontakty:</target></segment></unit>
+    <unit id="priv_proc_h" name="privacy.processing.heading"><segment><source>privacy.processing.heading</source><target>2. Zpracovávané údaje a účely</target></segment></unit>
+    <unit id="priv_proc_intro" name="privacy.processing.intro"><segment><source>privacy.processing.intro</source><target>Osobní údaje zpracováváme pro následující účely:</target></segment></unit>
+    <unit id="priv_proc_inq_lbl" name="privacy.processing.inquiry.label"><segment><source>privacy.processing.inquiry.label</source><target>Vyřízení poptávky a komunikace:</target></segment></unit>
+    <unit id="priv_proc_inq_txt" name="privacy.processing.inquiry.text"><segment><source>privacy.processing.inquiry.text</source><target>jméno, e-mail, telefon pro odpověď na váš dotaz</target></segment></unit>
+    <unit id="priv_proc_ana_lbl" name="privacy.processing.analytics.label"><segment><source>privacy.processing.analytics.label</source><target>Měření návštěvnosti:</target></segment></unit>
+    <unit id="priv_proc_ana_txt" name="privacy.processing.analytics.text"><segment><source>privacy.processing.analytics.text</source><target>anonymizované informace o návštěvě webu v Google Analytics v režimu souhlasu</target></segment></unit>
+    <unit id="priv_proc_mkt_lbl" name="privacy.processing.retargeting.label"><segment><source>privacy.processing.retargeting.label</source><target>Retargeting &amp; marketing:</target></segment></unit>
+    <unit id="priv_proc_mkt_txt" name="privacy.processing.retargeting.text"><segment><source>privacy.processing.retargeting.text</source><target>marketingové měření (Sklik, Meta) pouze po udělení souhlasu</target></segment></unit>
+    <unit id="priv_track_h" name="privacy.tracking.heading"><segment><source>privacy.tracking.heading</source><target>3. Používané sledovací kódy</target></segment></unit>
+    <unit id="priv_tbl_svc" name="privacy.table.service"><segment><source>privacy.table.service</source><target>Služba</target></segment></unit>
+    <unit id="priv_tbl_id" name="privacy.table.id"><segment><source>privacy.table.id</source><target>Identifikátor</target></segment></unit>
+    <unit id="priv_tbl_type" name="privacy.table.type"><segment><source>privacy.table.type</source><target>Typ</target></segment></unit>
+    <unit id="priv_tbl_consent" name="privacy.table.consent"><segment><source>privacy.table.consent</source><target>Požadavek na souhlas</target></segment></unit>
+    <unit id="priv_tbl_prov" name="privacy.table.provider"><segment><source>privacy.table.provider</source><target>Poskytovatel</target></segment></unit>
+    <unit id="priv_tbl_purp" name="privacy.table.purpose"><segment><source>privacy.table.purpose</source><target>Účel</target></segment></unit>
+    <unit id="priv_tbl_dur" name="privacy.table.duration"><segment><source>privacy.table.duration</source><target>Doba uchování</target></segment></unit>
+    <unit id="priv_sklik_id" name="privacy.sklik.id"><segment><source>privacy.sklik.id</source><target>Retargeting kód Sklik</target></segment></unit>
+    <unit id="priv_type_mkt" name="privacy.type.marketing"><segment><source>privacy.type.marketing</source><target>Marketingové</target></segment></unit>
+    <unit id="priv_type_ana" name="privacy.type.analytics"><segment><source>privacy.type.analytics</source><target>Analytické</target></segment></unit>
+    <unit id="priv_cons_req" name="privacy.consent.required"><segment><source>privacy.consent.required</source><target>Vyžadován aktivní souhlas</target></segment></unit>
+    <unit id="priv_cons_ana" name="privacy.consent.analytics"><segment><source>privacy.consent.analytics</source><target>Souhlas pro analytické cookies</target></segment></unit>
+    <unit id="priv_ga_h" name="privacy.ga.heading"><segment><source>privacy.ga.heading</source><target>4. Google Analytics (Consent Mode v2)</target></segment></unit>
+    <unit id="priv_ga_cmb" name="privacy.ga.consent_mode_before"><segment><source>privacy.ga.consent_mode_before</source><target>Google Analytics je spuštěn v režimu souhlasu. Před udělením souhlasu je nastaveno</target></segment></unit>
+    <unit id="priv_ga_cma" name="privacy.ga.consent_mode_after"><segment><source>privacy.ga.consent_mode_after</source><target>a reklamní parametry jsou zakázané. Žádné cookies se neukládají.</target></segment></unit>
+    <unit id="priv_ga_ac" name="privacy.ga.after_consent"><segment><source>privacy.ga.after_consent</source><target>Po udělení souhlasu může Google Analytics zpracovávat statistická data o návštěvnosti:</target></segment></unit>
+    <unit id="priv_ga_ip" name="privacy.ga.ip"><segment><source>privacy.ga.ip</source><target>IP adresa (anonymizována)</target></segment></unit>
+    <unit id="priv_ga_dev" name="privacy.ga.device"><segment><source>privacy.ga.device</source><target>Prohlížeč, typ zařízení a operační systém</target></segment></unit>
+    <unit id="priv_ga_beh" name="privacy.ga.behaviour"><segment><source>privacy.ga.behaviour</source><target>Interakce na webu (zobrazené stránky, doba návštěvy)</target></segment></unit>
+    <unit id="priv_ga_prov" name="privacy.ga.provider"><segment><source>privacy.ga.provider</source><target>Poskytovatelem je Google Ireland Ltd. Data mohou být zpracována v souladu s mechanismy EU-U.S. Data Privacy Framework.</target></segment></unit>
+    <unit id="priv_sklik_h" name="privacy.sklik.heading"><segment><source>privacy.sklik.heading</source><target>5. Sklik Retargeting</target></segment></unit>
+    <unit id="priv_sklik_intro" name="privacy.sklik.intro"><segment><source>privacy.sklik.intro</source><target>Retargeting Seznam.cz se načítá a aktivuje pouze po vašem výslovném souhlasu:</target></segment></unit>
+    <unit id="priv_sklik_nc" name="privacy.sklik.no_consent"><segment><source>privacy.sklik.no_consent</source><target>Bez udělení souhlasu se retargetingový skript nespouští.</target></segment></unit>
+    <unit id="priv_sklik_acc" name="privacy.sklik.accepted"><segment><source>privacy.sklik.accepted</source><target>Po potvrzení souhlasu (aktivní retargeting)</target></segment></unit>
+    <unit id="priv_ck_h" name="privacy.cookies.heading"><segment><source>privacy.cookies.heading</source><target>6. Přehled cookies</target></segment></unit>
+    <unit id="priv_ck_retarget" name="privacy.cookies.retargeting"><segment><source>privacy.cookies.retargeting</source><target>Retargeting a personalizace reklamy</target></segment></unit>
+    <unit id="priv_ck_d90" name="privacy.cookies.days_90"><segment><source>privacy.cookies.days_90</source><target>90 dní</target></segment></unit>
+    <unit id="priv_ck_at" name="privacy.cookies.analytics_type"><segment><source>privacy.cookies.analytics_type</source><target>Analytické</target></segment></unit>
+    <unit id="priv_ck_stat" name="privacy.cookies.statistics"><segment><source>privacy.cookies.statistics</source><target>Statistika návštěvnosti webu</target></segment></unit>
+    <unit id="priv_ck_gadur" name="privacy.cookies.ga_duration"><segment><source>privacy.cookies.ga_duration</source><target>Až 2 roky pro cookies; 14 měsíců pro data</target></segment></unit>
+    <unit id="priv_ck_own" name="privacy.cookies.own_provider"><segment><source>privacy.cookies.own_provider</source><target>Vlastní (web)</target></segment></unit>
+    <unit id="priv_ck_tech" name="privacy.cookies.technical_type"><segment><source>privacy.cookies.technical_type</source><target>Technické nezbytné</target></segment></unit>
+    <unit id="priv_ck_cchoice" name="privacy.cookies.consent_choice"><segment><source>privacy.cookies.consent_choice</source><target>Uložení volby souhlasu uživatele</target></segment></unit>
+    <unit id="priv_ck_cdur" name="privacy.cookies.consent_duration"><segment><source>privacy.cookies.consent_duration</source><target>1 rok nebo do vymazání dat prohlížeče</target></segment></unit>
+    <unit id="priv_rights_h" name="privacy.rights.heading"><segment><source>privacy.rights.heading</source><target>7. Vaše práva a správa souhlasu</target></segment></unit>
+    <unit id="priv_rights_w_lbl" name="privacy.rights.withdraw.label"><segment><source>privacy.rights.withdraw.label</source><target>Odvolání souhlasu:</target></segment></unit>
+    <unit id="priv_rights_del_lbl" name="privacy.rights.retargeting_delete.label"><segment><source>privacy.rights.retargeting_delete.label</source><target>Žádost o výmaz z databáze:</target></segment></unit>
+    <unit id="priv_rights_del_txt" name="privacy.rights.retargeting_delete.text"><segment><source>privacy.rights.retargeting_delete.text</source><target>e-mailem na adresu správce</target></segment></unit>
+    <unit id="priv_rights_comp_lbl" name="privacy.rights.complaint.label"><segment><source>privacy.rights.complaint.label</source><target>Právo na stížnost:</target></segment></unit>
+    <unit id="priv_rights_comp_txt" name="privacy.rights.complaint.text"><segment><source>privacy.rights.complaint.text</source><target>Máte právo podat stížnost u dozorového úřadu (Úřad pro ochranu osobních údajů)</target></segment></unit>
+    <unit id="priv_ico_lbl" name="privacy.ico.label"><segment><source>privacy.ico.label</source><target>IČO:</target></segment></unit>
+    <unit id="priv_track_lbl" name="privacy.tracking.label"><segment><source>privacy.tracking.label</source><target>Sledovací technologie:</target></segment></unit>
+    <unit id="cookie_hide_details" name="cookie.hide_details"><segment><source>cookie.hide_details</source><target>Skrýt podrobnosti</target></segment></unit>
+    <unit id="priv_rights_w_btn" name="privacy.rights.withdraw.button"><segment><source>privacy.rights.withdraw.button</source><target>Otevřít nastavení cookies</target></segment></unit>
+  </file>
+</xliff>

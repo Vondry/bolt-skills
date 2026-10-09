@@ -1,0 +1,83 @@
+{#
+  Smart Container: Reusable Contact Section
+  Rules: Reads contact details from theme.yaml (contact.phone, contact.email,
+         contact.address, contact.hours) and renders contact cards plus call/e-mail CTAs.
+  The section id "kontakt" is the target of `/#kontakt` menu links (bolt-menu).
+
+  Translation keys: contact.eyebrow, contact.title, contact.description, contact.phone_label,
+                    contact.email_label, contact.reply_time, contact.address_label
+#}
+
+{% set phone = config.get('theme/contact/phone') %}
+{% set email = config.get('theme/contact/email') %}
+{% set address = config.get('theme/contact/address') %}
+{% set hours = config.get('theme/contact/hours') %}
+
+<section id="kontakt" aria-labelledby="contact-title" class="py-section bg-surface border-t border-stroke">
+    <div class="wrapper px-edge flex flex-col lg:flex-row items-start justify-between gap-12">
+
+        {# Left Column: Heading and intro #}
+        <div class="flex flex-col gap-4 max-w-lg">
+            <span class="eyebrow">{{ __('contact.eyebrow') }}</span>
+            <h2 id="contact-title" class="font-display text-section font-semibold text-ink">
+                {{ __('contact.title') }}
+            </h2>
+            <p class="text-lead text-ink-2 leading-relaxed">
+                {{ __('contact.description') }}
+            </p>
+
+            <div class="pt-4 flex flex-wrap gap-4">
+                {% if phone %}
+                    {% include 'components/ui/button.twig' with {
+                        label: phone,
+                        href: 'tel:' ~ phone|replace({' ': ''}),
+                        variant: 'primary',
+                        size: 'md'
+                    } %}
+                {% endif %}
+                {% if email %}
+                    {% include 'components/ui/button.twig' with {
+                        label: email,
+                        href: 'mailto:' ~ email,
+                        variant: 'outline',
+                        size: 'md'
+                    } %}
+                {% endif %}
+            </div>
+        </div>
+
+        {# Right Column: Contact Cards Grid #}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full lg:max-w-xl">
+            {% if phone %}
+                <div class="card p-6 flex flex-col gap-2">
+                    <span class="eyebrow">{{ __('contact.phone_label') }}</span>
+                    <a href="tel:{{ phone|replace({' ': ''}) }}" class="text-lg font-bold text-ink hover:text-accent transition-colors">
+                        {{ phone }}
+                    </a>
+                    {% if hours %}
+                        <span class="text-meta text-ink-3">{{ hours }}</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if email %}
+                <div class="card p-6 flex flex-col gap-2">
+                    <span class="eyebrow">{{ __('contact.email_label') }}</span>
+                    <a href="mailto:{{ email }}" class="text-lg font-bold text-ink hover:text-accent transition-colors break-all">
+                        {{ email }}
+                    </a>
+                    <span class="text-meta text-ink-3">{{ __('contact.reply_time') }}</span>
+                </div>
+            {% endif %}
+
+            {% if address %}
+                <div class="card p-6 flex flex-col gap-2 sm:col-span-2">
+                    <span class="eyebrow">{{ __('contact.address_label') }}</span>
+                    <p class="text-base font-semibold text-ink leading-snug">
+                        {{ address }}
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>

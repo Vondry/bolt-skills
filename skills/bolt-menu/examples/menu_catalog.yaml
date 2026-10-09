@@ -1,0 +1,56 @@
+# Menu configuration: Hierarchical multi-page catalog with nested submenus
+#
+# Labels are defined per-locale (`cs`, `en`, `de`).
+# Links are defined without locale prefixes; Twig prepends locale via `locale_link()`.
+# Each link must match a ContentType listing/record URL or a static route.
+
+# --- Primary navigation (header) ---------------------------------------------
+main:
+  - label: { cs: 'O nás', en: 'About us', de: 'Über uns' }
+    link: /o-nas
+  - label: { cs: 'Produkty', en: 'Products', de: 'Produkte' }
+    link: /produkty
+    class: has-submenu
+    submenu:
+      - label: { cs: 'Všechny produkty', en: 'All products', de: 'Alle Produkte' }
+        link: /produkty
+      - label: { cs: 'Příslušenství', en: 'Accessories', de: 'Zubehör' }
+        link: /prislusenstvi
+      - label: { cs: 'Náhradní díly', en: 'Spare parts', de: 'Ersatzteile' }
+        link: /nahradni-dily
+  - label: { cs: 'Služby', en: 'Services', de: 'Leistungen' }
+    link: /sluzby
+  - label: { cs: 'Reference', en: 'References', de: 'Referenzen' }
+    link: /reference
+  - label: { cs: 'Kariéra', en: 'Careers', de: 'Karriere' }
+    link: /kariera
+  - label: { cs: 'Kontakt', en: 'Contact', de: 'Kontakt' }
+    link: /kontakt
+    class: cta
+
+# --- Footer link columns -----------------------------------------------------
+footer:
+  - label: { cs: 'Produkty', en: 'Products', de: 'Produkte' }
+    submenu:
+      - label: { cs: 'Všechny produkty', en: 'All products', de: 'Alle Produkte' }
+        link: /produkty
+      - label: { cs: 'Příslušenství', en: 'Accessories', de: 'Zubehör' }
+        link: /prislusenstvi
+      - label: { cs: 'Náhradní díly', en: 'Spare parts', de: 'Ersatzteile' }
+        link: /nahradni-dily
+      - label: { cs: 'Dokumenty ke stažení', en: 'Downloads', de: 'Downloads' }
+        link: /ke-stazeni
+  - label: { cs: 'Společnost', en: 'Company', de: 'Unternehmen' }
+    submenu:
+      - label: { cs: 'O nás', en: 'About us', de: 'Über uns' }
+        link: /o-nas
+      - label: { cs: 'Reference', en: 'References', de: 'Referenzen' }
+        link: /reference
+      - label: { cs: 'Kariéra', en: 'Careers', de: 'Karriere' }
+        link: /kariera
+      - label: { cs: 'Kontakt', en: 'Contact', de: 'Kontakt' }
+        link: /kontakt
+  - label: { cs: 'Právní informace', en: 'Legal', de: 'Rechtliches' }
+    submenu:
+      - label: { cs: 'Zásady ochrany osobních údajů', en: 'Privacy Policy', de: 'Datenschutz' }
+        link: /zasady-ochrany-osobnich-udaju

@@ -1,0 +1,51 @@
+{#
+  Page-Scoped Pure Component: Homepage Hero Banner
+  Scope: Exclusive to pages/homepage/homepage.twig
+  Rules: Zero setcontent. Reads only the record passed in.
+
+  Props:
+    - record: the homepage singleton (fields hero_title, hero_subtitle, hero_eyebrow,
+              hero_cta_label, hero_cta_link — all optional)
+
+  Translation keys: hero.eyebrow, hero.primary_cta, hero.contact_cta
+#}
+{% import 'macros.twig' as macros %}
+
+{% set title = record.hero_title|default(config.get('general/sitename')) %}
+{% set subtitle = record.hero_subtitle|default(config.get('general/payoff')) %}
+{% set primary_cta = record.hero_cta_label|default(__('hero.primary_cta')) %}
+{% set primary_link = record.hero_cta_link|default('/produkty') %}
+
+<section class="relative bg-night text-night-ink overflow-hidden py-20 lg:py-32">
+    <div class="wrapper px-edge relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto">
+        <span class="text-xs sm:text-sm font-bold tracking-widest uppercase text-accent-ink-2 mb-4">
+            {{ record.hero_eyebrow|default(__('hero.eyebrow')) }}
+        </span>
+
+        <h1 class="font-display text-hero font-semibold tracking-tight leading-tight mb-6">
+            {{ macros.typo(title) }}
+        </h1>
+
+        {% if subtitle %}
+            <p class="text-lead text-night-ink-2 max-w-2xl leading-relaxed mb-8">
+                {{ subtitle }}
+            </p>
+        {% endif %}
+
+        <div class="flex flex-wrap items-center justify-center gap-4">
+            {% include 'components/ui/button.twig' with {
+                label: primary_cta,
+                href: primary_link,
+                variant: 'primary',
+                size: 'lg'
+            } %}
+
+            {% include 'components/ui/button.twig' with {
+                label: __('hero.contact_cta'),
+                href: '/#kontakt',
+                variant: 'light-outline',
+                size: 'lg'
+            } %}
+        </div>
+    </div>
+</section>

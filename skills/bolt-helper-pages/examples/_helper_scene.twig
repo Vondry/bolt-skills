@@ -1,0 +1,60 @@
+{#
+  Error scene — shared markup for every helper page.
+  Uses purely scoped semantic classes styled in _helper_scene_styles.twig.
+  Does NOT use arbitrary Tailwind utility classes, preventing CSS bundle bloat.
+
+  Params:
+    code      — status code (e.g. '404', '403', '500', '503')
+    eyebrow   — small label (e.g. 'Chyba 404 · Stránka nenalezena')
+    heading   — main h1 text
+    lead      — explanatory paragraph
+    field_key — optional: label for requested path
+    field_val — optional: formatted requested URL
+    progress  — optional boolean: show maintenance progress bar
+    buttons   — optional array of { label, href, variant }
+    note      — optional footnote / contact note
+#}
+<section class="helper-scene">
+    <div class="helper-container">
+        <div class="helper-card">
+
+            <span class="helper-ghost" aria-hidden="true">{{ code }}</span>
+
+            <div class="helper-content">
+                {% if eyebrow is defined and eyebrow is not empty %}
+                    <span class="helper-eyebrow">{{ eyebrow }}</span>
+                {% endif %}
+
+                <h1 class="helper-heading">{{ heading|raw }}</h1>
+
+                <p class="helper-lead">{{ lead|raw }}</p>
+
+                {% if progress is defined and progress %}
+                    <div class="helper-progress" role="presentation"></div>
+                {% endif %}
+
+                {% if field_val is defined and field_val is not empty %}
+                    <div class="helper-field">
+                        <span class="helper-field-key">{{ field_key|default('Požadovaná adresa') }}:</span>
+                        <span class="helper-field-val">{{ field_val|raw }}</span>
+                    </div>
+                {% endif %}
+
+                {% if buttons is defined and buttons is not empty %}
+                    <div class="helper-actions">
+                        {% for b in buttons %}
+                            <a href="{{ b.href }}" class="helper-btn helper-btn--{{ b.variant|default('primary') }}">
+                                {{ b.label }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if note is defined and note is not empty %}
+                    <p class="helper-note">{{ note|raw }}</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</section>

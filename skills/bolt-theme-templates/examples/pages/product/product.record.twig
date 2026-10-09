@@ -1,0 +1,130 @@
+{% extends 'partials/_master.twig' %}
+
+{#
+  Page Orchestrator: Product Record Detail
+  Bound by the products ContentType: record_template: pages/product/product.record.twig
+  (or a root entrypoint product.record.twig).
+  Rules: Orchestrates shared pure components (breadcrumbs, picture, badge, button),
+         page-scoped components (spec-table.twig, stock-badge.twig) and containers.
+#}
+{% import 'macros.twig' as macros %}
+
+{% block main %}
+    {# 1. Breadcrumbs + admin edit link #}
+    <div class="wrapper px-edge flex items-center justify-between gap-4">
+        {% include 'components/ui/breadcrumbs.twig' with {
+            items: [
+                { label: __('products.title'), href: '/produkty' },
+                { label: record|title }
+            ]
+        } %}
+        {{ macros.edit(record) }}
+    </div>
+
+    {# 2. Main Product Showcase #}
+    <article class="wrapper px-edge py-10 lg:py-16">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+
+            {# Left: Media. One PhotoSwipe gallery for the main image and the thumbnails. #}
+            <div class="photoswipe-gallery flex flex-col gap-4">
+                {% if record.image is defined and record.image is not empty %}
+                    <div class="rounded-md overflow-hidden border border-stroke aspect-4/3 bg-surface">
+                        {% include 'components/ui/picture.twig' with {
+                            image: record.image,
+                            alt: record|title,
+                            aspect: 'aspect-4/3',
+                            loading: 'eager',
+                            pswp: true
+                        } %}
+                    </div>
+                {% else %}
+                    <div class="rounded-md border border-stroke aspect-4/3 bg-surface flex items-center justify-center text-ink-3">
+                        {{ __('products.no_image') }}
+                    </div>
+                {% endif %}
+
+                {% if record.gallery is defined and record.gallery|length > 0 %}
+                    <div class="grid grid-cols-4 gap-3">
+                        {% for thumb in record.gallery %}
+                            <div class="rounded-sm overflow-hidden aspect-square border border-stroke hover:border-accent transition-colors">
+                                {% include 'components/ui/picture.twig' with {
+                                    image: thumb,
+                                    alt: (record|title) ~ ' – ' ~ loop.index,
+                                    aspect: 'aspect-square',
+                                    pswp: true
+                                } %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Right: Overview, price, availability and inquiry CTA #}
+            <div class="flex flex-col gap-6">
+                <div class="flex flex-wrap items-center gap-3">
+                    {% if record.category is defined and record.category is not empty %}
+                        {% include 'components/ui/badge.twig' with {
+                            label: record.category,
+                            variant: 'accent',
+                            size: 'md'
+                        } %}
+                    {% endif %}
+                    {% if record.stock is defined %}
+                        {% include 'pages/product/components/stock-badge.twig' with { stock: record.stock } %}
+                    {% endif %}
+                </div>
+
+                <h1 class="font-display text-section font-semibold text-ink leading-tight">
+                    {{ macros.typo(record|title) }}
+                </h1>
+
+                {% if record.price is defined and record.price is not empty %}
+                    <p class="font-display text-section font-semibold text-accent">
+                        {{ macros.formatPrice(record.price) }}
+                    </p>
+                {% endif %}
+
+                {% if record.perex is defined and record.perex is not empty %}
+                    <p class="text-lead text-ink-2 leading-relaxed font-medium">
+                        {{ record.perex }}
+                    </p>
+                {% elseif record.teaser is defined and record.teaser is not empty %}
+                    <p class="text-lead text-ink-2 leading-relaxed font-medium">
+                        {{ record.teaser }}
+                    </p>
+                {% endif %}
+
+                {# Page-Scoped Component: Specifications Table #}
+                {% if record.specs is defined and record.specs|length > 0 %}
+                    {% include 'pages/product/components/spec-table.twig' with {
+                        specs: record.specs,
+                        title: __('products.technical_specs')
+                    } %}
+                {% endif %}
+
+                <div class="pt-4 flex flex-wrap gap-4">
+                    {# '#kontakt' scrolls to the contact section below. To open a contact page with
+                       the product preselected instead: '/kontakt?produkt=' ~ record.slug #}
+                    {% include 'components/ui/button.twig' with {
+                        label: __('products.inquire_cta'),
+                        href: '#kontakt',
+                        variant: 'primary',
+                        size: 'lg'
+                    } %}
+                </div>
+            </div>
+        </div>
+
+        {# 3. Rich Text Content (redactor/article output is already safe HTML) #}
+        {% if record.body is defined and record.body is not empty %}
+            <div class="mt-16 pt-12 border-t border-stroke max-w-4xl">
+                <div class="cms-redactor">
+                    {{ record.body }}
+                </div>
+            </div>
+        {% endif %}
+    </article>
+
+    {# 4. Reusable Contact Section Container (target of '#kontakt') #}
+    {% include 'containers/contact/_contact-section.twig' %}
+{% endblock main %}

@@ -1,0 +1,28 @@
+{% extends 'partials/_master.twig' %}
+
+{#
+  Page Orchestrator: Homepage
+  Rules: Zero raw HTML. Pure composition of page-scoped components and containers;
+         data queries live in containers (containers/products/_featured-products.twig).
+  Bound by the root index.twig: {% extends 'pages/homepage/homepage.twig' %}
+#}
+
+{% block main %}
+    {# 1. Hero Banner (page-scoped component) #}
+    {% include 'pages/homepage/components/hero.twig' with { record: record } %}
+
+    {# 2. Key numbers (page-scoped component; renders only when the record has metrics) #}
+    {% if record.metrics is defined %}
+        {% include 'pages/homepage/components/hero-metrics.twig' with {
+            items: record.metrics,
+            class: 'wrapper px-edge'
+        } %}
+    {% endif %}
+
+    {# 3. Featured Products (smart container — owns its setcontent query). Scaffolded only
+          for sites with a `products` ContentType, hence `ignore missing`. #}
+    {% include 'containers/products/_featured-products.twig' ignore missing with { limit: 3 } %}
+
+    {# 4. Reusable Contact Section Container #}
+    {% include 'containers/contact/_contact-section.twig' %}
+{% endblock main %}

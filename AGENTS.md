@@ -1,0 +1,45 @@
+# Bolt CMS Agent Skills
+
+This repository provides curated AI agent skills, task procedures, and verification runbooks for projects using [Bolt CMS](https://boltcms.io).
+
+## Available Skills
+
+- [`bolt-disable-api`](skills/bolt-disable-api/SKILL.md): Comprehensive procedure to disable or lock down API Platform, GraphQL, and OpenAPI documentation endpoints in Bolt CMS across both development and production environments.
+- [`bolt-add-language`](skills/bolt-add-language/SKILL.md): Step-by-step procedure to add a new language/locale with full parity across routing parameters, ContentTypes, XLIFF 2.0 catalogs, navigation menus, and theme switchers.
+- [`bolt-contenttypes`](skills/bolt-contenttypes/SKILL.md): Comprehensive guidelines, architectural rules, and verification script for creating, modifying, and validating Bolt CMS ContentTypes and fields in `config/bolt/contenttypes.yaml`.
+- [`bolt-extension-setup`](skills/bolt-extension-setup/SKILL.md): Complete setup, configuration recipes, templates, and verification script for AppoloDev/bolt-seo, bolt/sitemap-extension (with PR #5 singleton override), and Vondry/bolt-llms-txt.
+- [`bolt-helper-pages`](skills/bolt-helper-pages/SKILL.md): Comprehensive architecture, dual-base layout strategy, zero-database safety rules, and brand-aligned visual scenes for 404, 403, 500, and 503 maintenance screens.
+- [`bolt-timezone`](skills/bolt-timezone/SKILL.md): Timezone parity (Europe/Prague) across Bolt config, Kernel boot override, Docker INI, and compose environment to prevent the date-shifting save bug.
+- [`bolt-htaccess`](skills/bolt-htaccess/SKILL.md): Two-tier Apache .htaccess setup: root HTTPS redirect and ./public forwarding, plus public/.htaccess source code shielding to block templates, configs, build tooling, and sensitive metadata.
+- [`bolt-code-quality`](skills/bolt-code-quality/SKILL.md): Complete setup for Easy Coding Standard (PSR-12/cleanCode), PHPStan Level 8 static analysis on src/, unified Makefile commands (cscheck, csfix, stancheck, csclear), safe Bolt migration sync, and GitLab CI matrix (PHP 8.2–8.5).
+- [`bolt-asset-caching`](skills/bolt-asset-caching/SKILL.md): Multi-layer asset and thumbnail caching setup: resolves the Symfony firewall /thumbs session-listener cache bug, configures Bolt save_files disk caching, Apache mod_expires, Nginx static expires, and frontend ?v=X.X cache-busting.
+- [`bolt-theme-init`](skills/bolt-theme-init/SKILL.md): Bootstrap, scaffold, and verify a new Bolt CMS theme from scratch with Component/Container/Page architecture (pure components with zero setcontent, smart containers, page orchestrators with zero raw HTML, page-scoped components, and product listing/record detail examples), Tailwind CSS v4 CLI, and Rollup TypeScript build pipeline.
+- [`bolt-tailwind-theme`](skills/bolt-tailwind-theme/SKILL.md): Extract and configure Tailwind CSS v4 design tokens (@theme inline), WCAG AA contrast scales, Czech latin-ext font-faces, scanning safeguards, and the complete blueprint of repeating cross-project utilities (.wrapper, .btn variants, .card, .link-arrow, .pagination, and .cms-redactor).
+- [`bolt-runtime-extensions`](skills/bolt-runtime-extensions/SKILL.md): Deploy, register, and verify custom runtime PHP Twig extensions in `src/` (LocaleLinkExtension with query/hash preservation, ImageDimensionsExtension with cached disk probe for PhotoSwipe v5, FileSizeExtension for human-readable downloads).
+- [`bolt-menu`](skills/bolt-menu/SKILL.md): Configure, structure, and verify Bolt CMS navigation menus in `config/bolt/menu.yaml` (header `main`, footer columns, nested submenus, multilingual labels, `/#anchor` formatting, and CTA classes) with Twig Component/Container integration.
+- [`bolt-cookie-consent`](skills/bolt-cookie-consent/SKILL.md): Deploy and verify Czech ZEK § 89 / GDPR compliant opt-in cookie banner (equal visual weight, no dark patterns, Google Consent Mode v2, Sklik) and multilingual Privacy Policy page (/zasady-ochrany-osobnich-udaju).
+- [`bolt-theme-templates`](skills/bolt-theme-templates/SKILL.md): Production standards, component libraries, and automated verification for Twig + Tailwind CSS v4 templates under Component/Container/Page architecture (zero-setcontent pure UI components, smart containers, zero-HTML page orchestrators, and page-scoped components).
+
+## End-to-End Orchestration Workflow
+
+When building or auditing a complete website from scratch or based on a design (Figma, tokens, brief), agents must follow the master runbook:
+- [`WORKFLOWS.md`](WORKFLOWS.md): Phase-by-phase execution graph guiding agents through all 15 skills in dependency order, with an Integration Contract (shared layout, folders, tokens, JS hooks, URLs, translation keys) that every theme-facing skill follows:
+  0. **Phase 0: Intake & Site Plan** (decisions recorded in the project's `AGENTS.md`; user checkpoint)
+  1. **Phase 1: Environment & Security Baseline** (`bolt-timezone`, `bolt-add-language` step 1 — locale parameters, `bolt-disable-api`, `bolt-code-quality` setup)
+  2. **Phase 2: Web Server Delivery & Caching** (`bolt-htaccess` [Apache], `bolt-asset-caching`)
+  3. **Phase 3: Extensions & Runtime PHP** (`bolt-extension-setup` packages & config, `bolt-runtime-extensions`)
+  4. **Phase 4: Theme Foundation, Layout Shell & Design Tokens** (`bolt-theme-init`, contract master layout, `bolt-menu` templates, `bolt-tailwind-theme`, JS wiring)
+  5. **Phase 5: Content Model & Navigation** (`bolt-contenttypes`, static routes, `bolt-menu` content, XLIFF catalogs; user checkpoint)
+  6. **Phase 6: Templates & Features** (`bolt-theme-templates`, `bolt-extension-setup` theme overrides, locale switcher, `bolt-helper-pages`, `bolt-cookie-consent`)
+  7. **Phase 7: Content, Translations & Production Build** (seed records, translations, SEO per locale, `npm run prod`)
+  8. **Phase 8: QA & Sign-Off** (`bolt-code-quality` run, `scripts/verify-all.sh`, live smoke checks, Definition of Done)
+- **Translation Merge Helper**: `php scripts/merge-xliff.php <skill>/examples/translations.<locale>.xlf translations/messages.<locale>.xlf` adds the units a skill's templates use to a project catalog (never overwrites existing translations).
+- **Master Verification Runner**: Execute `./scripts/verify-all.sh --project=/path/to/project` to validate the skills in workflow order. Use `--skip=` for skills that do not apply, `--base-url=` for live HTTP checks; `bolt-add-language` is verified once per secondary locale from `app_locales`.
+
+## Skill Standard
+
+All skills in this repository follow the open agent standard:
+- Documented in `skills/<skill_name>/SKILL.md` with YAML frontmatter (`name`, `description`).
+- Deterministic steps with concrete file paths, configuration diffs, and pitfalls.
+- Executable verification scripts under `scripts/verify.sh`.
+

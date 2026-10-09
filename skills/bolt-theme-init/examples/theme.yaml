@@ -1,0 +1,42 @@
+# Theme Configuration
+# Variables can be accessed in Twig templates as {{ theme.variable_name }}
+# or {{ config.get('theme/variable_name') }} (e.g. config.get('theme/contact/email')).
+
+# Must match the theme folder name and `theme:` in config/bolt/config.yaml.
+name: 'THEME_NAME'
+
+# Cache buster appended to built CSS and JS (?v=X.X) in partials/_master.twig.
+# Bump this version whenever making changes under css/ or js/.
+assets_version: '1.0'
+
+# Logo files relative to the theme folder (components/brand/logo.twig from bolt-menu).
+# Without a logo the site name is rendered as text.
+logo:
+  default: ~                    # e.g. 'img/logo/logo.svg'
+  light: ~                      # variant for dark backgrounds (footer, hero)
+
+# Operator / company contact details. Shown in the footer and contact containers,
+# on the privacy policy (data controller identity), on error/maintenance helper
+# pages, and in /llms.txt.
+contact:
+  name: ~                       # legal name of the operator (privacy policy)
+  ico: ~                        # company ID (IČO)
+  address: ~                    # registered address / where to find us
+  email: 'info@example.cz'
+  phone: '+420 123 456 789'
+  hours: ~                      # e.g. 'Po–Pá 8:00–16:00'
+  bio: ~                        # one-sentence description for the footer
+
+# Tracking IDs (only when the site plan lists tracking; see bolt-cookie-consent).
+analytics:
+  ga4_id: ~                     # e.g. 'G-XXXXXXXXXX'
+  sklik_id: ~                   # Seznam Sklik retargeting ID
+  consent_mode: basic           # basic: trackers load only after consent | advanced: cookieless pings before consent
+
+# Social network links (rendered by the footer container when not empty)
+socials:
+  facebook: ~
+  youtube: ~
+  instagram: ~
+  linkedin: ~
+  twitter: ~

@@ -1,0 +1,28 @@
+{
+  "name": "THEME_NAME",
+  "version": "1.0.0",
+  "scripts": {
+    "watch:css": "npx @tailwindcss/cli --input ./css/tailwind/index.css --output ./css/index.css --minify --watch",
+    "watch:js": "rollup -c --watch",
+    "dev": "concurrently \"npm run watch:css\" \"npm run watch:js\"",
+    "build:css": "npx @tailwindcss/cli --input ./css/tailwind/index.css --output ./css/index.css --minify",
+    "build:js": "rollup -c",
+    "prod": "npm run build:css && npm run build:js"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3",
+    "concurrently": "^10.0.5",
+    "rollup": "^4.64.1",
+    "tailwindcss": "^4.3.3",
+    "tslib": "^2.8.1",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "photoswipe": "^5.4.4"
+  }
+}

@@ -1,0 +1,20 @@
+# Error & Helper pages configuration snippet for config/bolt/config.yaml
+#
+# NOTE: In Bolt CMS, error pages are configured globally for a single locale.
+# Dynamic locale propagation is pending bolt/core#3726 (https://github.com/bolt/core/pull/3726).
+#
+# The default content for the "Not Found" (404) page.
+notfound: [ 'helper-pages/notfound.404.twig' ]
+
+# Toggle maintenance mode on or off. Note: Logged-in editors will still see the site.
+maintenance_mode: false
+
+# The default for the "Maintenance mode" (503) page.
+maintenance: [ 'helper-pages/maintenance.503.twig' ]
+
+# The default content for the "Forbidden" (403) page.
+forbidden: [ 'helper-pages/forbidden.403.twig' ]
+
+# The default content for the "Internal Server Error" (500) page.
+# Note: Used in APP_ENV=prod mode. Kept strictly simple without database queries.
+internal_server_error: [ 'helper-pages/internal-server-error.500.twig' ]

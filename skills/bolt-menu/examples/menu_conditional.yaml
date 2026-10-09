@@ -1,0 +1,40 @@
+# Menu configuration: Conditional event/media website with anchor sections
+#
+# Certain items (e.g. performers, tickets, archive) can be conditionally guarded in
+# templates so they only display when their corresponding ContentType has published entries.
+main:
+  - label: { cs: 'Úvod', en: 'Home' }
+    link: /
+  - label: { cs: 'Program', en: 'Programme' }
+    link: /#program
+  - label: { cs: 'Účinkující', en: 'Performers' }
+    link: /#ucinkujici
+  - label: { cs: 'Vstupenky', en: 'Tickets' }
+    link: /#vstupenky
+    class: cta
+  - label: { cs: 'O akci', en: 'About the event' }
+    link: /#o-akci
+  - label: { cs: 'Archiv', en: 'Archive' }
+    link: /archiv
+  - label: { cs: 'Kontakt', en: 'Contact' }
+    link: /#kontakt
+
+footer:
+  - label: { cs: 'Akce', en: 'Event' }
+    submenu:
+      - label: { cs: 'O akci', en: 'About the event' }
+        link: /#o-akci
+      - label: { cs: 'Program', en: 'Programme' }
+        link: /#program
+      - label: { cs: 'Účinkující', en: 'Performers' }
+        link: /#ucinkujici
+      - label: { cs: 'Archiv', en: 'Archive' }
+        link: /archiv
+  - label: { cs: 'Informace', en: 'Information' }
+    submenu:
+      - label: { cs: 'Praktické informace a FAQ', en: 'Practical info & FAQ' }
+        link: /#faq
+      - label: { cs: 'Zásady ochrany osobních údajů', en: 'Privacy Policy' }
+        link: /zasady-ochrany-osobnich-udaju
+      - label: { cs: 'Kontakt', en: 'Contact' }
+        link: /#kontakt

@@ -1,0 +1,10 @@
+RewriteEngine on
+
+# HTTPS redirect — works both on direct Apache TLS and behind a TLS-terminating proxy:
+# redirect when Apache itself did not receive HTTPS AND no proxy reported an HTTPS request.
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirect all traffic to ./public folder
+RewriteRule (.*) public/$1 [QSA,L]

@@ -1,0 +1,23 @@
+{#
+  Pure Component: Navigation Link Item
+  Props:
+    - label (string): Display text
+    - uri (string): Target link (passed to locale_link)
+    - class (string|optional): Extra CSS classes
+    - is_active (bool|optional): Whether item is currently active (adds aria-current="page")
+    - is_cta (bool|optional): Render as the primary call-to-action button (.btn-primary)
+#}
+{% set target_url = locale_link(uri|default('/')) %}
+
+{% if is_cta|default(false) %}
+    <a href="{{ target_url }}"
+       class="btn-primary {{ class|default('') }}">
+        {{ label }}
+    </a>
+{% else %}
+    <a href="{{ target_url }}"
+       class="inline-flex items-center gap-1 px-3 py-2 font-medium text-base transition-colors duration-200 {{ is_active|default(false) ? 'text-accent font-semibold' : 'text-ink hover:text-accent' }} {{ class|default('') }}"
+       {% if is_active|default(false) %}aria-current="page"{% endif %}>
+        {{ label }}
+    </a>
+{% endif %}

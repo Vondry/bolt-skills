@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+/* Galleries only — remove together with the photoswipe npm dependency when unused. */
+@import '../../node_modules/photoswipe/dist/photoswipe.css';
+
+/* Scan for TW CSS classes in translation files */
+@source "../../../../../translations";
+
+/* Scan Bolt menu configuration (classes set on menu items, e.g. `class: cta`) */
+@source "../../../../../config/bolt/menu.yaml";
+
+/* Prevent feedback loop with compiled output */
+@source not "../index.css";
+
+/* Ignore documentation files */
+@source not "../../README.md";
+
+/* Helper/error pages carry their own scoped styles (bolt-helper-pages) */
+@source not "../../helper-pages";
+
+/* ------------------------------------------------------------------ *
+ *  Design tokens baseline.
+ *  Same token NAMES as bolt-tailwind-theme (the Integration Contract in
+ *  WORKFLOWS.md), with neutral placeholder values. bolt-tailwind-theme
+ *  replaces the values with the ones extracted from the design.
+ * ------------------------------------------------------------------ */
+@theme inline {
+    --breakpoint-menu: 62rem;
+
+    --spacing-header: 4.5rem;
+
+    --font-display: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SFMono-Regular', monospace;
+
+    --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
+    --color-surface-2: var(--surface-2);
+    --color-ink: var(--ink);
+    --color-ink-2: var(--ink-2);
+    --color-ink-3: var(--ink-3);
+    --color-stroke: var(--stroke);
+
+    --color-accent: #1d4ed8;
+    --color-accent-hover: #1e40af;
+    --color-accent-soft: #dbeafe;
+    --color-accent-ink: #ffffff;
+    --color-accent-ink-2: #bfdbfe;
+
+    --color-night: #0f172a;
+    --color-night-deep: #020617;
+    --color-night-stroke: #1e293b;
+    --color-night-ink: #ffffff;
+    --color-night-ink-2: #cbd5e1;
+    --color-night-ink-3: #94a3b8;
+
+    --text-hero: clamp(2.25rem, 1.5rem + 3vw, 4rem);
+    --text-section: clamp(1.75rem, 1rem + 2.5vw, 2.75rem);
+    --text-card: clamp(1.125rem, 0.95rem + 0.7vw, 1.375rem);
+    --text-micro: 0.6875rem;
+    --text-meta: 0.8125rem;
+    --text-body: 0.9375rem;
+    --text-lead: 1.0625rem;
+}
+
+:root {
+    --hairline: 0.0625rem;
+
+    --canvas: #ffffff;
+    --surface: #f8fafc;
+    --surface-2: #f1f5f9;
+    --ink: #0f172a;
+    --ink-2: #475569;
+    --ink-3: #5b6b80;   /* 5.44:1 on --canvas, 5.2:1 on --surface, 4.97:1 on --surface-2 (WCAG AA) */
+    --stroke: #e2e8f0;
+}
+
+@layer base {
+    /* Anchor targets land below the sticky header */
+    :where([id]) {
+        scroll-margin-top: var(--spacing-header);
+    }
+
+    :focus-visible {
+        outline: 0.125rem solid var(--color-accent);
+        outline-offset: 0.1875rem;
+    }
+}
+
+/* Minimal layout utilities used by the scaffolded templates; bolt-tailwind-theme
+   ships the complete set (.btn variants, .link-arrow, .pagination, .cms-redactor). */
+@utility wrapper {
+    @apply mx-auto w-full max-w-360;
+}
+
+@utility px-edge {
+    @apply px-6 sm:px-10 lg:px-20;
+}
+
+@utility py-section {
+    @apply py-12 lg:py-16;
+}
+
+@utility card {
+    @apply rounded-sm bg-canvas;
+    border: var(--hairline) solid var(--color-stroke);
+}
+
+/* Dropdown accordion panels driven by js/src/menu.ts ([data-dropdown-toggle]) */
+.dropdown {
+    overflow: hidden;
+    height: 0;
+    transition: height 0.15s ease-in-out;
+}

@@ -1,0 +1,187 @@
+{% extends 'partials/_master.twig' %}
+
+{#
+  Privacy Policy & Cookies Information Page
+  Path: /zasady-ochrany-osobnich-udaju (and /<locale>/zasady-ochrany-osobnich-udaju)
+  Complies with:
+    - GDPR: Regulation (EU) 2016/679, Articles 12-14, 15-22
+    - Czech Law: Zákon č. 110/2019 Sb. o zpracování osobních údajů
+    - Czech Law: Zákon č. 127/2005 Sb. o elektronických komunikacích (§ 89 odst. 3 - opt-in)
+#}
+
+{% block main %}
+    <article class="cms-redactor wrapper px-edge flex-col font-body py-section">
+        <header class="text-center mb-10">
+            <h1 class="font-display text-section font-semibold mb-3 text-ink">{{ __('privacy.title') }}</h1>
+            <p class="text-base text-ink-3">{{ __('privacy.last_updated') }}</p>
+        </header>
+
+        <div class="space-y-10 max-w-4xl mx-auto text-ink leading-relaxed">
+            
+            {# 1. Správce údajů #}
+            <section>
+                <h2 class="font-display text-card font-semibold mb-3 text-ink">{{ __('privacy.controller.heading') }}</h2>
+                {# Controller identity from theme.yaml (contact.name, contact.ico, contact.address);
+                   privacy.controller.text is the fallback while those are not filled in. #}
+                <p class="mb-2">
+                    <strong>{{ __('privacy.controller.label') }}</strong>
+                    {% if config.get('theme/contact/name') %}
+                        {{ config.get('theme/contact/name') }}
+                        {%- if config.get('theme/contact/ico') %}, {{ __('privacy.ico.label') }} {{ config.get('theme/contact/ico') }}{% endif %}
+                        {%- if config.get('theme/contact/address') %}, {{ config.get('theme/contact/address') }}{% endif %}
+                    {% else %}
+                        {{ __('privacy.controller.text') }}
+                    {% endif %}
+                </p>
+                <p>
+                    <strong>{{ __('privacy.contacts.label') }}</strong>
+                    {% if config.get('theme/contact/email') %}
+                        <a href="mailto:{{ config.get('theme/contact/email') }}" class="text-accent hover:underline">{{ config.get('theme/contact/email') }}</a>
+                    {% endif %}
+                    {% if config.get('theme/contact/phone') %}
+                        | <a href="tel:{{ config.get('theme/contact/phone')|replace({' ': ''}) }}" class="text-accent hover:underline">{{ config.get('theme/contact/phone') }}</a>
+                    {% endif %}
+                </p>
+            </section>
+
+            {# 2. Zpracovávané údaje a účely #}
+            <section>
+                <h2 class="font-display text-card font-semibold mb-3 text-ink">{{ __('privacy.processing.heading') }}</h2>
+                <p class="mb-3">{{ __('privacy.processing.intro') }}</p>
+                <ul class="list-disc pl-6 space-y-2">
+                    <li><strong>{{ __('privacy.processing.inquiry.label') }}</strong> {{ __('privacy.processing.inquiry.text') }}</li>
+                    <li><strong>{{ __('privacy.processing.analytics.label') }}</strong> {{ __('privacy.processing.analytics.text') }}</li>
+                    <li><strong>{{ __('privacy.processing.retargeting.label') }}</strong> {{ __('privacy.processing.retargeting.text') }}</li>
+                </ul>
+            </section>
+
+            {# 3. Používané sledovací kódy #}
+            <section>
+                <h2 class="font-display text-card font-semibold mb-3 text-ink">{{ __('privacy.tracking.heading') }}</h2>
+                <div class="overflow-x-auto my-4">
+                    <table class="w-full border-collapse border border-stroke text-sm">
+                        <thead>
+                            <tr class="bg-surface text-ink-2">
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.service') }}</th>
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.id') }}</th>
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.type') }}</th>
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.consent') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="border border-stroke p-3 font-medium">Google Analytics 4</td>
+                                <td class="border border-stroke p-3"><code>{{ config.get('theme/analytics/ga4_id')|default('G-XXXXXXXXXX') }}</code></td>
+                                <td class="border border-stroke p-3">{{ __('privacy.type.analytics') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.consent.analytics') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-stroke p-3 font-medium">Seznam.cz (Sklik)</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.sklik.id') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.type.marketing') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.consent.required') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            {# 4. Google Analytics Consent Mode v2 #}
+            <section>
+                <h2 class="font-display text-card font-semibold mb-3 text-ink">{{ __('privacy.ga.heading') }}</h2>
+                <p class="mb-3">
+                    {{ __('privacy.ga.consent_mode_before') }} <code>analytics_storage=denied</code> {{ __('privacy.ga.consent_mode_after') }}
+                </p>
+                <p class="mb-2">{{ __('privacy.ga.after_consent') }}</p>
+                <ul class="list-disc pl-6 space-y-1 mb-3">
+                    <li>{{ __('privacy.ga.ip') }}</li>
+                    <li>{{ __('privacy.ga.device') }}</li>
+                    <li>{{ __('privacy.ga.behaviour') }}</li>
+                </ul>
+                <p class="text-sm text-ink-2">{{ __('privacy.ga.provider') }}</p>
+            </section>
+
+            {# 5. Sklik Retargeting #}
+            <section>
+                <h2 class="font-display text-card font-semibold mb-3 text-ink">{{ __('privacy.sklik.heading') }}</h2>
+                <p class="mb-2">{{ __('privacy.sklik.intro') }}</p>
+                <ul class="list-disc pl-6 space-y-1">
+                    <li>{{ __('privacy.sklik.no_consent') }}</li>
+                    <li><code>consent=1</code> - {{ __('privacy.sklik.accepted') }}</li>
+                </ul>
+            </section>
+
+            {# 6. Přehled Cookies #}
+            <section>
+                <h2 class="font-display text-card font-semibold mb-3 text-ink">{{ __('privacy.cookies.heading') }}</h2>
+                <div class="overflow-x-auto my-4">
+                    <table class="w-full border-collapse border border-stroke text-sm">
+                        <thead>
+                            <tr class="bg-surface text-ink-2">
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.provider') }}</th>
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.type') }}</th>
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.purpose') }}</th>
+                                <th class="border border-stroke p-3 text-left">{{ __('privacy.table.duration') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="border border-stroke p-3">{{ __('privacy.cookies.own_provider') }}</td>
+                                <td class="border border-stroke p-3 font-medium">{{ __('privacy.cookies.technical_type') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.cookies.consent_choice') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.cookies.consent_duration') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-stroke p-3">Google Analytics</td>
+                                <td class="border border-stroke p-3 font-medium">{{ __('privacy.cookies.analytics_type') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.cookies.statistics') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.cookies.ga_duration') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="border border-stroke p-3">Sklik / Seznam.cz</td>
+                                <td class="border border-stroke p-3 font-medium">{{ __('privacy.type.marketing') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.cookies.retargeting') }}</td>
+                                <td class="border border-stroke p-3">{{ __('privacy.cookies.days_90') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            {# 7. Vaše práva a správa souhlasu #}
+            <section id="prava-a-sprava-souhlasu">
+                <h2 class="font-display text-card font-semibold mb-3 text-ink">{{ __('privacy.rights.heading') }}</h2>
+                <ul class="list-disc pl-6 space-y-3">
+                    <li>
+                        <strong>{{ __('privacy.rights.withdraw.label') }}</strong>
+                        {# [data-cookie-settings] re-opens the consent banner (js/src/cookie-consent.ts) #}
+                        <button type="button"
+                                data-cookie-settings
+                                class="inline-flex items-center text-accent font-semibold hover:underline cursor-pointer">
+                            {{ __('privacy.rights.withdraw.button') }}
+                        </button>
+                    </li>
+                    <li>
+                        <strong>{{ __('privacy.rights.retargeting_delete.label') }}</strong>
+                        {{ __('privacy.rights.retargeting_delete.text') }}
+                        {% if config.get('theme/contact/email') %}
+                            <a href="mailto:{{ config.get('theme/contact/email') }}" class="text-accent hover:underline">{{ config.get('theme/contact/email') }}</a>
+                        {% endif %}
+                    </li>
+                    <li>
+                        <strong>{{ __('privacy.rights.complaint.label') }}</strong>
+                        {{ __('privacy.rights.complaint.text') }}
+                        (<a href="https://uoou.gov.cz" rel="noopener" target="_blank" class="text-accent hover:underline">uoou.gov.cz</a>).
+                    </li>
+                </ul>
+            </section>
+
+            <section class="pt-8 border-t border-stroke text-xs text-ink-3">
+                <p>
+                    <strong>{{ __('privacy.ico.label') }}</strong> {{ config.get('theme/contact/ico')|default('N/A') }} |
+                    <strong>{{ __('privacy.tracking.label') }}</strong> Google Analytics + Sklik
+                </p>
+            </section>
+        </div>
+    </article>
+{% endblock main %}

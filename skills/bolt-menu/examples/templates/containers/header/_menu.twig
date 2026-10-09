@@ -1,0 +1,164 @@
+{#
+  Smart Container: Header Navigation
+  Retrieves menu data via `menu_array('main')` from `config/bolt/menu.yaml`.
+  Splits call-to-action buttons from standard nav items, handles active states,
+  and delegates rendering to pure components.
+
+  JavaScript hooks (js/src/menu.ts from bolt-theme-init):
+    [data-sticky-header]          header height subtracted from anchor scrolling (auto-scroll.ts)
+    [data-dropdown-toggle]        submenu accordions (components/nav/dropdown.twig)
+    [data-menu-toggle]            opens the mobile drawer
+    [data-mobile-menu="drawer"]   the drawer; [data-menu-backdrop] its backdrop
+    [data-menu-close]             close button (links inside the drawer close it too)
+
+  Translation keys: nav.main_label, nav.open_menu, nav.close_menu, nav.mobile_label, nav.menu
+#}
+
+{% set current_path = app.request.pathinfo %}
+{# The homepage routes are 'homepage' (/) and 'homepage_locale' (/{_locale}/). #}
+{% set on_homepage = app.request.attributes.get('_route') in ['homepage', 'homepage_locale'] %}
+
+{# 1. Retrieve all items for 'main' menu #}
+{% set raw_items = menu_array('main')|default([]) %}
+
+{# 2. Separate CTAs from regular nav links #}
+{% set cta_items = raw_items|filter(i => i.class is defined and 'cta' in i.class) %}
+{% set nav_items = raw_items|filter(i => i.class is not defined or 'cta' not in i.class) %}
+
+{# 3. Optional guard: drop the homepage link ("Úvod", link: /) when already on the homepage #}
+{% set nav_items = nav_items|filter(i => not (on_homepage and i.link|default('') == '/')) %}
+
+<header id="site-header" data-sticky-header class="sticky top-0 z-40 bg-canvas/95 backdrop-blur-md border-b border-stroke">
+    <div class="wrapper px-edge flex items-center justify-between h-header gap-6">
+
+        {# Logo #}
+        <a href="{{ locale_link('/') }}" class="flex items-center shrink-0" aria-label="{{ config.get('general/sitename') }}">
+            {% include 'components/brand/logo.twig' ignore missing with { class: 'h-8 w-auto' } %}
+        </a>
+
+        {# Desktop Navigation #}
+        <nav class="hidden menu:flex items-center" aria-label="{{ __('nav.main_label') }}">
+            <ul class="flex items-center gap-1 list-none m-0 p-0">
+                {% for item in nav_items %}
+                    {# Compare the locale-prefixed URL with the request path, so items are also
+                       active on /en/… pages; anchors (/#section) are never "active". #}
+                    {% set item_url = locale_link(item.uri|default(item.link|default('/'))) %}
+                    {% set is_active = item_url == current_path
+                        or (item_url != locale_link('/') and current_path starts with item_url ~ '/') %}
+
+                    {% if item.submenu is defined and item.submenu|length > 0 %}
+                        {% set child_active = item.submenu|filter(s => locale_link(s.uri|default(s.link|default('/'))) == current_path)|length > 0 %}
+                        {% include 'components/nav/dropdown.twig' with {
+                            id: 'menu-dropdown-' ~ loop.index,
+                            label: item.label,
+                            submenu: item.submenu,
+                            is_active: is_active or child_active
+                        } %}
+                    {% else %}
+                        <li>
+                            {% include 'components/nav/item.twig' with {
+                                label: item.label,
+                                uri: item.uri|default(item.link),
+                                is_active: is_active,
+                                is_cta: false
+                            } %}
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+
+        {# Desktop Action Area (Locale Switcher + CTA buttons) #}
+        <div class="hidden menu:flex items-center gap-4">
+            {% include 'partials/_locale-switcher.twig' ignore missing with { mobile: false } %}
+
+            {% for cta in cta_items %}
+                {% include 'components/nav/item.twig' with {
+                    label: cta.label,
+                    uri: cta.uri|default(cta.link),
+                    is_cta: true
+                } %}
+            {% endfor %}
+        </div>
+
+        {# Mobile Menu Button #}
+        <button id="menu-toggle"
+                type="button"
+                data-menu-toggle
+                aria-expanded="false"
+                aria-controls="mobile-drawer"
+                aria-label="{{ __('nav.open_menu') }}"
+                data-label-open="{{ __('nav.open_menu') }}"
+                data-label-close="{{ __('nav.close_menu') }}"
+                class="menu:hidden p-2 text-ink hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-6 shrink-0" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+    </div>
+</header>
+
+{# Mobile Backdrop & Drawer — hidden from assistive tech until menu.ts opens it #}
+<div id="menu-backdrop"
+     data-menu-backdrop
+     class="fixed inset-0 bg-night/50 z-40 opacity-0 pointer-events-none transition-opacity duration-300 menu:hidden"
+     aria-hidden="true"></div>
+
+<aside id="mobile-drawer"
+       data-mobile-menu="drawer"
+       aria-label="{{ __('nav.mobile_label') }}"
+       aria-hidden="true"
+       inert
+       class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-canvas z-50 flex flex-col translate-x-full transition-transform duration-300 ease-out shadow-2xl menu:hidden">
+    <div class="flex items-center justify-between p-4 border-b border-stroke">
+        <span class="font-bold text-lg text-ink">{{ __('nav.menu') }}</span>
+        <button id="menu-close"
+                type="button"
+                data-menu-close
+                aria-label="{{ __('nav.close_menu') }}"
+                class="p-2 text-ink-2 hover:text-ink rounded-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-6" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto p-4 flex flex-col gap-2" aria-label="{{ __('nav.main_label') }}">
+        {% for item in nav_items %}
+            {% if item.submenu is defined and item.submenu|length > 0 %}
+                <div class="flex flex-col gap-1 py-1">
+                    <span class="font-semibold text-xs uppercase tracking-wider text-ink-3 px-3">{{ item.label }}</span>
+                    {% for sub in item.submenu %}
+                        <a href="{{ locale_link(sub.uri|default(sub.link)) }}"
+                           data-menu-close
+                           class="px-4 py-2 text-base text-ink hover:text-accent hover:bg-surface rounded-sm transition-colors">
+                            {{ sub.label }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <a href="{{ locale_link(item.uri|default(item.link)) }}"
+                   data-menu-close
+                   class="px-3 py-2 text-base font-medium text-ink hover:text-accent hover:bg-surface rounded-sm transition-colors">
+                    {{ item.label }}
+                </a>
+            {% endif %}
+        {% endfor %}
+
+        {% if cta_items|length > 0 %}
+            <div class="pt-4 mt-2 border-t border-stroke flex flex-col gap-3">
+                {% for cta in cta_items %}
+                    <a href="{{ locale_link(cta.uri|default(cta.link)) }}"
+                       data-menu-close
+                       class="btn-primary text-center">
+                        {{ cta.label }}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="mt-auto pt-6 border-t border-stroke">
+            {% include 'partials/_locale-switcher.twig' ignore missing with { mobile: true } %}
+        </div>
+    </nav>
+</aside>

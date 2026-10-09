@@ -1,0 +1,136 @@
+# Bolt CMS Agent Skills (`vondry/bolt-skills`)
+
+A curated collection of production-tested AI agent skills, task procedures, and verification runbooks for building, securing, and maintaining websites with [Bolt CMS](https://boltcms.io).
+
+Compatible with **Google Antigravity**, **Claude Code**, **Gemini**, **Cursor**, **IBM Bob**, and other LLM agent frameworks.
+
+---
+
+## Available Skills
+
+| Skill | Description | Location |
+| :--- | :--- | :--- |
+| **`bolt-disable-api`** | Complete procedure to safely disable or lock down API Platform, GraphQL, and OpenAPI documentation across Dev and Prod environments. | [`skills/bolt-disable-api/`](skills/bolt-disable-api/SKILL.md) |
+| **`bolt-add-language`** | End-to-end procedure to add a new language/locale across routing, ContentTypes, XLIFF catalogs, menus, and theme switchers. | [`skills/bolt-add-language/`](skills/bolt-add-language/SKILL.md) |
+| **`bolt-contenttypes`** | Standards, best practices, and automated validator for creating/updating ContentTypes and fields (no raw HTML, mandatory singleton ordering, viewless blocks, sets/collections). | [`skills/bolt-contenttypes/`](skills/bolt-contenttypes/SKILL.md) |
+| **`bolt-extension-setup`** | Complete setup and verification for essential Bolt extensions: AppoloDev/bolt-seo, bolt/sitemap-extension (with PR #5 singleton override), and Vondry/bolt-llms-txt. | [`skills/bolt-extension-setup/`](skills/bolt-extension-setup/SKILL.md) |
+| **`bolt-helper-pages`** | Architecture, dual-base layouts, zero-database safety rules, and brand-aligned visual scenes for 404, 403, 500, and 503 maintenance pages. | [`skills/bolt-helper-pages/`](skills/bolt-helper-pages/SKILL.md) |
+| **`bolt-timezone`** | Timezone parity (Europe/Prague) across Bolt config, Kernel boot override, Docker INI, and compose environment to prevent the date-shifting save bug. | [`skills/bolt-timezone/`](skills/bolt-timezone/SKILL.md) |
+| **`bolt-htaccess`** | Two-tier Apache .htaccess setup: root HTTPS redirect and ./public forwarding, plus public/.htaccess source code shielding to block templates, configs, build tooling, and sensitive metadata. | [`skills/bolt-htaccess/`](skills/bolt-htaccess/SKILL.md) |
+| **`bolt-code-quality`** | Complete setup for Easy Coding Standard (PSR-12/cleanCode), PHPStan Level 8 static analysis on src/, unified Makefile commands (cscheck, csfix, stancheck, csclear), safe Bolt migration sync, and GitLab CI matrix (PHP 8.2–8.5). | [`skills/bolt-code-quality/`](skills/bolt-code-quality/SKILL.md) |
+| **`bolt-asset-caching`** | Multi-layer asset and thumbnail caching setup: resolves the Symfony firewall /thumbs session-listener cache bug, configures Bolt save_files disk caching, Apache mod_expires, Nginx static expires, and frontend ?v=X.X cache-busting. | [`skills/bolt-asset-caching/`](skills/bolt-asset-caching/SKILL.md) |
+| **`bolt-theme-init`** | Bootstrap, scaffold, and verify a new Bolt CMS theme from scratch with Component/Container/Page architecture, Tailwind CSS v4 CLI, and Rollup TypeScript build pipeline. | [`skills/bolt-theme-init/`](skills/bolt-theme-init/SKILL.md) |
+| **`bolt-tailwind-theme`** | Extract and configure Tailwind CSS v4 design tokens (@theme inline), WCAG AA contrast scales, Czech font-faces, and reusable utility blueprints (.wrapper, .btn, .card, .cms-redactor). | [`skills/bolt-tailwind-theme/`](skills/bolt-tailwind-theme/SKILL.md) |
+| **`bolt-runtime-extensions`** | Deploy, register, and verify custom runtime PHP Twig extensions in `src/` (LocaleLinkExtension, ImageDimensionsExtension, FileSizeExtension). | [`skills/bolt-runtime-extensions/`](skills/bolt-runtime-extensions/SKILL.md) |
+| **`bolt-menu`** | Configure, structure, and verify navigation menus in `config/bolt/menu.yaml` (header, footer, submenus, anchors, CTAs) with Twig Component/Container patterns. | [`skills/bolt-menu/`](skills/bolt-menu/SKILL.md) |
+| **`bolt-cookie-consent`** | Deploy and verify Czech ZEK § 89 / GDPR compliant opt-in cookie banner (equal visual weight, Google Consent Mode v2, Sklik) and multilingual Privacy Policy page. | [`skills/bolt-cookie-consent/`](skills/bolt-cookie-consent/SKILL.md) |
+| **`bolt-theme-templates`** | Build and verify Twig + Tailwind v4 templates under Component/Container/Page architecture (pure UI components, smart containers, zero-HTML page orchestrators). | [`skills/bolt-theme-templates/`](skills/bolt-theme-templates/SKILL.md) |
+
+---
+
+## End-to-End Website Scaffolding Workflow
+
+To orchestrate and scaffold a complete, production-grade Bolt CMS website from a Figma design, tokens, or project brief:
+- Read **[`WORKFLOWS.md`](WORKFLOWS.md)** for the phase-by-phase execution graph (Phase 0 intake through Phase 8 sign-off), the Integration Contract shared by all theme skills, the decision matrix, the skill-to-phase map, and troubleshooting tips.
+- Execute the master verification suite **`scripts/verify-all.sh`** to validate the skills in workflow order:
+  ```bash
+  ./scripts/verify-all.sh --project=/path/to/bolt-project \
+      --base-url=http://localhost:8080 \
+      --skip=bolt-cookie-consent          # only skills that do not apply to this site
+  ```
+  `bolt-add-language` is verified once per secondary locale read from `app_locales` in `config/services.yaml` (override with `--locales=en,de`) and skipped on single-language sites.
+- Merge the translation units shipped by the skills (`skills/<skill>/examples/translations.<locale>.xlf`) into the project catalogs:
+  ```bash
+  php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
+      vendor/vondry/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf translations/messages.cs.xlf
+  ```
+  Missing units are added; existing translations are never changed.
+
+---
+
+## Installation via Composer
+
+```bash
+composer require --dev vondry/bolt-skills
+```
+
+The package is a Composer plugin, so on the first install Composer asks you to trust it (`Do you trust "vondry/bolt-skills" to execute code?`). Answer `y`; the choice is stored in `config.allow-plugins`.
+
+That is all. On every `composer install` / `composer update` the plugin:
+
+- symlinks each skill into `.claude/skills/<skill>` (Claude Code) and `.agents/skills/<skill>` (other agents), pointing to `vendor/vondry/bolt-skills/skills/<skill>`;
+- adds those links to a managed block in `.gitignore`, so they are never committed (teammates get them from their own `composer install`);
+- adds a managed "Bolt CMS Agent Skills" block to the project's `AGENTS.md` (created if missing) listing the skills and `WORKFLOWS.md`;
+- removes links to skills that no longer exist in the installed version.
+
+Skills of your own in the same folders are left untouched; an existing file or folder with the same name as a bundled skill is skipped with a warning.
+
+### Removal
+
+```bash
+composer remove --dev vondry/bolt-skills
+```
+
+removes every skill link, the managed blocks in `.gitignore` and `AGENTS.md`, and any file or folder the plugin created that is now empty. Your own content is kept as it was.
+
+### Configuration (optional)
+
+In the project's `composer.json`:
+
+```json
+"extra": {
+    "bolt-skills": {
+        "targets": [".claude/skills", ".agents/skills"],
+        "agents-md": true,
+        "gitignore": true
+    }
+}
+```
+
+- `targets`: skill folders to link into, relative to the project root.
+- `agents-md`: set to `false` to leave `AGENTS.md` alone.
+- `gitignore`: set to `false` to leave `.gitignore` alone (for example, to commit the links).
+
+---
+
+## Updating Skills
+
+Whenever new skills or updates are released, update with Composer:
+
+```bash
+composer update vondry/bolt-skills
+```
+
+---
+
+## Structure of a Skill
+
+Every skill in this repository follows open agent guidelines:
+
+```text
+skills/<skill_name>/
+├── SKILL.md          # Step-by-step instructions with YAML frontmatter
+├── scripts/          # Optional executable test/verification scripts
+│   └── verify.sh
+├── examples/         # Optional templates and code snippets
+└── references/       # Optional detailed documentation
+```
+
+### Writing New Skills
+When adding a new skill:
+1. Create a new directory under `skills/<skill_name>/`.
+2. Add a `SKILL.md` with standard YAML frontmatter:
+   ```yaml
+   ---
+   name: <skill-name>
+   description: >-
+     Describe what the skill does and when an agent should activate it.
+   ---
+   ```
+3. Include exact file paths, before/after snippets, and an automated verification script under `scripts/`.
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.

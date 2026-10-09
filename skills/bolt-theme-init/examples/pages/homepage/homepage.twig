@@ -1,0 +1,11 @@
+{# bolt-theme-init:placeholder
+   Homepage placeholder so the theme renders right after scaffolding. bolt-theme-templates'
+   scaffold replaces every file that still contains the marker above with its real page. #}
+{% extends 'partials/_master.twig' %}
+
+{% block main %}
+    <section class="wrapper px-edge py-section">
+        <h1 class="font-display text-hero text-ink">{{ record.title|default(config.get('general/sitename')) }}</h1>
+        <p class="mt-4 text-lead text-ink-2">{{ config.get('general/payoff') }}</p>
+    </section>
+{% endblock main %}

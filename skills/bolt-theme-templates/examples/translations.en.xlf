@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="en">
+  <file id="messages.en">
+    <!-- bolt-theme-templates: units used by components/, containers/ and pages/. Merge into translations/messages.<locale>.xlf with scripts/merge-xliff.php. -->
+    <!-- Shared UI components (components/ui/) -->
+    <unit id="nav_home" name="nav.home"><segment><source>nav.home</source><target>Home</target></segment></unit>
+    <unit id="a11y_breadcrumbs" name="a11y.breadcrumbs"><segment><source>a11y.breadcrumbs</source><target>Breadcrumb</target></segment></unit>
+    <unit id="a11y_pagination" name="a11y.pagination"><segment><source>a11y.pagination</source><target>Pagination</target></segment></unit>
+    <unit id="pager_previous" name="pager.previous"><segment><source>pager.previous</source><target>Previous page</target></segment></unit>
+    <unit id="pager_next" name="pager.next"><segment><source>pager.next</source><target>Next page</target></segment></unit>
+    <unit id="card_read_more" name="card.read_more"><segment><source>card.read_more</source><target>Details</target></segment></unit>
+    <unit id="card_edit" name="card.edit"><segment><source>card.edit</source><target>Edit</target></segment></unit>
+    <unit id="section_show_all" name="section.show_all"><segment><source>section.show_all</source><target>Show all</target></segment></unit>
+    <unit id="empty_title" name="empty.title"><segment><source>empty.title</source><target>No items found</target></segment></unit>
+    <unit id="empty_message" name="empty.message"><segment><source>empty.message</source><target>There is no content in this category at the moment.</target></segment></unit>
+    <!-- Contact containers (containers/contact/) -->
+    <unit id="contact_eyebrow" name="contact.eyebrow"><segment><source>contact.eyebrow</source><target>A question or an inquiry?</target></segment></unit>
+    <unit id="contact_title" name="contact.title"><segment><source>contact.title</source><target>Get in touch</target></segment></unit>
+    <unit id="contact_description" name="contact.description"><segment><source>contact.description</source><target>We will gladly discuss your requirements, prepare a tailored quote or show you samples at our branch.</target></segment></unit>
+    <unit id="contact_phone_label" name="contact.phone_label"><segment><source>contact.phone_label</source><target>Phone</target></segment></unit>
+    <unit id="contact_email_label" name="contact.email_label"><segment><source>contact.email_label</source><target>E-mail</target></segment></unit>
+    <unit id="contact_reply_time" name="contact.reply_time"><segment><source>contact.reply_time</source><target>We usually reply within 24 hours</target></segment></unit>
+    <unit id="contact_address_label" name="contact.address_label"><segment><source>contact.address_label</source><target>Where to find us</target></segment></unit>
+    <unit id="contact_banner_title" name="contact.banner_title"><segment><source>contact.banner_title</source><target>Interested in working together?</target></segment></unit>
+    <unit id="contact_banner_text" name="contact.banner_text"><segment><source>contact.banner_text</source><target>Write to us or give us a call. We will gladly discuss your requirements and propose the best solution.</target></segment></unit>
+    <unit id="contact_banner_cta" name="contact.banner_cta"><segment><source>contact.banner_cta</source><target>Contact us</target></segment></unit>
+    <!-- Homepage (pages/homepage/, containers/products/) -->
+    <unit id="hero_eyebrow" name="hero.eyebrow"><segment><source>hero.eyebrow</source><target>First-class quality &amp; service</target></segment></unit>
+    <unit id="hero_primary_cta" name="hero.primary_cta"><segment><source>hero.primary_cta</source><target>Explore our offer</target></segment></unit>
+    <unit id="hero_contact_cta" name="hero.contact_cta"><segment><source>hero.contact_cta</source><target>Contact us</target></segment></unit>
+    <unit id="homepage_featured_eyebrow" name="homepage.featured_eyebrow"><segment><source>homepage.featured_eyebrow</source><target>Recommended</target></segment></unit>
+    <unit id="homepage_featured_title" name="homepage.featured_title"><segment><source>homepage.featured_title</source><target>Featured products</target></segment></unit>
+    <unit id="homepage_all_products" name="homepage.all_products"><segment><source>homepage.all_products</source><target>All products</target></segment></unit>
+    <!-- Products (pages/product/) -->
+    <unit id="products_title" name="products.title"><segment><source>products.title</source><target>Product catalogue</target></segment></unit>
+    <unit id="products_eyebrow" name="products.eyebrow"><segment><source>products.eyebrow</source><target>Our offer</target></segment></unit>
+    <unit id="products_perex" name="products.perex"><segment><source>products.perex</source><target>Choose from our wide range of certified products and solutions.</target></segment></unit>
+    <unit id="products_empty_title" name="products.empty_title"><segment><source>products.empty_title</source><target>No products found</target></segment></unit>
+    <unit id="products_empty_message" name="products.empty_message"><segment><source>products.empty_message</source><target>There are no items in this category at the moment.</target></segment></unit>
+    <unit id="products_no_image" name="products.no_image"><segment><source>products.no_image</source><target>No image</target></segment></unit>
+    <unit id="products_technical_specs" name="products.technical_specs"><segment><source>products.technical_specs</source><target>Technical specifications</target></segment></unit>
+    <unit id="products_inquire_cta" name="products.inquire_cta"><segment><source>products.inquire_cta</source><target>Send an inquiry</target></segment></unit>
+    <unit id="products_in_stock" name="products.in_stock"><segment><source>products.in_stock</source><target>In stock (%count% pcs)</target></segment></unit>
+    <unit id="products_on_request" name="products.on_request"><segment><source>products.on_request</source><target>On request</target></segment></unit>
+  </file>
+</xliff>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="cs">
+  <file id="messages.cs">
+    <!-- bolt-theme-init: units used by partials/_master.twig and the fallback listing.twig. Merge into translations/messages.<locale>.xlf with scripts/merge-xliff.php. -->
+    <unit id="a11y_skip_to_content" name="a11y.skip_to_content"><segment><source>a11y.skip_to_content</source><target>Přeskočit na obsah</target></segment></unit>
+    <unit id="listing_empty" name="listing.empty"><segment><source>listing.empty</source><target>Zatím zde nic není.</target></segment></unit>
+  </file>
+</xliff>

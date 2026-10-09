@@ -1,0 +1,74 @@
+# GitLab CI: lint the Bolt CMS project (ECS + PHPStan) across PHP 8.2 – 8.5.
+#
+# Linting is defined via the composer scripts in composer.json:
+#   composer lint     -> vendor/bin/ecs check       (Easy Coding Standard)
+#   composer phpstan  -> vendor/bin/phpstan analyse  (level 8 on src/)
+
+stages:
+  - lint
+
+# Shared setup for every lint job. Runs on the official PHP CLI image for the
+# version under test, installs the extensions Bolt/Symfony needs and Composer,
+# then pulls the dev dependencies (ecs, phpstan).
+.lint:
+  stage: lint
+  image: php:${PHP_VERSION}-cli
+  variables:
+    COMPOSER_ALLOW_SUPERUSER: "1"
+    COMPOSER_NO_INTERACTION: "1"
+  cache:
+    key: "composer-${PHP_VERSION}"
+    paths:
+      - vendor/
+      - .composer-cache/
+  before_script:
+    # docker-php-extension-installer handles system libs + ext compilation.
+    - curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions
+    - chmod +x /usr/local/bin/install-php-extensions
+    - install-php-extensions intl gd zip pdo_mysql opcache exif bcmath
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - export COMPOSER_CACHE_DIR="$CI_PROJECT_DIR/.composer-cache"
+    - composer install --prefer-dist --no-progress --no-scripts
+
+ecs:
+  extends: .lint
+  parallel:
+    matrix:
+      - PHP_VERSION: [ "8.2", "8.3", "8.4", "8.5" ]
+  script:
+    - composer lint
+
+phpstan:
+  extends: .lint
+  parallel:
+    matrix:
+      - PHP_VERSION: [ "8.2", "8.3", "8.4", "8.5" ]
+  script:
+    - composer phpstan
+
+# Twig syntax validation for the theme. Not PHP-version dependent, so
+# it runs once. Boots the Symfony kernel, which uses the committed .env config.
+twig:
+  extends: .lint
+  variables:
+    PHP_VERSION: "8.3"
+  script:
+    - php bin/console lint:twig public/theme/<theme_name>
+
+# XLIFF syntax validation for the translation catalogues (messages.*.xlf).
+# Catches malformed XML / invalid XLIFF before it reaches production.
+xliff:
+  extends: .lint
+  variables:
+    PHP_VERSION: "8.3"
+  script:
+    - php bin/console lint:xliff translations
+
+# YAML syntax validation for the Symfony config. --parse-tags allows the custom
+# tags (e.g. !php/const) used in the config files.
+yaml:
+  extends: .lint
+  variables:
+    PHP_VERSION: "8.3"
+  script:
+    - php bin/console lint:yaml config --parse-tags
