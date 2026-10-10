@@ -125,7 +125,8 @@ fi
 
 if [ -n "$COMPOSE_FILE" ]; then
     if grep -q -E "(mariadb|mysql)" "$COMPOSE_FILE"; then
-        if grep -q -E "TZ:\s*[\"']?$EXPECTED_TIMEZONE[\"']?" "$COMPOSE_FILE"; then
+        # Map syntax (TZ: "Europe/Prague") or list syntax (- TZ=Europe/Prague)
+        if grep -q -E "TZ[:=][[:space:]]*[\"']?$EXPECTED_TIMEZONE[\"']?" "$COMPOSE_FILE"; then
             echo "PASSED (TZ: \"$EXPECTED_TIMEZONE\" in $COMPOSE_FILE)"
         else
             echo "WARNING"
