@@ -139,6 +139,18 @@ if (! $placeholder && $envTracked === true) {
     out('PASS', '.env contains no APP_SECRET (it lives in .env.local)');
 }
 
+// Credentials inside connection strings (MAILER_DSN, DATABASE_URL, …): scheme://user:password@host.
+foreach ($env as $name => $value) {
+    if (! is_string($value) || preg_match('#^[a-z][a-z0-9+.-]*://[^/\s]*:[^/\s]*@#i', $value) !== 1) {
+        continue;
+    }
+    if (preg_match('#://[^:/]*:"?(|db_password|password|pass|secret|changeme|!changeme!)"?@#i', $value) === 1) {
+        continue;
+    }
+    $tracked = $envTracked === true ? ' (tracked by git)' : '';
+    out('FAIL', ".env{$tracked} sets {$name} with a password in it. Move the line to the server's .env.local, keep a password-less default in .env (e.g. MAILER_DSN=smtp://localhost), and change the password at the provider — it stays in git history.");
+}
+
 if (is_file('.env.local') && gitTracked('.env.local') === true) {
     out('FAIL', '.env.local is tracked by git — remove it from the repository (git rm --cached .env.local) and rotate its secrets.');
 }
@@ -284,6 +296,10 @@ if (($bolt['headers']['powered_by'] ?? true) !== false) {
 }
 if (($bolt['omit_meta_generator_tag'] ?? false) !== true) {
     out('WARN', 'omit_meta_generator_tag is not true — every page names Bolt in <meta name="generator">.');
+}
+$canonical = (string) ($bolt['canonical'] ?? '');
+if ($canonical === '') {
+    out('WARN', 'config/bolt/config.yaml has no canonical — canonical links name whichever host was requested (www and the bare domain both). Add canonical: \'%env(default::BOLT_CANONICAL)%\' and set BOLT_CANONICAL.');
 }
 $querySearch = $bolt['query_search'] ?? true;
 $querySearchOn = is_array($querySearch) ? ($querySearch['enable'] ?? true) : (bool) $querySearch;

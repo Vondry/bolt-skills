@@ -1,6 +1,10 @@
 # config/bolt/config.yaml — security-relevant keys (bolt-security-hardening). Merge into the
 # existing file; keys not listed here stay as they are.
 
+# The one host that serves the site (BOLT_CANONICAL in .env, empty in the local .env.local). Without
+# this key BOLT_CANONICAL does nothing and canonical links name whichever host was requested.
+canonical: '%env(default::BOLT_CANONICAL)%'
+
 # Do not advertise Bolt: no "X-Powered-By: Bolt" header, no <meta name="generator">.
 headers:
   allow_floc: false

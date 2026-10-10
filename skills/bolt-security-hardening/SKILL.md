@@ -83,6 +83,7 @@ BOLT_CANONICAL=
 * **`SYMFONY_TRUSTED_HOSTS`** is a regular expression of every domain the site answers to (add the staging domain if staging runs with this `.env`). Any other `Host` gets HTTP 400. Without it, a request with `Host: evil.tld` to `/bolt/reset-password` makes Bolt mail a reset link to `https://evil.tld/…` — one click by the admin hands over the token. Bolt's `framework.yaml` already reads the variable (`trusted_hosts: ['%env(default::SYMFONY_TRUSTED_HOSTS)%']`); a project whose `framework.yaml` says `trusted_hosts: ~` must get that line back.
 * **Both hosts, one site.** `example.cz` and `www.example.cz` must both answer over valid HTTPS, but only one serves the site — the other redirects to it with 301 (`bolt-htaccess` Step 1, default: without www). `BOLT_CANONICAL` makes every canonical link name that host; empty, Bolt names whichever host was requested, so each page exists twice. Keep both hosts in `SYMFONY_TRUSTED_HOSTS`. The live checks (`verify.sh`, section 8) always test both.
 * **`TRUSTED_PROXIES`** (Bolt's sample `.env`) is read by nothing in Symfony 6.4; delete it. `SYMFONY_TRUSTED_PROXIES` is wired up in Step 2.
+* **Passwords in connection strings.** `MAILER_DSN=smtp://user:password@host` or a `DATABASE_URL` with a password are secrets like `APP_SECRET`: the real value goes to the server's `.env.local`, `.env` keeps a password-less default (`MAILER_DSN=smtp://localhost`), and a password that was ever committed is changed at the provider. `verify.sh` fails on any `scheme://user:password@` value in `.env`.
 * **`.env.local.php`** (`composer dump-env prod`) overrides every `.env*` file. Do not upload one generated on a developer machine.
 
 ---
@@ -159,6 +160,7 @@ Merge [`examples/config_snippet.yaml`](examples/config_snippet.yaml):
 
 | Key | Value | Why |
 | :--- | :--- | :--- |
+| `canonical` | `'%env(default::BOLT_CANONICAL)%'` | Without the key `BOLT_CANONICAL` (Step 1) is ignored. Bolt's sample config ships it; older projects have it commented out. |
 | `headers.powered_by`, `omit_meta_generator_tag` | `false`, `true` | No `X-Powered-By: Bolt`, no `<meta name="generator">`: scanners do not learn the CMS. |
 | `query_search.enable` | `false` | Otherwise any listing filters by any field (`/entries?title--like=a`) — fields the templates never show can be read one guess at a time. Keep it on only when a listing page filters through the query string. |
 | `htmlcleaner.allowed_tags` | without `iframe` | Its `src` is not filtered (also `javascript:`); embeds use `_consent-embed.twig` (`bolt-cookie-consent`). Remove `frameborder`, `allowfullscreen`, `scrolling` from `allowed_attributes` with it. |
@@ -171,7 +173,10 @@ The HTML cleaner only runs on fields with `sanitise: true` — `bolt-contenttype
 every `redactor`, `article` and `html` field (Bolt does not do that by default for Redactor and
 Article). On a real project the only visible changes were: `×` in thumbnail URLs percent-encoded
 (still valid), Redactor's internal `data-image` attribute removed, and an image without `alt`
-getting its file name as `alt` — fill alternative texts in the editor.
+getting its file name as `alt` — fill alternative texts in the editor. A site that keeps
+`iframe` in `allowed_tags` (trusted editors only) loses `allowfullscreen` on embedded videos — the
+cleaner does not know the attribute on iframes. The template can add it back to the cleaned HTML:
+`{{ record.body|replace({'<iframe ': '<iframe allowfullscreen '})|raw }}`.
 
 ---
 
