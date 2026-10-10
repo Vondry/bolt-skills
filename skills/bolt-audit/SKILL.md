@@ -57,7 +57,7 @@ bash $SKILLS/bolt-audit/scripts/audit.sh --base-url=https://staging.example.cz  
 #   --strict                      exit 1 when a skill fails (CI)
 ```
 
-It writes `profile.md`, `summary.md` / `summary.tsv`, `logs/<skill>.log`, `examples.md` and `diffs/`. Applicability is decided automatically where it can be: `bolt-htaccess` is N/A on Nginx-only sites, `bolt-add-language` runs once per secondary locale and is N/A on single-language sites. `bolt-cookie-consent` runs without `--draft`: placeholders count as failures in an audit.
+It writes `profile.md`, `summary.md` / `summary.tsv`, `logs/<skill>.log`, `examples.md` and `diffs/`. With `--base-url` it also requests every sitemap URL (with each secondary-locale prefix), the search page and a missing URL, and lists the status codes in `http.md` (`http-smoke` row: any 5xx is a failure, any other non-200 a warning, the missing URL must answer 404) — pages that crash are invisible to the file-based checks. Applicability is decided automatically where it can be: `bolt-htaccess` is N/A on Nginx-only sites, `bolt-add-language` runs once per secondary locale and is N/A on single-language sites. `bolt-cookie-consent` runs without `--draft`: placeholders count as failures in an audit.
 
 ## Step 3 — Read the profile
 
@@ -78,7 +78,7 @@ Go through the skills in `summary.md` order. For **each** skill:
 
 Do not skip a skill because its script passed — the *Review* points are exactly what scripts cannot see. Keep the notes per skill; a long audit may be continued in a new session from the report directory. Large projects: the skills are independent at this step, so the review can be split between parallel agents (one or a few skills each) if the user asks for it; merge their findings in Step 5.
 
-Then check the *Beyond the skills* list at the end of the checklist.
+Then read `http.md` (every non-200 page is a finding with the template that renders it) and check the *Beyond the skills* list at the end of the checklist.
 
 ## Step 5 — Write `AUDIT.md`
 

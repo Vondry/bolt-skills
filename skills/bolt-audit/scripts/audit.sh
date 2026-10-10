@@ -18,6 +18,7 @@ set -e
 #   summary.tsv       the same, machine-readable
 #   logs/<skill>.log  full output of the skill's verify.sh
 #   examples.md       project files compared with each skill's examples (references/example-map.tsv)
+#   http.md           with --base-url: status of every sitemap URL, the search page and a 404 probe
 #   diffs/<skill>/    unified diffs for the files that differ
 #
 # Live HTTP checks run only with --base-url (never against a default port, which might be
@@ -229,6 +230,64 @@ for skill in "${SKILLS[@]}"; do
             ;;
     esac
 done
+
+# ---------------------------------------------------------------- HTTP smoke test (live only)
+# Every sitemap URL (and its secondary-locale variants), the search page and a guaranteed 404:
+# pages that answer 500 are invisible to the file-based checks above.
+if [ -n "$BASE_URL" ] && { [ -z "$ONLY_LIST" ] || in_list "http-smoke" "$ONLY_LIST"; } && ! in_list "http-smoke" "$SKIP_LIST" \
+    && ! curl -s -o /dev/null --max-time 10 "$BASE_URL/"; then
+    record "http-smoke" "SKIP" 0 0 "$BASE_URL not reachable"
+    echo "  http-smoke: SKIP ($BASE_URL not reachable)"
+elif [ -n "$BASE_URL" ] && { [ -z "$ONLY_LIST" ] || in_list "http-smoke" "$ONLY_LIST"; } && ! in_list "http-smoke" "$SKIP_LIST"; then
+    HTTP_LOG="$OUT/logs/http-smoke.log"
+    URLS="$OUT/http-urls.txt"
+    curl -s --max-time 30 "$BASE_URL/sitemap.xml" | grep -oE "<loc>[^<]+</loc>" | sed -E 's#</?loc>##g; s#^https?://[^/]+##' > "$URLS.base" || true
+    [ -s "$URLS.base" ] || echo "/" > "$URLS.base"
+    cp "$URLS.base" "$URLS"
+    for code in $SECONDARY; do
+        awk -v c="$code" -v p="/$code/" '$0 !~ "^" p && $0 != "/" c { print ($0 == "/" ? p : "/" c $0) }' "$URLS.base" >> "$URLS"
+    done
+    echo "/search?searchTerm=test" >> "$URLS"
+    for code in $SECONDARY; do echo "/$code/search?searchTerm=test" >> "$URLS"; done
+    sort -u "$URLS" | head -n 300 > "$URLS.sorted" && mv "$URLS.sorted" "$URLS"
+    rm -f "$URLS.base"
+    PROBE="/bolt-audit-missing-$STAMP"
+    {
+        echo "# HTTP smoke test against $BASE_URL"
+        echo ""
+        echo "Every sitemap URL (and its /<locale> variants), the search page and a missing URL (expects 404)."
+        echo "At most 300 URLs."
+        echo ""
+        echo "| URL | Status | Expected |"
+        echo "| :--- | ---: | :--- |"
+    } > "$OUT/http.md"
+    HTTP_FAIL=0
+    HTTP_WARN=0
+    while read -r path; do
+        code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$BASE_URL$path" || true)
+        mark="200"
+        case "$code" in
+            200) ;;
+            5*|000) HTTP_FAIL=$((HTTP_FAIL + 1)); mark="200 — **failure**" ;;
+            *) HTTP_WARN=$((HTTP_WARN + 1)); mark="200 — check" ;;
+        esac
+        echo "| \`$path\` | $code | $mark |" >> "$OUT/http.md"
+        echo "$code $path" >> "$HTTP_LOG"
+    done < "$URLS"
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$BASE_URL$PROBE" || true)
+    if [ "$code" = "404" ]; then mark="404"; else mark="404 — **failure**"; HTTP_FAIL=$((HTTP_FAIL + 1)); fi
+    echo "| \`$PROBE\` | $code | $mark |" >> "$OUT/http.md"
+    echo "$code $PROBE (expects 404)" >> "$HTTP_LOG"
+    rm -f "$URLS"
+    if [ $HTTP_FAIL -gt 0 ]; then
+        record "http-smoke" "FAIL" "$HTTP_FAIL" "$HTTP_WARN" ""
+    elif [ $HTTP_WARN -gt 0 ]; then
+        record "http-smoke" "WARN" 0 "$HTTP_WARN" ""
+    else
+        record "http-smoke" "PASS" 0 0 ""
+    fi
+    echo "  http-smoke: $(tail -n 1 "$OUT/summary.tsv" | cut -f2) (see http.md)"
+fi
 
 # ---------------------------------------------------------------- examples vs. project
 {

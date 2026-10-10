@@ -12,6 +12,11 @@ profile). Report defects with a fix; report deviations once per skill with the c
 and never inflate them into many findings. A failing script line on a project that does not use
 the convention is a deviation, not a defect.
 
+**Exception — the theme structure is required.** The Component/Container/Page structure
+(`bolt-theme-init`, `bolt-theme-templates`) is not a style preference: every theme-facing skill
+plugs into it. A theme without it is a **finding** (Medium, effort L) with the migration below —
+never "keep, record as deviation".
+
 ---
 
 ## 1. bolt-timezone
@@ -51,8 +56,14 @@ the convention is a deviation, not a defect.
 
 ## 8. bolt-theme-init
 - **Script:** active theme, directory, Component/Container/Page structure and `partials/_master.twig`, no `setcontent` in components, ContentType template bindings, build tooling, compiled assets.
-- **Review:** if the theme predates the convention (no `components/`, `containers/`, `pages/`), report **one** deviation with the cost of migrating; inside the existing structure check what the convention protects: queries (`setcontent`) inside reusable includes, the master layout's blocks and includes (SEO, consent, skip link), `assets_version` cache-busting, a build that runs (`npm run prod` exists and the committed bundle is fresh).
-- **Severity hints:** convention deviation → Medium (one finding); no skip link / no `lang` → Medium (accessibility); stale or missing build → High.
+- **Review:** if the theme predates the convention (no `components/`, `containers/`, `pages/`), report **one finding** — *Theme not in the Component/Container/Page structure* — with this migration as the fix:
+  1. snapshot the rendered HTML of every URL (sitemap in every locale, search, 404) before touching anything;
+  2. `git mv` every template that queries (`setcontent`, `menu_array()`) to `containers/<area>/_<name>.twig`, pure templates to `components/<group>/<name>.twig`, pages to `pages/<name>/<name>.twig` / `<name>.record.twig` (page-only pieces to `pages/<name>/components/`); `partials/` keeps only the master layout, locale switcher and consent partials;
+  3. move queries that sit inside pages into containers; give the master layout the `seo`, `head`, `header`, `main`, `footer`, `scripts` blocks;
+  4. update every include, `homepage_template`, `search_results_template` and the ContentType `record_template` / `listing_template`;
+  5. compare the snapshots — only intended changes may differ — and run `bolt-theme-init` and `bolt-theme-templates` verification.
+  Inside the structure, also check the master layout's blocks and includes (SEO, consent, skip link), `assets_version` cache-busting, and a build that runs (`npm run prod` exists and the committed bundle is fresh).
+- **Severity hints:** structure missing → Medium (one finding, effort L); no skip link / no `lang` → Medium (accessibility); stale or missing build → High.
 
 ## 9. bolt-tailwind-theme
 - **Script:** entrypoint, `@source` scanning safeguards, `@theme` tokens, `scroll-margin-top`, repeating utilities, compilation.
@@ -72,7 +83,7 @@ the convention is a deviation, not a defect.
 ## 12. bolt-theme-templates
 - **Script:** directories and master, zero `setcontent` in components, page orchestrators, `locale_link` usage, `__()|default()` misuse, classes missing from the compiled CSS, `lint:twig`.
 - **Review:** raw HTML volume in `pages/` (Appendix B.1); Bolt 6 pager (`pager(records, …)`, not the Bolt 3 API); images through a picture component with `alt`, dimensions and thumbnails (no full-size originals); heading order; translated strings instead of literals on multilingual sites.
-- **Severity hints:** classes not in the CSS → High (unstyled UI); originals served instead of thumbnails → Medium (performance); literal strings on a multilingual site → Medium.
+- **Severity hints:** a page answering 500 (see `http.md`) → High; classes not in the CSS → High (unstyled UI); originals served instead of thumbnails → Medium (performance); literal strings on a multilingual site → Medium.
 
 ## 13. bolt-helper-pages
 - **Script:** error page mappings in `config/bolt/config.yaml`, helper templates, SEO / robustness (noindex, no DB on 500), Tailwind bundle isolation, `lint:twig`.

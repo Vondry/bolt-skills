@@ -52,7 +52,8 @@ sentence, and the three things to fix first>
 
 ## Deviations from the skills' conventions
 One line per skill that is built differently but works: what differs, and what aligning would cost
-(or "keep — record in the site plan").
+(or "keep — record in the site plan"). The theme's Component/Container/Page structure is never a
+deviation — a theme without it is a finding.
 
 ## Not checked
 What the audit could not verify and why: live checks without `--base-url`, Apache rules against
