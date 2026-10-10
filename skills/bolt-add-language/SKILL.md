@@ -116,7 +116,7 @@ Keys follow the Integration Contract (`WORKFLOWS.md`): **dotted keys** (`card.re
 The quickest way to create a new catalog with full parity is to merge the English catalog of the project into it and translate the targets:
 
 ```bash
-php vendor/vondry/bolt-skills/scripts/merge-xliff.php translations/messages.en.xlf translations/messages.<target_code>.xlf
+php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php translations/messages.en.xlf translations/messages.<target_code>.xlf
 ```
 
 The helper creates `messages.<target_code>.xlf` (setting `trgLang` and the file id) or adds only the missing units to an existing catalog — it never overwrites translations. Every skill that renders text ships its units in `examples/translations.<locale>.xlf` (`bolt-theme-init`, `bolt-menu`, `bolt-theme-templates`, `bolt-cookie-consent`, this skill); merge them the same way.
@@ -178,9 +178,9 @@ override_default:
 The header and the mobile drawer of `bolt-menu` include `partials/_locale-switcher.twig` (`{ mobile: false }` / `{ mobile: true }`). If the theme does not have it yet, copy the example shipped with this skill and merge its translation unit (`locale.switch`):
 
 ```bash
-cp vendor/vondry/bolt-skills/skills/bolt-add-language/examples/_locale-switcher.twig public/theme/<theme_name>/partials/
-php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
-    vendor/vondry/bolt-skills/skills/bolt-add-language/examples/translations.cs.xlf translations/messages.cs.xlf
+cp vendor/tomvondracek/bolt-skills/skills/bolt-add-language/examples/_locale-switcher.twig public/theme/<theme_name>/partials/
+php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+    vendor/tomvondracek/bolt-skills/skills/bolt-add-language/examples/translations.cs.xlf translations/messages.cs.xlf
 ```
 
 Locate the theme's locale switcher partial:
@@ -230,7 +230,7 @@ APP_ENV=prod bin/console cache:clear
 Run the bundled test script to verify that the new language is completely wired up:
 
 ```bash
-vendor/vondry/bolt-skills/skills/bolt-add-language/scripts/verify.sh <target_code>
+vendor/tomvondracek/bolt-skills/skills/bolt-add-language/scripts/verify.sh <target_code>
 ```
 
 Or run manual checks:

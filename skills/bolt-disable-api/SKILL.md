@@ -154,7 +154,7 @@ Ensure that no `/api/graphql`, `/api/graphql/graphiql`, or `/api/docs` routes ar
 ### 2. Run Verification Script
 Execute the bundled test script (set `BOLT_BASE_URL` to this project's running site for the HTTP checks; default `http://127.0.0.1:8000`):
 ```bash
-BOLT_BASE_URL=http://localhost:8080 vendor/vondry/bolt-skills/skills/bolt-disable-api/scripts/verify.sh
+BOLT_BASE_URL=http://localhost:8080 vendor/tomvondracek/bolt-skills/skills/bolt-disable-api/scripts/verify.sh
 ```
 Or verify manually via `curl`:
 - `curl -i http://127.0.0.1:8000/api/docs.html` -> Expect `401` or `404`

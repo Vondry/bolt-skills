@@ -226,7 +226,7 @@ __nodes:
 To inspect your ContentTypes configuration against all aforementioned standards, run the verification script:
 
 ```bash
-vendor/vondry/bolt-skills/skills/bolt-contenttypes/scripts/verify.sh
+vendor/tomvondracek/bolt-skills/skills/bolt-contenttypes/scripts/verify.sh
 ```
 
 ### What the script validates:

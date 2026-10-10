@@ -1,5 +1,5 @@
 {
-    "name": "vondry/bolt-skills",
+    "name": "tomvondracek/bolt-skills",
     "description": "Collection of AI agent skills, workflows, and runbooks for Bolt CMS",
     "type": "composer-plugin",
     "license": "MIT",
@@ -18,11 +18,11 @@
     },
     "autoload": {
         "psr-4": {
-            "Vondry\\BoltSkills\\": "src/"
+            "Tomvondracek\\BoltSkills\\": "src/"
         }
     },
     "extra": {
-        "class": "Vondry\\BoltSkills\\Plugin",
+        "class": "Tomvondracek\\BoltSkills\\Plugin",
         "antigravity": {
             "skills": "skills"
         }

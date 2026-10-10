@@ -248,8 +248,8 @@ For a height-animated panel below the header bar instead of a drawer, use `data-
 ### Translation Keys
 The containers use these keys; `examples/translations.cs.xlf` and `examples/translations.en.xlf` hold their Czech and English texts. Merge them into every catalog:
 ```bash
-php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
-    vendor/vondry/bolt-skills/skills/bolt-menu/examples/translations.cs.xlf translations/messages.cs.xlf
+php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+    vendor/tomvondracek/bolt-skills/skills/bolt-menu/examples/translations.cs.xlf translations/messages.cs.xlf
 ```
 `nav.main_label`, `nav.open_menu`, `nav.close_menu`, `nav.mobile_label`, `nav.menu`, `footer.socials`, `footer.rights`, `footer.privacy`, `footer.cookie_settings`.
 

@@ -384,7 +384,7 @@ This file is generated from the website's content management system; the facts b
 To verify that all three extensions and their theme overrides are correctly wired:
 
 ```bash
-vendor/vondry/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
+vendor/tomvondracek/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
 ```
 
 ### What the script verifies:

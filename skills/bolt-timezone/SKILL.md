@@ -211,7 +211,7 @@ When generating machine-readable or public summaries containing timestamps (e.g.
 Run the automated verification script from your project root:
 
 ```bash
-vendor/vondry/bolt-skills/skills/bolt-timezone/scripts/verify.sh
+vendor/tomvondracek/bolt-skills/skills/bolt-timezone/scripts/verify.sh
 ```
 
 ### What the script checks:

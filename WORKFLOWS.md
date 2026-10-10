@@ -10,7 +10,7 @@ The phases are ordered by real dependencies: every step only needs what earlier 
 
 - **Working directory.** Every command runs from the root of the Bolt project. Set the skills location once per shell:
   ```bash
-  SKILLS=vendor/vondry/bolt-skills/skills          # installed with: composer require --dev vondry/bolt-skills
+  SKILLS=vendor/tomvondracek/bolt-skills/skills          # installed with: composer require --dev tomvondracek/bolt-skills
   # SKILLS=/path/to/bolt-skills/skills             # when using a checkout of this repository instead
   ```
 - **Verify scripts.** Run a skill's verification with `bash $SKILLS/<skill>/scripts/verify.sh`. The scripts locate the project root from the current directory.
@@ -20,9 +20,9 @@ The phases are ordered by real dependencies: every step only needs what earlier 
   ```
 - **Applied vs. verified.** Several skills are applied across more than one phase (for example `bolt-extension-setup` installs packages in Phase 3 and adds theme templates in Phase 6). Their verification only passes once every part exists. [Appendix A](#appendix-a-skill-to-phase-map) lists where each skill is applied and where its verification is expected to pass. Do not chase failures from a verification that is scheduled for a later phase.
 - **Precedence.** The skills implement the [Integration Contract](#integration-contract-single-source-of-truth); if a project deviates from it, record the deviation in the site plan. What the verification scripts cannot check automatically is listed in [Appendix B](#appendix-b-known-limitations).
-- **Translations.** Every skill that renders text ships its units in `examples/translations.<locale>.xlf`. Merge them into the project's catalogs with `php vendor/vondry/bolt-skills/scripts/merge-xliff.php <skill catalog> translations/messages.<locale>.xlf` — it adds missing units and never overwrites existing translations.
+- **Translations.** Every skill that renders text ships its units in `examples/translations.<locale>.xlf`. Merge them into the project's catalogs with `php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php <skill catalog> translations/messages.<locale>.xlf` — it adds missing units and never overwrites existing translations.
 - **Commit after every gate** (`git commit -m "Phase N: …"`) so any phase can be rolled back on its own.
-- **Final verification** runs all skills in phase order: `vendor/vondry/bolt-skills/scripts/verify-all.sh` (see [Phase 8](#phase-8-qa--sign-off)).
+- **Final verification** runs all skills in phase order: `vendor/tomvondracek/bolt-skills/scripts/verify-all.sh` (see [Phase 8](#phase-8-qa--sign-off)).
 
 ---
 
@@ -315,7 +315,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 
 **Prerequisites:**
 - A Bolt 6.1 project that boots: `composer create-project bolt/project <dir>`, `DATABASE_URL` set in `.env.local`, `php bin/console bolt:setup`, local server reachable at the URL recorded as `BOLT_BASE_URL`.
-- Skills installed: `composer require --dev vondry/bolt-skills`.
+- Skills installed: `composer require --dev tomvondracek/bolt-skills`.
 - Git initialised with a clean baseline commit.
 - Node.js and npm available (needed from Phase 4).
 
@@ -467,8 +467,8 @@ Add a `TemplateController` route (plus the `/{_locale}/` variant on multilingual
 - Create `translations/messages.<locale>.xlf` for every code in `app_locales` (XLIFF 2.0, `srcLang` = default locale, `trgLang` = catalog locale, dotted keys) by merging the units the layout shell and navigation already use:
   ```bash
   for skill in bolt-theme-init bolt-menu; do
-      php vendor/vondry/bolt-skills/scripts/merge-xliff.php $SKILLS/$skill/examples/translations.cs.xlf translations/messages.cs.xlf
-      php vendor/vondry/bolt-skills/scripts/merge-xliff.php $SKILLS/$skill/examples/translations.en.xlf translations/messages.en.xlf
+      php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php $SKILLS/$skill/examples/translations.cs.xlf translations/messages.cs.xlf
+      php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php $SKILLS/$skill/examples/translations.en.xlf translations/messages.en.xlf
   done
   ```
   For a locale without a shipped catalog, merge the English catalog into `messages.<code>.xlf` and translate the targets.
@@ -572,7 +572,7 @@ php bin/console lint:container
 ### 8.2 Master Verification
 ```bash
 export BOLT_BASE_URL=http://localhost:8080           # this project's running site
-vendor/vondry/bolt-skills/scripts/verify-all.sh --skip=<skills that do not apply>
+vendor/tomvondracek/bolt-skills/scripts/verify-all.sh --skip=<skills that do not apply>
 ```
 - The runner executes the skills in phase order (Appendix A) and verifies `bolt-add-language` once per secondary locale read from `config/services.yaml` (override with `--locales=en,de`). Single-language sites skip it automatically.
 - Skip only what the decision matrix allows: `bolt-htaccess` (Nginx), `bolt-disable-api` (API consumers, endpoints tested manually). `bolt-cookie-consent` always runs: without trackers it checks the privacy page only.

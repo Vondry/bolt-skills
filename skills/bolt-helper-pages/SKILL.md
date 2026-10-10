@@ -333,7 +333,7 @@ When building for a new client (e.g. dental clinic, fitness studio, e-shop):
 To verify that all helper pages, configuration mappings, safety rules, and Tailwind bundle isolation are properly established:
 
 ```bash
-vendor/vondry/bolt-skills/skills/bolt-helper-pages/scripts/verify.sh
+vendor/tomvondracek/bolt-skills/skills/bolt-helper-pages/scripts/verify.sh
 ```
 
 ### What the script verifies:

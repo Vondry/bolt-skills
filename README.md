@@ -1,4 +1,4 @@
-# Bolt CMS Agent Skills (`vondry/bolt-skills`)
+# Bolt CMS Agent Skills (`tomvondracek/bolt-skills`)
 
 A curated collection of production-tested AI agent skills, task procedures, and verification runbooks for building, securing, and maintaining websites with [Bolt CMS](https://boltcms.io).
 
@@ -41,8 +41,8 @@ To orchestrate and scaffold a complete, production-grade Bolt CMS website from a
   `bolt-add-language` is verified once per secondary locale read from `app_locales` in `config/services.yaml` (override with `--locales=en,de`) and skipped on single-language sites.
 - Merge the translation units shipped by the skills (`skills/<skill>/examples/translations.<locale>.xlf`) into the project catalogs:
   ```bash
-  php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
-      vendor/vondry/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf translations/messages.cs.xlf
+  php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+      vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf translations/messages.cs.xlf
   ```
   Missing units are added; existing translations are never changed.
 
@@ -51,14 +51,14 @@ To orchestrate and scaffold a complete, production-grade Bolt CMS website from a
 ## Installation via Composer
 
 ```bash
-composer require --dev vondry/bolt-skills
+composer require --dev tomvondracek/bolt-skills
 ```
 
-The package is a Composer plugin, so on the first install Composer asks you to trust it (`Do you trust "vondry/bolt-skills" to execute code?`). Answer `y`; the choice is stored in `config.allow-plugins`.
+The package is a Composer plugin, so on the first install Composer asks you to trust it (`Do you trust "tomvondracek/bolt-skills" to execute code?`). Answer `y`; the choice is stored in `config.allow-plugins`.
 
 That is all. On every `composer install` / `composer update` the plugin:
 
-- symlinks each skill into `.claude/skills/<skill>` (Claude Code) and `.agents/skills/<skill>` (other agents), pointing to `vendor/vondry/bolt-skills/skills/<skill>`;
+- symlinks each skill into `.claude/skills/<skill>` (Claude Code) and `.agents/skills/<skill>` (other agents), pointing to `vendor/tomvondracek/bolt-skills/skills/<skill>`;
 - adds those links to a managed block in `.gitignore`, so they are never committed (teammates get them from their own `composer install`);
 - adds a managed "Bolt CMS Agent Skills" block to the project's `AGENTS.md` (created if missing) listing the skills and `WORKFLOWS.md`;
 - removes links to skills that no longer exist in the installed version.
@@ -68,7 +68,7 @@ Skills of your own in the same folders are left untouched; an existing file or f
 ### Removal
 
 ```bash
-composer remove --dev vondry/bolt-skills
+composer remove --dev tomvondracek/bolt-skills
 ```
 
 removes every skill link, the managed blocks in `.gitignore` and `AGENTS.md`, and any file or folder the plugin created that is now empty. Your own content is kept as it was.
@@ -98,7 +98,7 @@ In the project's `composer.json`:
 Whenever new skills or updates are released, update with Composer:
 
 ```bash
-composer update vondry/bolt-skills
+composer update tomvondracek/bolt-skills
 ```
 
 ---

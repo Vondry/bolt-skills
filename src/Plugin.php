@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Vondry\BoltSkills;
+namespace Tomvondracek\BoltSkills;
 
 use Composer\Composer;
 use Composer\EventDispatcher\EventSubscriberInterface;
@@ -32,15 +32,15 @@ use Composer\Util\Platform;
  */
 final class Plugin implements PluginInterface, EventSubscriberInterface
 {
-    public const PACKAGE_NAME = 'vondry/bolt-skills';
+    public const PACKAGE_NAME = 'tomvondracek/bolt-skills';
 
     private const DEFAULT_TARGETS = ['.claude/skills', '.agents/skills'];
 
-    private const AGENTS_MD_START = '<!-- vondry/bolt-skills:start (managed by composer, do not edit) -->';
-    private const AGENTS_MD_END = '<!-- vondry/bolt-skills:end -->';
+    private const AGENTS_MD_START = '<!-- tomvondracek/bolt-skills:start (managed by composer, do not edit) -->';
+    private const AGENTS_MD_END = '<!-- tomvondracek/bolt-skills:end -->';
 
-    private const GITIGNORE_START = '# >>> vondry/bolt-skills (managed by composer, do not edit)';
-    private const GITIGNORE_END = '# <<< vondry/bolt-skills';
+    private const GITIGNORE_START = '# >>> tomvondracek/bolt-skills (managed by composer, do not edit)';
+    private const GITIGNORE_END = '# <<< tomvondracek/bolt-skills';
 
     private Composer $composer;
 

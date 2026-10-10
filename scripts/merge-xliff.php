@@ -6,11 +6,11 @@ declare(strict_types=1);
  * Merge XLIFF 2.0 translation units shipped by a skill into a project catalog.
  *
  * Usage:
- *   php vendor/vondry/bolt-skills/scripts/merge-xliff.php <source.xlf> <target.xlf>
+ *   php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php <source.xlf> <target.xlf>
  *
  * Example:
- *   php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
- *       vendor/vondry/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf \
+ *   php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+ *       vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf \
  *       translations/messages.cs.xlf
  *
  * - Units are matched by their translation key: the unit's `name` attribute, or its

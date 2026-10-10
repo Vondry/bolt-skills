@@ -417,8 +417,8 @@ The partials owned by other skills are included with `ignore missing`, so the sh
 ### H. Translation Units
 `examples/translations.cs.xlf` / `translations.en.xlf` hold the units used by the layout shell and the fallbacks (`a11y.skip_to_content`, `listing.empty`). Merge them into the project catalogs:
 ```bash
-php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
-    vendor/vondry/bolt-skills/skills/bolt-theme-init/examples/translations.cs.xlf translations/messages.cs.xlf
+php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+    vendor/tomvondracek/bolt-skills/skills/bolt-theme-init/examples/translations.cs.xlf translations/messages.cs.xlf
 ```
 
 ---
@@ -467,8 +467,8 @@ Verify that `css/index.css` and `js/app.js` have been generated and are non-empt
 
 ### Step 5: Merge Translations, Clear Bolt CMS Cache & Test Render
 ```bash
-php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
-    vendor/vondry/bolt-skills/skills/bolt-theme-init/examples/translations.cs.xlf translations/messages.cs.xlf
+php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+    vendor/tomvondracek/bolt-skills/skills/bolt-theme-init/examples/translations.cs.xlf translations/messages.cs.xlf
 php bin/console cache:clear
 ```
 Open the homepage in the browser or run a test request to ensure HTTP 200 is returned (the placeholder page renders inside the layout shell).
@@ -485,7 +485,7 @@ Open the homepage in the browser or run a test request to ensure HTTP 200 is ret
 ### Automated Scaffolding Script
 To bootstrap a complete theme foundation in a single command:
 ```bash
-# From bolt-skills repo or vendor/vondry/bolt-skills:
+# From bolt-skills repo or vendor/tomvondracek/bolt-skills:
 ./skills/bolt-theme-init/scripts/scaffold.sh <theme-name> [project-root] [--force]
 ```
 Existing files are kept (reported as `[skip]`) unless `--force` is given. The script creates the directories, copies tooling, TypeScript modules, vendor assets, the layout shell, macros, fallbacks and the homepage placeholder, links the theme in `config/bolt/config.yaml`, runs `npm install`, `npm update --save` and `npm run prod`, checks that `css/index.css` and `js/app.js` are non-empty, and clears the Bolt cache.

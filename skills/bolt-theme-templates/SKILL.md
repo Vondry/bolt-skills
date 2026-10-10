@@ -1207,10 +1207,10 @@ The homepage stays free of `setcontent`: the query lives in this container.
 Every visible string is a dotted translation key (`products.title`, `card.read_more`, `contact.title`, `a11y.breadcrumbs`, …). `examples/translations.cs.xlf` and `examples/translations.en.xlf` contain all units these templates use (XLIFF 2.0, Czech defaults and English). Merge them into each catalog of the project:
 
 ```bash
-php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
-    vendor/vondry/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf translations/messages.cs.xlf
-php vendor/vondry/bolt-skills/scripts/merge-xliff.php \
-    vendor/vondry/bolt-skills/skills/bolt-theme-templates/examples/translations.en.xlf translations/messages.en.xlf
+php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+    vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf translations/messages.cs.xlf
+php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
+    vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/examples/translations.en.xlf translations/messages.en.xlf
 ```
 
 The helper only adds missing units (by key) and never changes existing translations. For other locales, merge the English catalog into `messages.<locale>.xlf` and translate the targets.
