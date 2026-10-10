@@ -1,6 +1,6 @@
 # Bolt CMS Agent Skills
 
-This repository provides curated AI agent skills, task procedures, and verification runbooks for projects using [Bolt CMS](https://boltcms.io).
+This repository provides curated AI agent skills, task procedures, and verification runbooks for projects using [Bolt CMS](https://boltcms.io) 6.
 
 ## Available Skills
 
@@ -19,6 +19,7 @@ This repository provides curated AI agent skills, task procedures, and verificat
 - [`bolt-menu`](skills/bolt-menu/SKILL.md): Configure, structure, and verify Bolt CMS navigation menus in `config/bolt/menu.yaml` (header `main`, footer columns, nested submenus, multilingual labels, `/#anchor` formatting, and CTA classes) with Twig Component/Container integration.
 - [`bolt-cookie-consent`](skills/bolt-cookie-consent/SKILL.md): Intake-driven (trackers such as Google Ads, GA4, Sklik, Meta; embeds; controller model) Czech ZEK § 89 / GDPR cookie banner and Privacy Policy page (/zasady-ochrany-osobnich-udaju), both rendered from one `theme.yaml` data model: two-layer opt-in banner with equal Accept / Reject, Google Consent Mode v2, consent-gated embeds, and verification against the ÚOOÚ / EDPB guidelines in `references/guidelines.cs.md`.
 - [`bolt-theme-templates`](skills/bolt-theme-templates/SKILL.md): Production standards, component libraries, and automated verification for Twig + Tailwind CSS v4 templates under Component/Container/Page architecture (zero-setcontent pure UI components, smart containers, zero-HTML page orchestrators, and page-scoped components).
+- [`bolt-audit`](skills/bolt-audit/SKILL.md): Read-only audit of an existing Bolt CMS 6 project against all the skills above — project profile, every verification script with full logs, comparison with the skills' examples, a one-by-one review per skill, and a prioritized `AUDIT.md` (defects vs. convention deviations, severity, evidence, fix).
 
 ## End-to-End Orchestration Workflow
 
@@ -43,3 +44,6 @@ All skills in this repository follow the open agent standard:
 - Deterministic steps with concrete file paths, configuration diffs, and pitfalls.
 - Executable verification scripts under `scripts/verify.sh`.
 
+## Auditing an Existing Project
+
+To check an existing site against the skills instead of building one, use [`bolt-audit`](skills/bolt-audit/SKILL.md): `bash skills/bolt-audit/scripts/audit.sh --project=/path/to/project [--base-url=…]` runs the automated part (read-only, report in `var/bolt-audit/<timestamp>/`); the skill then guides the per-skill review and the `AUDIT.md` report.

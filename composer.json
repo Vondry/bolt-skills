@@ -1,6 +1,6 @@
 {
     "name": "tomvondracek/bolt-skills",
-    "description": "Collection of AI agent skills, workflows, and runbooks for Bolt CMS",
+    "description": "Collection of AI agent skills, workflows, and runbooks for Bolt CMS 6",
     "type": "composer-plugin",
     "license": "MIT",
     "authors": [

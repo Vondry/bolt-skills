@@ -1264,6 +1264,6 @@ Raw HTML in page orchestrators is a judgement call and is not checked automatica
 | **Dynamic Tailwind class interpolation** | `bg-{{ color }}-500` classes are purged by Tailwind v4. | Use lookup maps (e.g. `variant_map = { 'primary': 'bg-accent' }`) with full static class strings. |
 | **Colour names outside the token set** (`brand`, `ink-800`, `zinc-*`) | No CSS is generated; components render unstyled. | Use the `bolt-tailwind-theme` tokens; the verification lists missing classes. |
 | **Stretched link without `relative`** | The click overlay covers the whole section or page. | `relative` on the card root. |
-| **Bolt 3 pager API** (`records.pager`, `pager.totalpages`, `makelink`) | Pagination never renders on Bolt 5/6. | `{{ pager(records, template = 'components/ui/pagination.twig') }}` (Pagerfanta). |
+| **Bolt 3 pager API** (`records.pager`, `pager.totalpages`, `makelink`) | Pagination never renders on Bolt 6. | `{{ pager(records, template = 'components/ui/pagination.twig') }}` (Pagerfanta). |
 | **PhotoSwipe attributes on `<img>`** | The lightbox never opens. | `a.photoswipe-gallery__link` inside `.photoswipe-gallery` (`picture.twig` with `pswp: true`). |
 | **`__('key')\|default('…')`** | The key is shown instead of the text. | Add the key to every catalog. |

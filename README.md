@@ -1,6 +1,6 @@
 # Bolt CMS Agent Skills (`tomvondracek/bolt-skills`)
 
-A curated collection of production-tested AI agent skills, task procedures, and verification runbooks for building, securing, and maintaining websites with [Bolt CMS](https://boltcms.io).
+A curated collection of production-tested AI agent skills, task procedures, and verification runbooks for building, securing, and maintaining websites with [Bolt CMS](https://boltcms.io) **6**.
 
 Compatible with **Google Antigravity**, **Claude Code**, **Gemini**, **Cursor**, **IBM Bob**, and other LLM agent frameworks.
 
@@ -25,6 +25,7 @@ Compatible with **Google Antigravity**, **Claude Code**, **Gemini**, **Cursor**,
 | **`bolt-menu`** | Configure, structure, and verify navigation menus in `config/bolt/menu.yaml` (header, footer, submenus, anchors, CTAs) with Twig Component/Container patterns. | [`skills/bolt-menu/`](skills/bolt-menu/SKILL.md) |
 | **`bolt-cookie-consent`** | Asks which trackers (Google Ads, GA4, Sklik, Meta), embeds and controller model the site uses, then builds a Czech ZEK § 89 / GDPR two-layer opt-in cookie banner (equal Accept / Reject, Google Consent Mode v2) and the Privacy Policy page from one `theme.yaml` data model, verified against ÚOOÚ / EDPB guidelines. | [`skills/bolt-cookie-consent/`](skills/bolt-cookie-consent/SKILL.md) |
 | **`bolt-theme-templates`** | Build and verify Twig + Tailwind v4 templates under Component/Container/Page architecture (pure UI components, smart containers, zero-HTML page orchestrators). | [`skills/bolt-theme-templates/`](skills/bolt-theme-templates/SKILL.md) |
+| **`bolt-audit`** | Read-only audit of an existing Bolt CMS 6 project against all skills: profile, every verification script, comparison with the examples, per-skill review and a prioritized `AUDIT.md` report. | [`skills/bolt-audit/`](skills/bolt-audit/SKILL.md) |
 
 ---
 
@@ -45,6 +46,19 @@ To orchestrate and scaffold a complete, production-grade Bolt CMS website from a
       vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/examples/translations.cs.xlf translations/messages.cs.xlf
   ```
   Missing units are added; existing translations are never changed.
+
+---
+
+## Auditing an Existing Project
+
+Point an agent at an existing site and ask for an audit (`bolt-audit` skill), or run the automated part yourself:
+
+```bash
+bash vendor/tomvondracek/bolt-skills/skills/bolt-audit/scripts/audit.sh \
+    --base-url=https://staging.example.cz      # optional: live HTTP checks against this project
+```
+
+The audit changes nothing in the project. It writes a profile, the logs of all verification scripts, a comparison of the project's files with the skills' examples and a summary to `var/bolt-audit/<timestamp>/`; the agent then reviews each skill and writes `AUDIT.md` with findings by severity and the skill step that fixes each one.
 
 ---
 

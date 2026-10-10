@@ -109,7 +109,7 @@ function validateFields(\$fields, \$prefix, \$isLocalized, &\$errors, &\$warning
         // Rule: Do not use deprecated 'repeater' field type
         if (\$type === 'repeater') {
             \$errors[] = sprintf(
-                \"[DEPRECATED FIELD TYPE] '%s' uses 'type: repeater'. In Bolt 5+, repeaters are replaced by 'type: collection' and 'type: set'.\",
+                \"[DEPRECATED FIELD TYPE] '%s' uses 'type: repeater'. In Bolt 6, repeaters are replaced by 'type: collection' and 'type: set'.\",
                 \$path
             );
         }

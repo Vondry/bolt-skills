@@ -21,7 +21,7 @@ This skill provides the official standards, required rules, and an automated ver
 > [!WARNING]
 > Do **NOT** use `type: html`.
 
-* **Why:** In Bolt CMS 5.x/6.x, `type: html` is a generic WYSIWYG HTML field (CKEditor-based in the admin) that accepts arbitrary markup, including inline styles and pasted HTML from other sites, and can even allow Twig (`allow_twig`). Content entered there drifts from the theme's design system and breaks layouts. `redactor` (and `article` for long-form content) give editors a controlled toolbar whose output the theme styles through `.cms-redactor` / `.cms-article`, and keep all rich-text fields consistent.
+* **Why:** In Bolt CMS 6, `type: html` is a generic WYSIWYG HTML field (CKEditor-based in the admin) that accepts arbitrary markup, including inline styles and pasted HTML from other sites, and can even allow Twig (`allow_twig`). Content entered there drifts from the theme's design system and breaks layouts. `redactor` (and `article` for long-form content) give editors a controlled toolbar whose output the theme styles through `.cms-redactor` / `.cms-article`, and keep all rich-text fields consistent.
 * **Standard Rich Text (`type: redactor`):**
   Use `type: redactor` (provided by `bolt/redactor`) for standard editorial rich text: introductions, body copy, descriptions, teasers, and sections.
 * **Structured Long-Form Content (`type: article`):**
@@ -144,7 +144,7 @@ blocks:
 > [!NOTE]
 > Official Bolt Documentation: [Transform Bolt 3 repeaters to Bolt 5 sets and collections](https://docs.boltcms.io/5.2/howto/transform-repeaters-to-sets-and-collections)
 
-In Bolt 5+, the legacy `repeater` field type is replaced by two distinct field types:
+In Bolt 6 (as since Bolt 5), the legacy `repeater` field type is replaced by two distinct field types:
 * `type: set`: Groups a fixed composite set of fields together under one parent key (e.g., a button with `label` and `href`).
 * `type: collection`: Allows editors to add, reorder, and remove multiple items (e.g., list of FAQ items, slides, features).
 

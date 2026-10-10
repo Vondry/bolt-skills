@@ -1,0 +1,86 @@
+# Where each skill's example file lives in a project, and how audit.sh compares it.
+# {theme} = public/theme/<active theme>.
+#
+# kind:
+#   logic    behaviour or security rules that should stay as in the example — any drift is reviewed
+#   design   adapted to the site's design and content — drift is expected; review the contract
+#            (hooks, includes, rules), not the markup
+#   snippet  merged into a larger project file — not diffed; review that the snippet is present
+#   variant  one of several alternatives (menu profiles) — not diffed
+#
+# skill	example	project path	kind
+bolt-add-language	_locale-switcher.twig	{theme}/partials/_locale-switcher.twig	design
+bolt-asset-caching	security.yaml	config/packages/security.yaml	snippet
+bolt-asset-caching	config_snippet.yaml	config/bolt/config.yaml	snippet
+bolt-asset-caching	htaccess_mod_expires.conf	public/.htaccess	snippet
+bolt-asset-caching	nginx_static.conf	docker/nginx/conf.d/default.conf	snippet
+bolt-code-quality	ecs.php	ecs.php	logic
+bolt-code-quality	phpstan.dist.neon	phpstan.dist.neon	logic
+bolt-code-quality	gitlab-ci.yml	.gitlab-ci.yml	design
+bolt-code-quality	Makefile	Makefile	snippet
+bolt-code-quality	composer_snippet.json	composer.json	snippet
+bolt-cookie-consent	cookie-consent.ts	{theme}/js/src/cookie-consent.ts	logic
+bolt-cookie-consent	_consent-mode.twig	{theme}/partials/_consent-mode.twig	logic
+bolt-cookie-consent	_privacy-macros.twig	{theme}/partials/_privacy-macros.twig	logic
+bolt-cookie-consent	_cookie-banner.twig	{theme}/partials/_cookie-banner.twig	design
+bolt-cookie-consent	_cookie-table.twig	{theme}/partials/_cookie-table.twig	design
+bolt-cookie-consent	_consent-embed.twig	{theme}/partials/_consent-embed.twig	design
+bolt-cookie-consent	_privacy-form-note.twig	{theme}/partials/_privacy-form-note.twig	design
+bolt-cookie-consent	gdpr.twig	{theme}/static-pages/gdpr.twig	design
+bolt-cookie-consent	theme.privacy.yaml	{theme}/theme.yaml	snippet
+bolt-extension-setup	appolo-boltseo.yaml	config/extensions/appolo-boltseo.yaml	design
+bolt-extension-setup	bolt-sitemapextension.yaml	config/extensions/bolt-sitemapextension.yaml	design
+bolt-extension-setup	tomvondracek-llmstxt.yaml	config/extensions/tomvondracek-llmstxt.yaml	design
+bolt-extension-setup	sitemap.xml.twig	{theme}/extensions/sitemap.xml.twig	logic
+bolt-extension-setup	llms.txt.twig	{theme}/extensions/llms.txt.twig	design
+bolt-helper-pages	_helper_template_with_master.twig	{theme}/helper-pages/_helper_template_with_master.twig	logic
+bolt-helper-pages	_helper_template_without_master.twig	{theme}/helper-pages/_helper_template_without_master.twig	logic
+bolt-helper-pages	_helper_scene.twig	{theme}/helper-pages/_helper_scene.twig	design
+bolt-helper-pages	_helper_scene_styles.twig	{theme}/helper-pages/_helper_scene_styles.twig	design
+bolt-helper-pages	notfound.404.twig	{theme}/helper-pages/notfound.404.twig	design
+bolt-helper-pages	forbidden.403.twig	{theme}/helper-pages/forbidden.403.twig	design
+bolt-helper-pages	internal-server-error.500.twig	{theme}/helper-pages/internal-server-error.500.twig	design
+bolt-helper-pages	maintenance.503.twig	{theme}/helper-pages/maintenance.503.twig	design
+bolt-helper-pages	config_snippet.yaml	config/bolt/config.yaml	snippet
+bolt-htaccess	root.htaccess	.htaccess	logic
+bolt-htaccess	public.htaccess	public/.htaccess	logic
+bolt-menu	templates/containers/header/_menu.twig	{theme}/containers/header/_menu.twig	design
+bolt-menu	templates/containers/footer/_footer.twig	{theme}/containers/footer/_footer.twig	design
+bolt-menu	templates/components/nav/item.twig	{theme}/components/nav/item.twig	design
+bolt-menu	templates/components/nav/dropdown.twig	{theme}/components/nav/dropdown.twig	design
+bolt-menu	templates/components/brand/logo.twig	{theme}/components/brand/logo.twig	design
+bolt-menu	menu_landing.yaml	config/bolt/menu.yaml	variant
+bolt-runtime-extensions	LocaleLinkExtension.php	src/LocaleLinkExtension.php	logic
+bolt-runtime-extensions	ImageDimensionsExtension.php	src/ImageDimensionsExtension.php	logic
+bolt-runtime-extensions	FileSizeExtension.php	src/FileSizeExtension.php	logic
+bolt-runtime-extensions	services_snippet.yaml	config/services.yaml	snippet
+bolt-tailwind-theme	index.css	{theme}/css/tailwind/index.css	design
+bolt-tailwind-theme	fonts_snippet.css	{theme}/css/tailwind/index.css	snippet
+bolt-theme-init	_master.twig	{theme}/partials/_master.twig	design
+bolt-theme-init	macros.twig	{theme}/macros.twig	logic
+bolt-theme-init	record.twig	{theme}/record.twig	logic
+bolt-theme-init	listing.twig	{theme}/listing.twig	logic
+bolt-theme-init	js/src/index.ts	{theme}/js/src/index.ts	design
+bolt-theme-init	js/src/menu.ts	{theme}/js/src/menu.ts	logic
+bolt-theme-init	js/src/auto-scroll.ts	{theme}/js/src/auto-scroll.ts	logic
+bolt-theme-init	js/src/locale-switcher.ts	{theme}/js/src/locale-switcher.ts	logic
+bolt-theme-init	js/src/photoswipe.ts	{theme}/js/src/photoswipe.ts	logic
+bolt-theme-init	package.json	{theme}/package.json	design
+bolt-theme-init	rollup.config.js	{theme}/rollup.config.js	logic
+bolt-theme-init	postcss.config.mjs	{theme}/postcss.config.mjs	logic
+bolt-theme-init	tsconfig.json	{theme}/tsconfig.json	logic
+bolt-theme-init	theme.yaml	{theme}/theme.yaml	design
+bolt-theme-init	contenttypes_snippet.yaml	config/bolt/contenttypes.yaml	snippet
+bolt-theme-templates	components/ui/button.twig	{theme}/components/ui/button.twig	design
+bolt-theme-templates	components/ui/card.twig	{theme}/components/ui/card.twig	design
+bolt-theme-templates	components/ui/picture.twig	{theme}/components/ui/picture.twig	logic
+bolt-theme-templates	components/ui/pagination.twig	{theme}/components/ui/pagination.twig	design
+bolt-theme-templates	components/ui/section-header.twig	{theme}/components/ui/section-header.twig	design
+bolt-theme-templates	components/ui/badge.twig	{theme}/components/ui/badge.twig	design
+bolt-theme-templates	components/ui/breadcrumbs.twig	{theme}/components/ui/breadcrumbs.twig	design
+bolt-theme-templates	components/ui/empty-state.twig	{theme}/components/ui/empty-state.twig	design
+bolt-theme-templates	pages/homepage/homepage.twig	{theme}/pages/homepage/homepage.twig	design
+bolt-timezone	Kernel.php	src/Kernel.php	logic
+bolt-timezone	config_snippet.yaml	config/bolt/config.yaml	snippet
+bolt-timezone	bolt.ini	docker/php/conf.d/bolt.dev.ini	snippet
+bolt-timezone	compose_snippet.yaml	compose.yaml	snippet
