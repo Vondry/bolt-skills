@@ -4,9 +4,9 @@
 help:
 	@grep -E '(^[a-zA-Z_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
 
-install: ## to install all project
+install: ## to install all project (creates or updates the schema; never loads fixtures, keeps existing content)
 	composer install
-	make db-reset
+	make db-update
 
 install_prod: ## to install production dependencies (no dev packages, optimized autoloader)
 	composer install --no-dev --optimize-autoloader
@@ -50,12 +50,11 @@ db-update: ## [dev] to update schema database and mark migrations as applied
 	bin/console doctrine:migrations:sync-metadata-storage -q
 	bin/console doctrine:migrations:version --add --all --no-interaction -q
 
-db-reset: ## [dev] to delete database and load fixtures (destroys all content)
+db-reset: ## [dev] to delete database and create an empty schema without fixtures (destroys all content)
 	bin/console doctrine:schema:drop --force --full-database
 	bin/console doctrine:schema:create -q
 	bin/console doctrine:migrations:sync-metadata-storage -q
 	bin/console doctrine:migrations:version --add --all --no-interaction -q
-	bin/console doctrine:fixtures:load --no-interaction
 
 db-migrate: ## [prod] to run pending Doctrine migrations (what Bolt recommends after composer install/update)
 	bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
