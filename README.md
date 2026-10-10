@@ -23,7 +23,7 @@ Compatible with **Google Antigravity**, **Claude Code**, **Gemini**, **Cursor**,
 | **`bolt-tailwind-theme`** | Extract and configure Tailwind CSS v4 design tokens (@theme inline), WCAG AA contrast scales, Czech font-faces, and reusable utility blueprints (.wrapper, .btn, .card, .cms-redactor). | [`skills/bolt-tailwind-theme/`](skills/bolt-tailwind-theme/SKILL.md) |
 | **`bolt-runtime-extensions`** | Deploy, register, and verify custom runtime PHP Twig extensions in `src/` (LocaleLinkExtension, ImageDimensionsExtension, FileSizeExtension). | [`skills/bolt-runtime-extensions/`](skills/bolt-runtime-extensions/SKILL.md) |
 | **`bolt-menu`** | Configure, structure, and verify navigation menus in `config/bolt/menu.yaml` (header, footer, submenus, anchors, CTAs) with Twig Component/Container patterns. | [`skills/bolt-menu/`](skills/bolt-menu/SKILL.md) |
-| **`bolt-cookie-consent`** | Deploy and verify Czech ZEK § 89 / GDPR compliant opt-in cookie banner (equal visual weight, Google Consent Mode v2, Sklik) and multilingual Privacy Policy page. | [`skills/bolt-cookie-consent/`](skills/bolt-cookie-consent/SKILL.md) |
+| **`bolt-cookie-consent`** | Asks which trackers (Google Ads, GA4, Sklik, Meta), embeds and controller model the site uses, then builds a Czech ZEK § 89 / GDPR two-layer opt-in cookie banner (equal Accept / Reject, Google Consent Mode v2) and the Privacy Policy page from one `theme.yaml` data model, verified against ÚOOÚ / EDPB guidelines. | [`skills/bolt-cookie-consent/`](skills/bolt-cookie-consent/SKILL.md) |
 | **`bolt-theme-templates`** | Build and verify Twig + Tailwind v4 templates under Component/Container/Page architecture (pure UI components, smart containers, zero-HTML page orchestrators). | [`skills/bolt-theme-templates/`](skills/bolt-theme-templates/SKILL.md) |
 
 ---
@@ -36,7 +36,7 @@ To orchestrate and scaffold a complete, production-grade Bolt CMS website from a
   ```bash
   ./scripts/verify-all.sh --project=/path/to/bolt-project \
       --base-url=http://localhost:8080 \
-      --skip=bolt-cookie-consent          # only skills that do not apply to this site
+      --skip=bolt-htaccess                # only skills that do not apply to this site (e.g. Nginx)
   ```
   `bolt-add-language` is verified once per secondary locale read from `app_locales` in `config/services.yaml` (override with `--locales=en,de`) and skipped on single-language sites.
 - Merge the translation units shipped by the skills (`skills/<skill>/examples/translations.<locale>.xlf`) into the project catalogs:

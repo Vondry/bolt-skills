@@ -1,0 +1,219 @@
+# Example: the theme.yaml blocks written by
+#   scaffold.sh --model=single --trackers=ga4,google_ads,sklik --embeds=youtube \
+#               --purposes=web_operation,contact_form,legal_claims
+# for a single operator (variant A) with Google Analytics 4, Google Ads, Sklik and YouTube embeds,
+# on a cs + en site. Every [DOPLNIT …] is answered by the operator, every [OVĚŘIT …] measured in a
+# clean browser profile, before sign-off (scripts/verify.sh without --draft).
+
+# Tracking IDs. A tracker runs only when privacy.cookies lists items in its category.
+analytics:
+  ga4_id: ~                     # 'G-XXXXXXXXXX'                   → category analytics
+  google_ads_id: ~              # 'AW-XXXXXXXXX'                   → category marketing
+  sklik_id: ~                   # Sklik retargeting ID (number)    → category marketing
+  consent_mode: basic           # basic: Google tags load only after consent | advanced: cookieless pings before consent (operator's explicit decision, CB-50)
+
+# --------------------------------------------------------------------------------------------
+# Privacy & cookie consent (bolt-cookie-consent). Single source of truth for the cookie banner,
+# the cookie list and the privacy policy page — never duplicate these texts in templates.
+#   [DOPLNIT …]  value the operator must supply (never invented)
+#   [OVĚŘIT …]   value to measure in a clean browser profile (DM-02)
+# Increase config_version (and add a changelog entry) whenever purposes, controllers, recipients
+# or cookie categories change: visitors who consented are asked again (CB-42, DM-01).
+# controller_model: single (A) | joint (B1) | separate (B2) | hybrid (B1 web + B2 clients).
+# purposes[].section: `website` (shared part) or a controller id (that controller's own section,
+# used for client agendas in the separate / hybrid models — VAR-20).
+# --------------------------------------------------------------------------------------------
+privacy:
+  config_version: 1
+  effective_date: '[DOPLNIT YYYY-MM-DD]'
+  controller_model: single
+  controllers:
+    - id: ctrl-1
+      legal_form: '[DOPLNIT OSVČ | s.r.o. | a.s. | advokát | …]'
+      name: '[DOPLNIT jméno nebo obchodní firma]'
+      address: '[DOPLNIT sídlo / místo podnikání]'
+      ico: '[DOPLNIT IČO]'
+      registry: '[DOPLNIT zápis v obchodním / živnostenském rejstříku nebo jiné evidenci]'
+      privacy_email: '[DOPLNIT e-mail pro dotazy k osobním údajům]'
+      dpo: ~
+  joint_arrangement: ~
+  summary: ~
+  purposes:
+    - id: web_operation
+      controllers: [ctrl-1]
+      section: website
+      title: { cs: 'Provoz a zabezpečení webu', en: 'Operating and securing the website' }
+      data: { cs: 'IP adresa, datum a čas požadavku, požadovaná adresa, typ prohlížeče (serverové logy)', en: 'IP address, date and time of the request, requested URL, browser type (server logs)' }
+      legal_basis: art6_1_f
+      legitimate_interest: { cs: 'zajištění bezpečnosti a dostupnosti webu a odhalování útoků', en: 'keeping the website secure and available and detecting attacks' }
+      retention: '[DOPLNIT např. 30 dní]'
+      recipients: [hosting]
+      provision: { cs: 'Údaje se zaznamenávají automaticky při každé návštěvě.', en: 'The data is recorded automatically on every visit.' }
+    - id: contact_form
+      controllers: [ctrl-1]
+      section: website
+      title: { cs: 'Odpověď na dotaz z formuláře nebo e-mailu', en: 'Replying to an enquiry from the form or by e-mail' }
+      data: { cs: 'jméno, e-mail, telefon, text zprávy', en: 'name, e-mail, phone, message text' }
+      legal_basis: art6_1_b
+      legitimate_interest: ~
+      retention: '[DOPLNIT např. 1 rok od poslední komunikace]'
+      recipients: [hosting, email]
+      provision: { cs: 'Poskytnutí je dobrovolné; bez kontaktního údaje vám nemůžeme odpovědět.', en: 'Providing the data is voluntary; without contact details we cannot reply.' }
+    - id: legal_claims
+      controllers: [ctrl-1]
+      section: website
+      title: { cs: 'Uplatnění a obrana právních nároků', en: 'Establishing and defending legal claims' }
+      data: { cs: 'údaje z komunikace a ze smluvního vztahu', en: 'data from communication and the contractual relationship' }
+      legal_basis: art6_1_f
+      legitimate_interest: { cs: 'ochrana našich právních nároků', en: 'protecting our legal claims' }
+      retention: '[DOPLNIT např. po dobu promlčecí lhůty]'
+      recipients: []
+      provision: { cs: 'Údaje nevyžadujeme zvlášť; používáme ty, které už máme.', en: 'We do not request this data separately; we use what we already hold.' }
+    - id: analytics
+      controllers: [ctrl-1]
+      section: website
+      title: { cs: 'Měření návštěvnosti', en: 'Measuring website traffic' }
+      data: { cs: 'online identifikátory (cookies), IP adresa, údaje o zařízení a prohlížeči, zobrazené stránky', en: 'online identifiers (cookies), IP address, device and browser details, pages viewed' }
+      legal_basis: art6_1_a
+      legitimate_interest: ~
+      retention: '[DOPLNIT do odvolání souhlasu; doba uchování dat v nástroji, např. 14 měsíců]'
+      recipients: [google_analytics]
+      provision: { cs: 'Dobrovolné; bez souhlasu se měření nespustí.', en: 'Voluntary; without consent no measurement takes place.' }
+    - id: marketing
+      controllers: [ctrl-1]
+      section: website
+      title: { cs: 'Reklama, měření konverzí a remarketing', en: 'Advertising, conversion measurement and remarketing' }
+      data: { cs: 'online identifikátory (cookies), IP adresa, údaje o zařízení a prohlížeči, navštívené stránky, konverze', en: 'online identifiers (cookies), IP address, device and browser details, pages visited, conversions' }
+      legal_basis: art6_1_a
+      legitimate_interest: ~
+      retention: '[DOPLNIT do odvolání souhlasu; doba uchování dat v reklamním systému]'
+      recipients: [google_ads, seznam]
+      provision: { cs: 'Dobrovolné; bez souhlasu se reklamní kódy nespustí.', en: 'Voluntary; without consent no advertising code runs.' }
+    - id: third_party
+      controllers: [ctrl-1]
+      section: website
+      title: { cs: 'Zobrazení vloženého obsahu (video, mapa)', en: 'Displaying embedded content (video, map)' }
+      data: { cs: 'IP adresa, údaje o zařízení a prohlížeči, online identifikátory poskytovatele', en: "IP address, device and browser details, the provider's online identifiers" }
+      legal_basis: art6_1_a
+      legitimate_interest: ~
+      retention: '[DOPLNIT do odvolání souhlasu]'
+      recipients: [youtube]
+      provision: { cs: 'Dobrovolné; bez souhlasu se místo obsahu zobrazí zástupný blok.', en: 'Voluntary; without consent a placeholder is shown instead.' }
+  recipients:
+    - id: hosting
+      name: '[DOPLNIT poskytovatel hostingu]'
+      role: processor
+      purpose: { cs: 'Hosting webu a serverové logy', en: 'Website hosting and server logs' }
+      country: '[DOPLNIT]'
+      transfer: ~
+    - id: email
+      name: '[DOPLNIT poskytovatel e-mailu]'
+      role: processor
+      purpose: { cs: 'Doručení a uložení e-mailů z formuláře', en: 'Delivery and storage of form e-mails' }
+      country: '[DOPLNIT]'
+      transfer: ~
+    - id: google_analytics
+      name: 'Google Ireland Limited'
+      role: processor
+      purpose: { cs: 'Měření návštěvnosti (Google Analytics)', en: 'Traffic measurement (Google Analytics)' }
+      country: { cs: 'Irsko (EU); předání do USA', en: 'Ireland (EU); transfer to the USA' }
+      transfer: adequacy
+    - id: google_ads
+      name: 'Google Ireland Limited'
+      role: controller
+      purpose: { cs: 'Reklama a měření konverzí (Google Ads)', en: 'Advertising and conversion measurement (Google Ads)' }
+      country: { cs: 'Irsko (EU); předání do USA', en: 'Ireland (EU); transfer to the USA' }
+      transfer: adequacy
+    - id: seznam
+      name: 'Seznam.cz, a.s.'
+      role: controller
+      purpose: { cs: 'Reklama, retargeting a měření konverzí (Sklik)', en: 'Advertising, retargeting and conversion measurement (Sklik)' }
+      country: { cs: 'Česká republika', en: 'Czech Republic' }
+      transfer: ~
+    - id: youtube
+      name: 'Google Ireland Limited (YouTube)'
+      role: joint_controller
+      purpose: { cs: 'Vložená videa; společný správce pro načtení přehrávače', en: 'Embedded videos; joint controller for loading the player' }
+      country: { cs: 'Irsko (EU); předání do USA', en: 'Ireland (EU); transfer to the USA' }
+      transfer: adequacy
+  cookies:
+    - name: bolt-cookie-consent
+      technology: localStorage
+      category: necessary
+      provider: { cs: 'Provozovatel webu', en: 'Website operator' }
+      party: first
+      purpose: { cs: 'Uložení vaší volby v cookie liště (kategorie, verze nastavení, čas udělení).', en: 'Stores your cookie banner choice (categories, settings version, time of decision).' }
+      expiry: { cs: '12 měsíců, po odmítnutí 6 měsíců', en: '12 months, 6 months after rejection' }
+      transfer: false
+    - name: _ga
+      technology: cookie
+      category: analytics
+      provider: { cs: 'Google Ireland Limited (Google Analytics)', en: 'Google Ireland Limited (Google Analytics)' }
+      party: first
+      purpose: { cs: 'Rozlišení návštěvníků pro statistiku návštěvnosti.', en: 'Distinguishes visitors for traffic statistics.' }
+      expiry: { cs: '13 měsíců', en: '13 months' }
+      transfer: true
+    - name: '_ga_*'
+      technology: cookie
+      category: analytics
+      provider: { cs: 'Google Ireland Limited (Google Analytics)', en: 'Google Ireland Limited (Google Analytics)' }
+      party: first
+      purpose: { cs: 'Uložení stavu relace pro statistiku návštěvnosti.', en: 'Keeps the session state for traffic statistics.' }
+      expiry: { cs: '13 měsíců', en: '13 months' }
+      transfer: true
+    - name: _gcl_au
+      technology: cookie
+      category: marketing
+      provider: { cs: 'Google Ireland Limited (Google Ads)', en: 'Google Ireland Limited (Google Ads)' }
+      party: first
+      purpose: { cs: 'Přiřazení konverze (poptávka, objednávka) ke kliknutí na reklamu.', en: 'Attributes a conversion (enquiry, order) to an ad click.' }
+      expiry: { cs: '90 dní', en: '90 days' }
+      transfer: true
+    - name: _gcl_aw
+      technology: cookie
+      category: marketing
+      provider: { cs: 'Google Ireland Limited (Google Ads)', en: 'Google Ireland Limited (Google Ads)' }
+      party: first
+      purpose: { cs: 'Uložení identifikátoru kliknutí na reklamu (gclid) pro měření konverzí.', en: 'Stores the ad click identifier (gclid) for conversion measurement.' }
+      expiry: { cs: '90 dní', en: '90 days' }
+      transfer: true
+    - name: IDE
+      technology: cookie
+      category: marketing
+      provider: { cs: 'Google Ireland Limited (doubleclick.net)', en: 'Google Ireland Limited (doubleclick.net)' }
+      party: third
+      purpose: { cs: 'Zobrazování reklam podle předchozí návštěvy webu (remarketing) a měření jejich účinnosti.', en: 'Shows ads based on a previous visit (remarketing) and measures their effectiveness.' }
+      expiry: { cs: '13 měsíců', en: '13 months' }
+      transfer: true
+    - name: '[OVĚŘIT cookies na doméně seznam.cz nastavené skriptem rc.js]'
+      technology: cookie
+      category: marketing
+      provider: { cs: 'Seznam.cz, a.s. (Sklik)', en: 'Seznam.cz, a.s. (Sklik)' }
+      party: third
+      purpose: { cs: 'Zobrazování reklam v síti Seznam.cz podle předchozí návštěvy webu (retargeting) a měření konverzí.', en: 'Shows ads in the Seznam.cz network based on a previous visit (retargeting) and measures conversions.' }
+      expiry: { cs: '[OVĚŘIT]', en: '[OVĚŘIT]' }
+      transfer: false
+    - name: 'VISITOR_INFO1_LIVE, VISITOR_PRIVACY_METADATA'
+      technology: cookie
+      category: third_party
+      provider: { cs: 'Google Ireland Limited (YouTube)', en: 'Google Ireland Limited (YouTube)' }
+      party: third
+      purpose: { cs: 'Přehrání vloženého videa a odhad rychlosti připojení.', en: 'Plays the embedded video and estimates connection speed.' }
+      expiry: { cs: '6 měsíců', en: '6 months' }
+      transfer: true
+    - name: YSC
+      technology: cookie
+      category: third_party
+      provider: { cs: 'Google Ireland Limited (YouTube)', en: 'Google Ireland Limited (YouTube)' }
+      party: third
+      purpose: { cs: 'Statistika přehrání vloženého videa.', en: 'Playback statistics of the embedded video.' }
+      expiry: { cs: 'do zavření prohlížeče', en: 'until the browser is closed' }
+      transfer: true
+  consent:
+    validity_months: 12
+    reask_after_reject_months: 6
+  automated_decision_making: false
+  changelog:
+    - version: 1
+      date: '[DOPLNIT YYYY-MM-DD]'
+      change: { cs: 'První verze.', en: 'First version.' }

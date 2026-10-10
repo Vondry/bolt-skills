@@ -29,8 +29,8 @@ public/theme/<theme-name>/
 │   ├── _master.twig              # HTML shell: SEO, a11y skip link, cache-busted assets,
 │   │                             #   blocks seo / head / header / main / footer / scripts   (this skill)
 │   ├── _locale-switcher.twig     # Language switcher                                         (bolt-add-language)
-│   ├── _cookie-banner.twig       # Opt-in cookie banner                                      (bolt-cookie-consent)
-│   └── _consent-mode.twig        # Google Consent Mode v2 defaults                           (bolt-cookie-consent)
+│   ├── _cookie-banner.twig       # Two-layer opt-in cookie banner                            (bolt-cookie-consent)
+│   └── _consent-mode.twig        # Consent configuration (JSON) for cookie-consent.ts        (bolt-cookie-consent)
 │
 ├── components/                   # 1. PURE / PRESENTATIONAL COMPONENTS
 │   │                             # Rule: ZERO setcontent. All data passed via parameters.
@@ -342,10 +342,13 @@ contact:
   hours: ~
   bio: ~
 
-# Tracking IDs (bolt-cookie-consent)
+# Tracking IDs (bolt-cookie-consent; its scaffold also appends the privacy: block —
+# controllers, purposes, recipients and the cookie inventory)
 analytics:
   ga4_id: ~
+  google_ads_id: ~
   sklik_id: ~
+  consent_mode: basic
 
 # Social networks
 socials:
@@ -389,14 +392,14 @@ The single layout every page, static page and 404/403 helper page extends. It de
 | Block / include | Filled by |
 | :--- | :--- |
 | `{% block seo %}` with `seo.title()` and `seo.metatags()` | `bolt-extension-setup` (AppoloDev/bolt-seo); helper and static pages override it |
-| `partials/_consent-mode.twig` (include, `ignore missing`) | `bolt-cookie-consent` — Consent Mode v2 defaults before any tracking script |
+| `partials/_consent-mode.twig` (include, `ignore missing`) | `bolt-cookie-consent` — consent configuration (JSON) read by `cookie-consent.ts`; trackers load only after consent |
 | `{{ asset('css/index.css') }}?v={{ theme.assets_version }}` and `js/app.js` | this skill + `bolt-asset-caching` (cache-busting). Bolt registers the active theme as the default asset package, so `asset()` paths are relative to the theme folder |
 | `{% block head %}` | page-specific additions (helper scene styles, carousel CSS, preloads) |
 | skip link to `#obsah` (`a11y.skip_to_content`) | this skill |
+| `partials/_cookie-banner.twig` (include, `ignore missing`) right after the skip link | `bolt-cookie-consent` — early in the tab order |
 | `{% block header %}` → `containers/header/_menu.twig` (`ignore missing`) | `bolt-menu` |
 | `{% block main %}` inside `<main id="obsah">` | page orchestrators |
 | `{% block footer %}` → `containers/footer/_footer.twig` (`ignore missing`) | `bolt-menu` |
-| `partials/_cookie-banner.twig` (include, `ignore missing`) | `bolt-cookie-consent` |
 | `{% block scripts %}` | page-specific scripts |
 
 The partials owned by other skills are included with `ignore missing`, so the shell renders as soon as this skill has run and fills in as later skills add their files. The full file is `examples/_master.twig`.

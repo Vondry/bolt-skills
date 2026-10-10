@@ -241,7 +241,7 @@ Follow the standard theme architecture from `bolt-theme-init` (Integration Contr
 | `[data-mobile-menu="drawer"]` | `<aside id="mobile-drawer">` (starts `inert`, `aria-hidden="true"`, `translate-x-full`) | Slide-in drawer with focus trap and body scroll lock |
 | `[data-menu-backdrop]` | `#menu-backdrop` | Shown with the drawer; a click closes it |
 | `[data-menu-close]` | `#menu-close` and the drawer links | Close the drawer (links also close it automatically) |
-| `[data-cookie-settings]` | Footer "Nastavení cookies" button | Re-opens the consent banner (`bolt-cookie-consent`) |
+| `[data-cookie-settings]` | Footer "Nastavení cookies" button | Opens the consent settings, second layer of the banner (`bolt-cookie-consent`) |
 
 For a height-animated panel below the header bar instead of a drawer, use `data-mobile-menu="collapse"` on the panel (see `bolt-theme-init`, section 3D).
 
@@ -513,17 +513,17 @@ Footer columns from `menu_array('footer')`, brand column with logo, bio, phone a
   Renders the brand column (logo, bio, phone, e-mail from theme.yaml), social links
   from theme.yaml, and the legal bottom bar.
 
-  "Nastavení cookies" re-opens the consent banner (bolt-cookie-consent listens to
-  [data-cookie-settings]); it is shown only when theme.yaml lists a tracking ID
-  (analytics.ga4_id or analytics.sklik_id).
+  "Nastavení cookies" opens the consent settings (bolt-cookie-consent listens to
+  [data-cookie-settings]); it is shown whenever theme.yaml privacy.cookies lists an item
+  that needs consent (trackers, embeds) — the same rule that renders the banner.
 
   Translation keys: footer.socials, footer.rights, footer.privacy, footer.cookie_settings
 #}
 
 {% set footer_columns = menu_array('footer')|default([]) %}
 {% set socials = config.get('theme/socials')|default([])|filter(url => url is not empty) %}
-{# Tracking IDs from theme.yaml (analytics.*); add further IDs here when the site uses more trackers. #}
-{% set has_tracking = config.get('theme/analytics/ga4_id') or config.get('theme/analytics/sklik_id') %}
+{# Cookie inventory from theme.yaml (bolt-cookie-consent): anything beyond `necessary` needs consent. #}
+{% set has_tracking = config.get('theme/privacy/cookies')|default([])|filter(item => item.category|default('necessary') != 'necessary')|length > 0 %}
 
 <footer class="bg-night text-night-ink-2 border-t border-night-stroke">
     <div class="wrapper px-edge py-16 flex flex-col gap-12">

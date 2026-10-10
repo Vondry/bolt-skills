@@ -17,14 +17,14 @@ This repository provides curated AI agent skills, task procedures, and verificat
 - [`bolt-tailwind-theme`](skills/bolt-tailwind-theme/SKILL.md): Extract and configure Tailwind CSS v4 design tokens (@theme inline), WCAG AA contrast scales, Czech latin-ext font-faces, scanning safeguards, and the complete blueprint of repeating cross-project utilities (.wrapper, .btn variants, .card, .link-arrow, .pagination, and .cms-redactor).
 - [`bolt-runtime-extensions`](skills/bolt-runtime-extensions/SKILL.md): Deploy, register, and verify custom runtime PHP Twig extensions in `src/` (LocaleLinkExtension with query/hash preservation, ImageDimensionsExtension with cached disk probe for PhotoSwipe v5, FileSizeExtension for human-readable downloads).
 - [`bolt-menu`](skills/bolt-menu/SKILL.md): Configure, structure, and verify Bolt CMS navigation menus in `config/bolt/menu.yaml` (header `main`, footer columns, nested submenus, multilingual labels, `/#anchor` formatting, and CTA classes) with Twig Component/Container integration.
-- [`bolt-cookie-consent`](skills/bolt-cookie-consent/SKILL.md): Deploy and verify Czech ZEK § 89 / GDPR compliant opt-in cookie banner (equal visual weight, no dark patterns, Google Consent Mode v2, Sklik) and multilingual Privacy Policy page (/zasady-ochrany-osobnich-udaju).
+- [`bolt-cookie-consent`](skills/bolt-cookie-consent/SKILL.md): Intake-driven (trackers such as Google Ads, GA4, Sklik, Meta; embeds; controller model) Czech ZEK § 89 / GDPR cookie banner and Privacy Policy page (/zasady-ochrany-osobnich-udaju), both rendered from one `theme.yaml` data model: two-layer opt-in banner with equal Accept / Reject, Google Consent Mode v2, consent-gated embeds, and verification against the ÚOOÚ / EDPB guidelines in `references/guidelines.cs.md`.
 - [`bolt-theme-templates`](skills/bolt-theme-templates/SKILL.md): Production standards, component libraries, and automated verification for Twig + Tailwind CSS v4 templates under Component/Container/Page architecture (zero-setcontent pure UI components, smart containers, zero-HTML page orchestrators, and page-scoped components).
 
 ## End-to-End Orchestration Workflow
 
 When building or auditing a complete website from scratch or based on a design (Figma, tokens, brief), agents must follow the master runbook:
 - [`WORKFLOWS.md`](WORKFLOWS.md): Phase-by-phase execution graph guiding agents through all 15 skills in dependency order, with an Integration Contract (shared layout, folders, tokens, JS hooks, URLs, translation keys) that every theme-facing skill follows:
-  0. **Phase 0: Intake & Site Plan** (decisions recorded in the project's `AGENTS.md`; user checkpoint)
+  0. **Phase 0: Intake & Site Plan** (decisions recorded in the project's `AGENTS.md`, including `bolt-cookie-consent`'s privacy intake; user checkpoint)
   1. **Phase 1: Environment & Security Baseline** (`bolt-timezone`, `bolt-add-language` step 1 — locale parameters, `bolt-disable-api`, `bolt-code-quality` setup)
   2. **Phase 2: Web Server Delivery & Caching** (`bolt-htaccess` [Apache], `bolt-asset-caching`)
   3. **Phase 3: Extensions & Runtime PHP** (`bolt-extension-setup` packages & config, `bolt-runtime-extensions`)

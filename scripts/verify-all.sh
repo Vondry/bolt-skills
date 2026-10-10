@@ -10,8 +10,8 @@ usage() {
     echo ""
     echo "Options:"
     echo "  --project=PATH    Path to the target Bolt CMS root directory (default: current directory if it contains config/services.yaml)"
-    echo "  --skip=LIST       Comma-separated skills that do not apply to this site (e.g. bolt-htaccess on Nginx,"
-    echo "                    bolt-cookie-consent without tracking). Reported as SKIP."
+    echo "  --skip=LIST       Comma-separated skills that do not apply to this site (e.g. bolt-htaccess on Nginx)."
+    echo "                    Reported as SKIP."
     echo "  --locales=LIST    Secondary locales to verify with bolt-add-language (default: every code in app_locales"
     echo "                    from config/services.yaml except the default 'locale'; none = skip)"
     echo "  --base-url=URL    URL of this project's running site for live HTTP checks (exported as BOLT_BASE_URL)"
@@ -88,7 +88,7 @@ SKILLS=(
     "bolt-menu"                # Phases 4 + 5
     "bolt-theme-templates"     # Phase 6
     "bolt-helper-pages"        # Phase 6
-    "bolt-cookie-consent"      # Phase 6 [privacy page always, banner if tracking]
+    "bolt-cookie-consent"      # Phase 6 [privacy page always, banner if trackers or embeds]
     "bolt-add-language"        # Phases 1-7, per secondary locale [multilingual]
 )
 

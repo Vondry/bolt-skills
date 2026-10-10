@@ -1,330 +1,305 @@
 ---
 name: bolt-cookie-consent
 description: >-
-  Legal standards, architectural blueprints, and automated verification for deploying a Czech
-  ZEK § 89 / GDPR compliant opt-in cookie banner, Google Consent Mode v2, and multilingual
-  Privacy Policy page (/zasady-ochrany-osobnich-udaju) in Bolt CMS.
+  Intake-driven cookie banner and privacy policy page for Czech Bolt CMS sites (ZEK § 89/3, GDPR,
+  ÚOOÚ / EDPB practice). Asks which trackers (Google Analytics 4, Google Ads, Seznam Sklik, Meta
+  Pixel, …), embeds and controller model the site uses, writes one data model into theme.yaml, and
+  renders from it a two-layer opt-in banner (Consent Mode v2, equal Accept / Reject, per-category
+  settings), consent-gated embeds and the /zasady-ochrany-osobnich-udaju page — styled with the
+  theme's design tokens and verified by scripts/verify.sh.
 ---
 
 # Bolt CMS Cookie Consent & Privacy Policy (`bolt-cookie-consent`)
 
-This skill defines the legal rules, UI architecture, and verification runbook for deploying a GDPR and Czech Electronic Communications Act (ZEK) compliant cookie banner and Privacy Policy page in Bolt CMS.
+This skill builds two things for a Czech website, both from **one data model** in `theme.yaml`:
+
+1. a **cookie banner** — only when the site uses something that needs consent (analytics, ads, retargeting, embedded video or maps);
+2. the **privacy policy page** `/zasady-ochrany-osobnich-udaju` — on every site, with or without trackers.
+
+The legal baseline is [`references/guidelines.cs.md`](references/guidelines.cs.md) (Czech, state of 10. 10. 2026). Its requirement IDs (`INV-`, `CB-`, `DP-`, `PP-`, `VAR-`, `DM-`, `AG-`) are used throughout this file, the templates and `scripts/verify.sh`. Read its sections *Cookie lišta*, *Zakázané designové vzory* and *Pravidla pro agenta* before you change any template.
+
+> **Not legal advice (AG-06).** The skill builds structure, design and behaviour. Facts — who the controller is, purposes, legal bases, retention periods, recipients — come from the operator. Never invent them (AG-01): leave `[DOPLNIT …]` and put the question on the handover list. For unusual processing (health data, children, profiling, transfers outside the EU without an adequacy decision) recommend a lawyer.
 
 ---
 
-## 1. Legal Requirements (Czech Republic & EU)
+## 1. Step 0 — Intake (ask before writing any file)
 
-In the Czech Republic, cookies and user tracking are governed by:
-- **Act No. 127/2005 Coll. (Zákon o elektronických komunikacích - ZEK), § 89 odst. 3** (amended by Act No. 374/2021 Sb. effective January 1, 2022).
-- **Regulation (EU) 2016/679 (GDPR)**, Articles 4(11), 6(1)(a), 7, and 12–14.
-- **Act No. 110/2019 Coll. on Personal Data Processing (ZZOU)**.
-- **Official guidance from ÚOOÚ (Úřad pro ochranu osobních údajů)** and the EDPB Cookie Banner Taskforce.
+Ask the operator (or the user acting for them) these questions — with your question tool if you have one, otherwise in chat — and record the answers in the project's `AGENTS.md` site plan (`WORKFLOWS.md`, Phase 0). Do not start the scaffold until questions 1–4 are answered.
 
-### Key Rules from ZEK & ÚOOÚ:
+| # | Question | Typical answer | Becomes |
+| :- | :--- | :--- | :--- |
+| 1 | **Which measuring and advertising tools will the site use?** Google Analytics 4 · Google Ads (conversions, remarketing) · Seznam Sklik (retargeting, conversions) · Meta Pixel · other (Hotjar, Microsoft Clarity, LinkedIn, TikTok …) · none | Google Ads, often GA4; Sklik optional | `--trackers=ga4,google_ads,sklik,meta_pixel` |
+| 2 | **Is third-party content embedded?** YouTube / Vimeo video · Google Maps · Mapy.com · social widgets · none. (External fonts and CDNs: self-host them instead — `bolt-tailwind-theme`.) | a YouTube video, a map on the contact page | `--embeds=youtube,google_maps,mapy_com` |
+| 3 | **Google Consent Mode: basic or advanced?** Basic = Google tags load only after consent (recommended, matches CB-01). Advanced = tags load before consent and send cookieless pings with IP address and browser data — only on the operator's explicit decision (CB-50). | basic | `analytics.consent_mode` |
+| 4 | **Is more than one business presented on the website?** If yes: (a) Do they decide **together** about the website (content, forms, analytics, cookie banner)? (b) Does each handle **its own clients** (contracts, invoicing, files)? Never guess the answer (AG-02). | one business | `--model=` (table below) |
+| 5 | **Controller identity**, for every business: legal name or trade name, legal form, registered office / place of business, IČO, registry entry (obchodní / živnostenský rejstřík, ČAK …), e-mail for privacy questions, data protection officer (if appointed). | from the operator; `contact:` in `theme.yaml` prefills the first one | `privacy.controllers` |
+| 6 | **What personal data does the site handle besides cookies?** Contact form / e-mail · orders and contracts · accounting · newsletter · job applications · client agenda per business. For each: retention period, and who receives it (hosting, e-mail provider, accountant, newsletter tool, CRM). | contact form + server logs | `--purposes=…`, `privacy.recipients` |
+| 7 | **Anything unusual?** Health data, children, profiling, automated decisions, transfers outside the EU/EEA. | no | `automated_decision_making`; AG-06 warning |
 
-1. **Strict Opt-In Principle**:
-   - All non-essential cookies and tracking scripts (Google Analytics, Seznam Sklik, Meta Pixel, heatmaps) **must not execute or set cookies** before the user grants prior, active consent.
-   - Only strictly necessary technical cookies (session, security, CSRF, storing consent choice) are exempt from consent under § 89 odst. 3 ZEK.
+Controller model from question 4 (guidelines, *Varianty*):
 
-2. **Equal Visual Prominence (No Dark Patterns)**:
-   - The button to reject cookies (**„Odmítnout vše“**) must have **equal visual weight, font size, and contrast** as the accept button (**„Přijmout vše“**).
-   - "Odmítnout" must be located in the **first layer** of the banner. Forcing the user into a secondary settings sub-menu to reject tracking while allowing one-click acceptance is an illegal dark pattern penalized by ÚOOÚ.
+| Businesses | Website & cookies | Client agenda | Variant | `--model=` |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | – | – | A — single controller | `single` |
+| 2+ | together | together | B1 — joint controllers (čl. 26) | `joint` |
+| 2+ | each separately (shared shop window) | each separately | B2 — separate controllers | `separate` |
+| 2+ | together | each separately | B1 + B2 | `hybrid` |
 
-3. **No Pre-Ticked Checkboxes**:
-   - In granular preference settings, non-essential categories (Analytics, Marketing) must be **unchecked by default**.
-
-4. **No Implied Consent**:
-   - Scrolling, clicking anywhere else on the page, or closing the banner by clicking an 'X' button does **not** constitute consent.
-
-5. **Revocation As Easy As Giving Consent**:
-   - Under Art. 7(3) GDPR, users must be able to withdraw consent at any time as easily as they gave it.
-   - The website must provide a persistent link in the footer (e.g. **„Nastavení cookies“**) that re-opens the banner / preferences dialog.
-
-6. **No Cookie Walls**:
-   - Access to general website content must not be made conditional on accepting cookies.
+Purposes for `--purposes=` (from `references/cookie-catalog.yaml`): `web_operation` (server logs — every site), `contact_form`, `contract`, `accounting`, `newsletter`, `legal_claims`. The consent purposes `analytics`, `marketing` and `third_party` are added automatically from the trackers and embeds.
 
 ---
 
-## 2. Privacy Policy Page Content (`/zasady-ochrany-osobnich-udaju`)
+## 2. Architecture
 
-Under GDPR Articles 12, 13, and 14, the Privacy Policy page must provide clear, concise, and transparent information:
-
-### What MUST be on the page:
-- **Data Controller Identity (Správce osobních údajů)**:
-  - Legal business name / Operator name
-  - Company ID (IČO) and registered address (Sídlo)
-  - Contact details (email, phone, contact person)
-  - Statement whether a Data Protection Officer (DPO / Pověřenec) is appointed.
-- **Purposes and Legal Grounds for Processing**:
-  - *Technical cookies / Website operation*: Art. 6(1)(f) GDPR (Legitimate interest) + § 89 ZEK.
-  - *Web traffic analytics (Google Analytics)*: Art. 6(1)(a) GDPR (Consent) + § 89 ZEK.
-  - *Marketing & Retargeting (Sklik, Meta)*: Art. 6(1)(a) GDPR (Consent) + § 89 ZEK.
-  - *Contact / inquiry forms*: Art. 6(1)(b) GDPR (Negotiating a contract) or 6(1)(f).
-- **Concrete Tracking Technologies & Cookie Table**:
-  - Name of cookie / tool (e.g. `bolt-cookie-consent`, `_ga`, `rc.js` / Sklik)
-  - Provider (First-party / Google Ireland Ltd. / Seznam.cz, a.s.)
-  - Purpose (Technické, statistika návštěvnosti, retargeting)
-  - Retention duration (e.g. 1 year, 2 years, session, 90 days)
-  - Type & consent requirement.
-- **Google Consent Mode v2 & Sklik Explanation**:
-  - Explanation that GA4 runs with `analytics_storage=denied` before consent.
-  - Explanation that Sklik retargeting loads only with marketing consent (basic mode) and that every hit carries `consent=1` / `consent=0`.
-- **International Data Transfers (Předávání údajů mimo EU)**:
-  - Statement on processing by Google Ireland Ltd. under EU-U.S. Data Privacy Framework.
-- **Data Subject Rights (Práva subjektů údajů)**:
-  - Right of access (Art. 15), rectification (Art. 16), erasure (Art. 17).
-  - Right to restriction of processing (Art. 18) and data portability (Art. 20).
-  - Right to object (Art. 21).
-  - **Right to withdraw consent anytime**: Interactive button calling `resetCookieConsent()`.
-  - Right to lodge a complaint with the Czech supervisory authority:
-    **Úřad pro ochranu osobních údajů (ÚOOÚ)**, Pplk. Sochora 27, 170 00 Praha 7, [uoou.gov.cz](https://uoou.gov.cz).
-- **Effective Date**: Date of last update.
-
----
-
-## 3. Architecture in Bolt CMS
-
-Bolt CMS themes implement privacy pages and cookie banners via two architectural patterns:
-
-### Pattern A: Static Page with XLIFF Translation (Preferred for speed & parity)
-- Template: `public/theme/<theme>/static-pages/gdpr.twig`, extending `partials/_master.twig` (`{% block main %}`).
-- Route: `/zasady-ochrany-osobnich-udaju` served by Bolt's `TemplateController`. The routes must sit in `config/routes.yaml` **above** the `frontend:` import, otherwise Bolt's catch-all frontend routes answer with 404 (`scripts/scaffold.sh` inserts them):
-  ```yaml
-  # config/routes.yaml
-  privacy:
-    path: /zasady-ochrany-osobnich-udaju
-    defaults:
-      _controller: Bolt\Controller\Frontend\TemplateController::template
-      templateName: static-pages/gdpr.twig
-
-  # Locale-prefixed variant (e.g. /en/zasady-ochrany-osobnich-udaju). Symfony sets the request
-  # locale from {_locale}, which __() / |trans and locale_link() pick up.
-  privacy_locale:
-    path: /{_locale}/zasady-ochrany-osobnich-udaju
-    requirements: { _locale: '%app_locales%' }
-    defaults:
-      _controller: Bolt\Controller\Frontend\TemplateController::template
-      templateName: static-pages/gdpr.twig
-  ```
-- Strings: Fully translated via XLIFF 2.0 catalogs (`translations/messages.cs.xlf` and `messages.en.xlf`, units `privacy.*` and `cookie.*` in `examples/translations.*.xlf`).
-- Automatic locale switching: `/zasady-ochrany-osobnich-udaju` on Czech, `/en/zasady-ochrany-osobnich-udaju` on English.
-- Dynamic contacts: Controller name, company ID (IČO), address, email and phone pulled from `theme.yaml` (`contact.name`, `contact.ico`, `contact.address`, `contact.email`, `contact.phone`); tracking IDs from `analytics.ga4_id` / `analytics.sklik_id`.
-
-### Pattern B: Singleton ContentType with Redactor (Preferred for client CMS editing)
-- ContentType: `privacy_policy` singleton defined in `config/bolt/contenttypes.yaml` (with `order: -id`, `slug` set so the page is served at `/zasady-ochrany-osobnich-udaju`).
-- Fields: `intro_section` (eyebrow, title, description), `effective_date`, and `sections` (collection of sets with `title` and `body` redactor).
-- Localized: `locales:` equal to `app_locales`.
-- Template: `public/theme/<theme>/pages/<name>/<name>.twig` (e.g. `pages/zasady/zasady.twig`) with auto-generated sticky Table of Contents and scroll-spy.
-
-### Files
-
-| File | Role |
-| :--- | :--- |
-| `partials/_consent-mode.twig` | Consent Mode v2 defaults + `window.loadAnalytics()` / `window.loadSklik()`, included in `<head>` of `partials/_master.twig` before any tracking script |
-| `partials/_cookie-banner.twig` | Banner markup (included at the end of `<body>` by `partials/_master.twig`) |
-| `js/src/cookie-consent.ts` | The only implementation of the banner behaviour; imported by `js/src/index.ts` |
-| `static-pages/gdpr.twig` | Privacy policy page (Pattern A) |
-| footer `[data-cookie-settings]` button | Re-opens the banner (`bolt-menu` footer container; also on the privacy page) |
-
----
-
-## 4. Technical Integration: Google Consent Mode v2 & Sklik
-
-### Step 1: Head Initialization (`partials/_consent-mode.twig`)
-`partials/_master.twig` includes this partial in `<head>` before any other script. It reads the IDs from `theme.yaml` (`analytics.ga4_id`, `analytics.sklik_id`, `analytics.consent_mode`) and the stored consent record, sets the Consent Mode defaults, and defines the loaders.
-
-**Choose the Consent Mode variant in the site plan:**
-- **`basic` (default)** — strict opt-in matching rule 1 above: neither `gtag.js` nor Sklik's `rc.js` is loaded before consent; `cookie-consent.ts` calls `window.loadAnalytics()` / `window.loadSklik()` when the visitor grants the category (and on later visits with stored consent).
-- **`advanced`** — `gtag.js` loads on every visit with storage denied and sends cookieless pings until consent; `rc.js` sends hits with `consent=0`. This transmits data (IP address, user agent) before consent, which many supervisory authorities regard as requiring consent as well. If chosen, describe it in the privacy policy.
-
-```twig
-{#
-  partials/_consent-mode.twig — Google Consent Mode v2 defaults and tracking loaders.
-  Included in <head> of partials/_master.twig BEFORE any other tracking script.
-  IDs come from theme.yaml:  analytics: { ga4_id: 'G-…', sklik_id: 123456 }
-
-  Two Consent Mode variants (decide in the site plan, describe the choice in the privacy policy):
-
-    basic (default, strict opt-in)  gtag.js and Sklik's rc.js are NOT loaded before consent.
-                                    js/src/cookie-consent.ts calls window.loadAnalytics() /
-                                    window.loadSklik() once the visitor grants analytics / marketing
-                                    consent (and on every later visit with stored consent).
-    advanced                        gtag.js loads on every visit with all storage denied and sends
-                                    cookieless pings until consent (rc.js sends consent=0 hits).
-                                    Set analytics.consent_mode: 'advanced' in theme.yaml.
-                                    This transmits data (IP, user agent) to Google before consent;
-                                    many authorities regard that as requiring consent too.
-
-  The stored consent record (localStorage 'bolt-cookie-consent', version 1) is read here so
-  returning visitors start with their previous choice.
-#}
-{% set ga4_id = config.get('theme/analytics/ga4_id') %}
-{% set sklik_id = config.get('theme/analytics/sklik_id') %}
-{% set consent_mode = config.get('theme/analytics/consent_mode')|default('basic') %}
-
-{% if ga4_id or sklik_id %}
-<script>
-    (function () {
-        var STORAGE_KEY = 'bolt-cookie-consent';
-        var CONSENT_VERSION = 1;
-        var GA_ID = {{ ga4_id|default('')|json_encode|raw }};
-        var MODE = {{ consent_mode|json_encode|raw }};
-
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        window.gtag = gtag;
-
-        var analytics = false;
-        var marketing = false;
-        try {
-            var stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            if (stored.version === CONSENT_VERSION) {
-                analytics = stored.analytics === true;
-                marketing = stored.marketing === true;
-            }
-        } catch (e) {}
-
-        gtag('consent', 'default', {
-            analytics_storage: analytics ? 'granted' : 'denied',
-            ad_storage: marketing ? 'granted' : 'denied',
-            ad_user_data: marketing ? 'granted' : 'denied',
-            ad_personalization: marketing ? 'granted' : 'denied'
-        });
-        gtag('set', 'ads_data_redaction', true);
-
-        var loaded = false;
-        window.loadAnalytics = function () {
-            if (loaded || !GA_ID) return;
-            loaded = true;
-            gtag('js', new Date());
-            gtag('config', GA_ID, {
-                allow_ad_personalization_signals: false,
-                allow_google_signals: false
-            });
-            var s = document.createElement('script');
-            s.async = true;
-            s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
-            document.head.appendChild(s);
-        };
-
-        // Advanced mode loads immediately (denied until consent); basic mode only with consent.
-        if (MODE === 'advanced' || analytics) {
-            window.loadAnalytics();
-        }
-
-        {% if sklik_id %}
-        // Seznam Sklik retargeting: the consent flag is sent with every hit;
-        // js/src/cookie-consent.ts updates it and re-sends after a decision.
-        window.retargetingConf = { rtgId: {{ sklik_id|json_encode|raw }}, consent: marketing ? 1 : 0 };
-
-        var sklikLoaded = false;
-        window.loadSklik = function () {
-            if (sklikLoaded) return;
-            sklikLoaded = true;
-            var r = document.createElement('script');
-            r.async = true;
-            r.src = 'https://c.seznam.cz/js/rc.js';
-            r.onload = function () {
-                if (window.rc && window.rc.retargetingHit) {
-                    window.rc.retargetingHit(window.retargetingConf);
-                }
-            };
-            document.head.appendChild(r);
-        };
-
-        // Same rule as analytics: basic mode loads rc.js only with marketing consent.
-        if (MODE === 'advanced' || marketing) {
-            window.loadSklik();
-        }
-        {% endif %}
-    })();
-</script>
-{% endif %}
+```
+theme.yaml
+├── analytics:  ga4_id, google_ads_id, sklik_id, consent_mode
+└── privacy:    controllers, purposes, recipients, cookies (inventory), consent rules, changelog
+      │
+      ├── partials/_consent-mode.twig ── <script type="application/json" id="cookie-consent-config">
+      │                                   └── js/src/cookie-consent.ts  (the only behaviour; loads trackers after consent)
+      ├── partials/_cookie-banner.twig ── layer 1 bar + layer 2 <dialog> (+ partials/_cookie-table.twig)
+      ├── static-pages/gdpr.twig ──────── privacy policy (+ partials/_cookie-table.twig)
+      ├── partials/_privacy-form-note.twig  notice next to every form's submit button (PP-02)
+      └── containers/footer/_footer.twig ─ "Nastavení cookies" button when privacy.cookies needs consent (bolt-menu)
 ```
 
-### Step 2: Banner & Consent Updates (`js/src/cookie-consent.ts`)
-The banner (`partials/_cookie-banner.twig`) contains markup only — no inline scripts or `onclick` handlers, so a strict Content-Security-Policy keeps working. `cookie-consent.ts` wires it through data attributes:
+**One source of truth (data model, DM-01).** The banner text (controllers, purposes, named third parties), the cookie list in both layers and on the page, the purposes table and the recipients table are all rendered from `privacy:`. Never copy these facts into templates or translation catalogs — the two would drift apart, which is exactly what ÚOOÚ fined (cookies on the site that the banner did not describe). Translation catalogs (`cookie.*`, `privacy.*`) hold only the fixed wording: labels, rights, legal references.
 
-| Attribute | Element |
-| :--- | :--- |
-| `[data-cookie-banner]` | the banner (`role="dialog"`, starts `hidden` + `translate-y-full`) |
-| `[data-cookie-accept]`, `[data-cookie-reject]` | first-layer buttons — **identical classes**, only the label differs |
-| `[data-cookie-toggle-prefs]` | shows the granular preferences; `data-label-open` / `data-label-close` hold its labels |
-| `[data-cookie-pref="analytics" \| "marketing"]` | preference checkboxes, unchecked by default |
-| `[data-cookie-save]` | saves the toggled preferences (replaces Accept while preferences are open) |
-| `[data-cookie-settings]` | any button that re-opens the banner (footer, privacy page) |
+**A tracker runs only when it is inventoried.** `_consent-mode.twig` passes an ID to the script only if `privacy.cookies` has items in the tracker's category (GA4 → `analytics`; Google Ads, Sklik, Meta → `marketing`). An ID without inventory never loads, and `verify.sh` reports it (INV-01, INV-03).
 
-When the visitor decides, the module persists the record (localStorage `bolt-cookie-consent`, version 1), then:
+**No inline JavaScript.** The head partial prints JSON only, the banner has no `onclick`, so a strict Content-Security-Policy keeps working. Nothing contacts a third party before consent — no `preconnect` / `dns-prefetch` to tracker domains either (CB-01).
+
+| File (in the theme) | Source | Role |
+| :--- | :--- | :--- |
+| `theme.yaml` → `analytics:`, `privacy:` | `scripts/privacy-config.php` (via scaffold) | The data model. Shape: `examples/theme.privacy.yaml` |
+| `partials/_consent-mode.twig` | `examples/` | Consent configuration as JSON, in `<head>` of `partials/_master.twig` |
+| `partials/_cookie-banner.twig` | `examples/` | Layer 1 bar and layer 2 dialog; included right after the skip link in `partials/_master.twig` |
+| `partials/_cookie-table.twig` | `examples/` | Items of one category — shared by the banner and the page |
+| `partials/_privacy-macros.twig` | `examples/` | `privacy_ui.t(value)` (localized value), `privacy_ui.date(value)` |
+| `partials/_consent-embed.twig` | `examples/` | Video / map placeholder that loads after consent (CB-02) |
+| `partials/_privacy-form-note.twig` | `examples/` | Form notice: who, why, link to the policy (PP-02) |
+| `js/src/cookie-consent.ts` | `examples/` | All behaviour; imported by `js/src/index.ts` |
+| `static-pages/gdpr.twig` + routes | `examples/`, scaffold | The privacy policy page |
+
+### The data model (`privacy:`)
+
+| Key | Content | Guideline |
+| :--- | :--- | :--- |
+| `config_version`, `effective_date`, `changelog` | Policy version and history. **Bump `config_version` and add a changelog entry** when purposes, controllers, recipients or cookie categories change — visitors who consented are asked again | PP-06, CB-42, DM-01 |
+| `controller_model`, `controllers[]` | `id`, `legal_form`, `name`, `address`, `ico`, `registry`, `privacy_email`, `dpo` (`~`, a name, or `{ name, email }`) | čl. 13/1 a, b; § 435 OZ; VAR-30 |
+| `joint_arrangement` | `contact_controller`, `summary` (essence of the čl. 26 arrangement) — `joint` / `hybrid` only | VAR-10–VAR-12 |
+| `summary` | Optional 3–5 sentence summary; `~` uses the generic `privacy.summary.*` text | PP-04 |
+| `purposes[]` | `id`, `controllers`, `section` (`website` or a controller id), `title`, `data`, `legal_basis` (`art6_1_a/b/c/f`), `legitimate_interest`, `retention`, `recipients`, `provision` | čl. 13/1 c, d; 13/2 a, e; VAR-20, VAR-31 |
+| `recipients[]` | `id`, `name`, `role` (`processor`, `controller`, `joint_controller`), `purpose`, `country`, `transfer` (`~`, `adequacy`, `scc`) | čl. 13/1 e, f |
+| `cookies[]` | `name` (`_ga_*` = prefix; comma-separated names allowed), `technology`, `category` (`necessary`, `preferences`, `analytics`, `marketing`, `third_party`), `provider`, `party` (`first`, `third`), `purpose`, `expiry`, `transfer` | INV-01–INV-03, CB-21, CB-24 |
+| `consent` | `validity_months: 12`, `reask_after_reject_months: 6` | CB-41, DP-05 |
+| `automated_decision_making` | `false`, or a localized description | čl. 13/2 f |
+
+Texts are localized maps — `{ cs: '…', en: '…' }` — with Czech mandatory (CB-23); a plain string is used for every locale. The generator writes one key per locale in `app_locales` and `[DOPLNIT překlad xx]` where the catalog has no text.
+
+---
+
+## 3. Scaffold
+
+Run from the Bolt project root (needs `vendor/` — the generator uses the project's `symfony/yaml`):
+
+```bash
+# Typical: Google Ads + GA4 + Sklik, a YouTube video, one business, contact form
+bash $SKILLS/bolt-cookie-consent/scripts/scaffold.sh --model=single \
+    --trackers=google_ads,ga4,sklik --embeds=youtube \
+    --purposes=web_operation,contact_form,legal_claims
+
+# Two lawyers sharing the website and analytics, each with own clients
+bash $SKILLS/bolt-cookie-consent/scripts/scaffold.sh --model=hybrid --controllers=2 \
+    --trackers=google_ads --purposes=web_operation,contact_form,contract,legal_claims
+
+# No trackers, no embeds: privacy page only
+bash $SKILLS/bolt-cookie-consent/scripts/scaffold.sh --model=single --no-banner \
+    --purposes=web_operation,contact_form
+```
+
+The scaffold:
+- appends the `privacy:` block to `theme.yaml` (skipped when one exists — then edit it by hand) and adds the missing `analytics:` keys for the chosen trackers;
+- copies the partials, `js/src/cookie-consent.ts` and `static-pages/gdpr.twig` (existing files are kept; `--no-banner` skips the banner, consent and embed files) and enables `import './cookie-consent'` in `js/src/index.ts`;
+- inserts the `privacy` / `privacy_locale` routes **above** Bolt's `frontend:` import in `config/routes.yaml` (below it, Bolt's catch-all answers 404);
+- prints the `merge-xliff.php` commands for the `cookie.*` / `privacy.*` units.
+
+`php scripts/privacy-config.php … ` (without `--write`) prints the block instead, e.g. to compare with an existing one. `--necessary=session` adds a session-cookie item for forms with CSRF protection; measure its real name.
+
+After the scaffold:
+1. Set the IDs under `analytics:` (`G-…`, `AW-…`, Sklik retargeting ID as a number).
+2. Go through `privacy:` with the operator; replace every `[DOPLNIT …]`. For `separate` / `hybrid`, move each business's client purposes to `section: <controller id>` with `controllers: [<that id>]`.
+3. Measure every `[OVĚŘIT …]` item (section 7) and correct names and lifetimes that differ from the catalog.
+4. Clear Bolt's cache (`bin/console cache:clear`) — `theme.yaml` is cached.
+
+---
+
+## 4. Adapting the banner to the design
+
+The banner uses only Integration-Contract tokens (`night`, `canvas`, `accent`, `ink`, `stroke` … from `bolt-tailwind-theme`), so it already follows the theme. To match the design more closely, edit the class variables at the top of `partials/_cookie-banner.twig` and the wrappers:
+
+- **`consent_button`** is shared by Reject, Accept (layer 1) and Reject, Save, Accept (layer 2). Change it freely — `btn-primary`-like, outlined, rounded — but keep it **one variable**: same size, font, padding, colour and element type for all of them (CB-12; `verify.sh` compares the classes). Text contrast ≥ 4.5 : 1. Never give Reject a warning colour, grey it out or turn it into a link (DP-01, DP-02).
+- **`settings_button`** ("Nastavení cookies") may look secondary, but stays a button in layer 1 (CB-13).
+- **Panel**: background, border, radius, shadow and max width of the bar; light (`bg-canvas text-ink`) or dark (`bg-night text-night-ink`) to match the footer or header.
+- **Position**: keep the non-blocking bar at the bottom (CB-04). A centred modal variant needs a close button that counts as "no consent", must move focus into the dialog and must not block the page behind it (CB-03, CB-04, CB-60) — the bar is the safer default.
+- **360 px** (CB-15): the text scrolls (`max-h-[38vh]`), Reject and Accept sit side by side, so both are visible without scrolling. Keep that when shortening or lengthening the text.
+- **Copy**: `cookie.*` units. Keep it short and factual; no "Používáním webu souhlasíte" (CB-05), no guilt or fear ("bez cookies web nebude fungovat", DP-04), one name for the settings everywhere — "Nastavení cookies" (DP-08).
+
+Never: pre-enabled switches (DP-03), "legitimate interest" toggles switched on (DP-06), a Save button that accepts everything (DP-07), the withdrawal link only deep in the policy (DP-09), auto-hiding the bar (CB-62), a cookie wall (CB-03).
+
+---
+
+## 5. Trackers, embeds and consent behaviour
+
+### Google Analytics 4 and Google Ads (Consent Mode v2)
+
+`cookie-consent.ts` defines `gtag` with all four consent signals **denied** (`analytics_storage`, `ad_storage`, `ad_user_data`, `ad_personalization`) and `ads_data_redaction`, then follows the stored choice:
+
+| | `basic` (default) | `advanced` |
+| :--- | :--- | :--- |
+| Before consent | `gtag.js` is not loaded | `gtag.js` loads, GA4 and Ads configured with everything denied (cookieless pings) |
+| Analytics consent | loads `gtag.js`, configures GA4 (`cookie_expires` 13 months, CB-24) | consent update |
+| Marketing consent | loads `gtag.js`, configures Google Ads (conversions, remarketing) | consent update |
+
+The privacy page describes the active mode automatically (`privacy.cookies.consent_mode_*`). Do not paste Google's gtag or Google Tag Manager snippet into a template — `verify.sh` fails on it. GTM is deliberately not supported: tags inside a container would bypass the per-category loading; configure GA4 and Google Ads through `analytics:` instead.
+
+**Conversions** (form sent, order placed) go through the module, which does nothing without marketing consent:
 
 ```typescript
-export function applyConsent(data: Pick<CookieConsentData, 'analytics' | 'marketing'>): void {
-    // 1. Update Google Consent Mode v2
-    window.gtag?.('consent', 'update', {
-        analytics_storage: data.analytics ? 'granted' : 'denied',
-        ad_storage: data.marketing ? 'granted' : 'denied',
-        ad_user_data: data.marketing ? 'granted' : 'denied',
-        ad_personalization: data.marketing ? 'granted' : 'denied',
-    });
-
-    // Basic mode: load gtag.js only now
-    if (data.analytics) window.loadAnalytics?.();
-
-    // Refused or withdrawn: delete _ga* cookies on the host AND every parent domain
-    // (GA sets them on the registrable domain, e.g. .example.cz while browsing www.example.cz)
-    if (!data.analytics) removeTrackingCookies();
-
-    // 2. Seznam Sklik retargeting: load rc.js with marketing consent, send the consent flag with the hit
-    if (data.marketing) window.loadSklik?.();
-    if (window.retargetingConf) {
-        window.retargetingConf.consent = data.marketing ? 1 : 0;
-        window.rc?.retargetingHit?.(window.retargetingConf);
-    }
-
-    // 3. Dispatch global event for other scripts
-    window.dispatchEvent(new CustomEvent('cookie-consent', { detail: data }));
-}
+window.cookieConsent?.conversion({ googleAds: 'AW-XXXXXXXXX/conversion-label', sklik: 100012345, value: 1500, currency: 'CZK' });
 ```
 
-The module also exposes `window.cookieConsent` (`acceptAll`, `rejectAll`, `savePreferences`, `togglePrefs`, `reset`) and `window.resetCookieConsent()`, traps focus inside the banner while it is open, and returns focus to the previously focused element when it closes. The full file is `examples/cookie-consent.ts`.
+### Seznam Sklik
 
-### Step 3: Footer Revocation Link
-The `bolt-menu` footer container renders the button when `theme.yaml` lists a tracking ID; any template can add one:
+With marketing consent the module loads `https://c.seznam.cz/js/rc.js` and sends `rc.retargetingHit({ rtgId, consent: 1 })` on every page view; `conversion({ sklik: id })` sends `rc.conversionHit(…)`. Without consent nothing is loaded — Sklik has no "advanced" mode here. Seznam is listed as an independent controller in the recipients (confirm with the operator's Sklik terms).
+
+### Other trackers (Meta Pixel, Hotjar, Clarity, LinkedIn, TikTok …)
+
+Add them as blocked scripts; the module turns them into real scripts when their category is granted:
 
 ```twig
-<button type="button" data-cookie-settings class="hover:underline cursor-pointer">
-    {{ __('footer.cookie_settings') }}
-</button>
+{# partials/_master.twig, before </body> — prefer an external file over inline code (CSP) #}
+<script type="text/plain" data-consent-category="marketing" src="{{ asset('js/meta-pixel.js') }}"></script>
 ```
+
+Then add their items to `privacy.cookies` (the catalog has Meta Pixel), their recipient to `privacy.recipients` and to the `marketing` purpose, and bump `config_version`.
+
+### Embedded video and maps (CB-02)
+
+Never write a YouTube, Vimeo or map iframe directly into a template. Use the placeholder; it names the provider, loads the embed only after the visitor clicks "Načíst obsah" (which grants the `third_party` category only), and shows it right away to visitors who already granted the category:
+
+```twig
+{% include 'partials/_consent-embed.twig' with {
+    src: 'https://www.youtube-nocookie.com/embed/VIDEO_ID',
+    title: 'Prohlídka dílny',
+    provider: 'YouTube (Google Ireland Limited)'
+} only %}
+```
+
+### Consent record, re-asking and withdrawal
+
+- The choice is stored in `localStorage` `bolt-cookie-consent`: categories, `config_version`, time of decision, expiry, random id (CB-40). It is a necessary item and listed as such.
+- Consent is valid 12 months; after "Odmítnout vše" the banner stays away for 6 months (CB-41, DP-05). A higher `config_version` asks again everyone who consented to anything, while a rejection stays valid until it expires (CB-42).
+- "Nastavení cookies" (footer, layer 1, privacy page, embed placeholders) opens layer 2 with the current state (CB-30). Withdrawing a category deletes its first-party cookies (names from `privacy.cookies`, on every parent domain) and reloads the page so already running scripts stop (CB-31).
+- Choosing never depends on browser settings (CB-43); closing layer 2 without saving changes nothing.
+
+### JavaScript API
+
+| | |
+| :--- | :--- |
+| `window.cookieConsent.open()` | open layer 2 |
+| `window.cookieConsent.has('marketing')` | is a category granted? |
+| `window.cookieConsent.conversion({ … })` | Google Ads / Sklik conversion, only with marketing consent |
+| `window` event `cookie-consent` | `CustomEvent` with the record after every change |
+
+Markup hooks (`data-cookie-*`, `data-consent-*`) are listed at the top of `examples/cookie-consent.ts` and in `WORKFLOWS.md` (Integration Contract).
 
 ---
 
-## 5. Automation & Verification
+## 6. The privacy policy page
 
-### Scaffolding Script (`scripts/scaffold.sh`)
-Scaffolds the banner, the Consent Mode partial, the TypeScript module, the privacy page and its routes:
+`static-pages/gdpr.twig` is served by `TemplateController` at `/zasady-ochrany-osobnich-udaju` and `/{_locale}/zasady-ochrany-osobnich-udaju`. It follows the guidelines' recommended order and fills every mandatory block from `privacy:` — or states explicitly that it does not apply:
 
-```bash
-bash skills/bolt-cookie-consent/scripts/scaffold.sh              # site with tracking
-bash skills/bolt-cookie-consent/scripts/scaffold.sh --no-banner  # privacy page only (no tracking)
+| Mandatory block | On the page | Data |
+| :--- | :--- | :--- |
+| 1. Controller | `#spravce` — one card per controller | `controllers` |
+| 2. Data protection officer | in each card ("nebyl jmenován" when `dpo: ~`) | `controllers[].dpo` |
+| 3. Processing by purpose | `#ucely` — table: purpose, (controller), data, legal basis + legitimate interest, retention, obligation to provide | `purposes` |
+| 4. Recipients | `#prijemci` — table with role | `recipients` |
+| 5. Transfers outside the EU/EEA | `#prijemci` — basis per recipient | `recipients[].transfer` |
+| 6. Rights, complaint to ÚOOÚ | `#prava` | `privacy.rights.*` |
+| 7. Right to object | `#namitka` — separate, visually distinct block (čl. 21/4) | `privacy.objection.*` |
+| 8. Automated decision-making | end of `#ucely` | `automated_decision_making` |
+| 9. Cookies | `#cookies` — same tables as layer 2, Consent Mode note, "Nastavení cookies" button | `cookies`, `analytics.consent_mode` |
+| 10. Exercising rights | `#kontakt` — one contact channel, reply within one month (VAR-32) | `joint_arrangement.contact_controller` or the first controller |
+| 11. Joint controllers | `#spolecne-spravcovstvi` — essence of the arrangement, rights against any controller | `joint_arrangement` |
+
+Also: effective date and version (PP-06), summary (PP-04), table of contents, change history, and `data-cookie-banner-defer` so the bar never covers the page (PP-05).
+
+**More than one controller.** Every controller gets an identical card (VAR-30); the purposes table gains a "Správce" column (VAR-31); purposes with `section: <controller id>` appear in that controller's own section (B2 / hybrid, VAR-20); the banner names all controllers (VAR-13). For a form where the visitor chooses the recipient, pass `controller_text` to the form note (VAR-21).
+
+**Forms (PP-02).** Next to every submit button:
+
+```twig
+{% include 'partials/_privacy-form-note.twig' with { purpose: 'contact_form' } %}
 ```
 
-- Copies `partials/_cookie-banner.twig`, `partials/_consent-mode.twig`, `js/src/cookie-consent.ts` and `static-pages/gdpr.twig` (existing files are preserved).
-- Enables `import './cookie-consent';` in `js/src/index.ts`.
-- Inserts the `privacy` / `privacy_locale` routes above `frontend:` in `config/routes.yaml` (skipped when the path is already routed).
-- Reminds you to merge `examples/translations.<locale>.xlf` with `scripts/merge-xliff.php` and to set the IDs in `theme.yaml`.
+No consent checkbox for contract or legitimate-interest purposes; where the basis is consent (newsletter), add an **unticked** checkbox.
 
-### Verification Script (`scripts/verify.sh`)
-Runs strict automated compliance checks against Czech regulations and Bolt CMS standards:
+**Footer (PP-01, CB-30).** `bolt-menu`'s footer links the policy on every page and shows "Nastavení cookies" whenever `privacy.cookies` contains an item that needs consent.
+
+**Languages.** Czech is mandatory for every text (CB-23). For each further locale, merge `examples/translations.en.xlf` into `messages.<code>.xlf` and translate it, and add the locale key to every localized map in `privacy:`.
+
+---
+
+## 7. Measuring, filling in and handing over
+
+**Measure (DM-02).** The catalog's cookie names and lifetimes are the providers' documented defaults, not a measurement. On the running site, in a clean browser profile without extensions:
+1. Load the homepage: DevTools → Application shows no cookie and no storage key (the consent record appears only after a choice); Network shows no request to Google, Seznam, Meta or embed domains (CB-01).
+2. "Přijmout vše", visit a few pages, play the embed. List every cookie and storage key per domain with its expiry.
+3. Make `privacy.cookies` match: add what is missing (with a Czech purpose — nothing unclassified, INV-03), remove what does not appear, fix `expiry`, replace each `[OVĚŘIT …]`.
+
+**Hand over (AG-05)** to the operator:
+- the inventory (the `privacy.cookies` table — or the `#cookies` section of the page);
+- the filled `theme.yaml` blocks;
+- the list of every remaining `[DOPLNIT]` question;
+- the result of `verify.sh` and of the manual acceptance checklist (guidelines, *Akceptační checklist*);
+- the AG-06 note that this is not a legal assessment.
+
+---
+
+## 8. Verification
 
 ```bash
-bash skills/bolt-cookie-consent/scripts/verify.sh
+bash $SKILLS/bolt-cookie-consent/scripts/verify.sh --draft   # while [DOPLNIT] / [OVĚŘIT] remain
+bash $SKILLS/bolt-cookie-consent/scripts/verify.sh           # sign-off: placeholders fail
 ```
 
-**Verification Steps:**
-1. Detects active theme from `config/bolt/config.yaml`.
-2. Verifies `_cookie-banner.twig` exists.
-3. Audits banner compliance: verifies Reject ("Odmítnout") and Accept exist in the first layer and that `#cookie-btn-reject` and `#cookie-btn-accept` carry **identical classes** (only `order-*` may differ) — equal visual prominence, no dark pattern.
-4. Verifies inclusion of the banner in `_master.twig` / `_base.twig`.
-5. Verifies a persistent revocation trigger (`resetCookieConsent()`, `cookieConsent.reset` or `[data-cookie-settings]`) in theme templates or scripts.
-6. Verifies presence of the Privacy Policy page (`/zasady-ochrany-osobnich-udaju`) — and, for the static template, its route in `config/routes.yaml`.
-7. Checks XLIFF translation catalogs (`messages.cs.xlf`) for required `cookie.*` and `privacy.*` units.
+| Step | Checks |
+| :--- | :--- |
+| 1 | Active theme |
+| 2 | `theme.yaml` data (`scripts/check-privacy.php`): placeholders; controller model and identity; joint arrangement; purposes with Czech texts, valid legal basis, concrete legitimate interest; recipients; every cookie item classified with Czech purpose, provider and expiry; consent record listed; tracker IDs inventoried; consent lifetimes; version, date, changelog; automated decisions stated |
+| 3 | Banner partials present, `_consent-mode.twig` in `<head>`, banner included in the master layout |
+| 4 | Reject / Accept (layer 1) and Reject / Save / Accept (layer 2) share identical classes; settings button; layer-2 dialog; switches start off; `role="dialog"`, `aria-labelledby`, `role="switch"` |
+| 5 | No implied-consent wording; one label for "Nastavení cookies" |
+| 6 | No tracker script, gtag call or third-party iframe hard-coded in any template |
+| 7 | `cookie-consent.ts` present and imported; no auto-hide |
+| 8 | Footer links the policy and has `[data-cookie-settings]` |
+| 9 | Privacy page, route, rendered from `privacy:`, all section anchors, banner deferred on the page |
+| 10 | Every `cookie.*` / `privacy.*` unit in every catalog (Czech mandatory); live checks with `BOLT_BASE_URL`: no tracker script in the homepage HTML, consent configuration rendered, policy returns 200 without placeholders |
+
+Without trackers and embeds the banner checks are skipped and the privacy page is still verified — run this skill on every site. The behaviour that a script cannot see (DevTools before and after a choice, 360 px, keyboard and screen reader) is the manual checklist printed at the end of the run.
+
+---
+
+## 9. Pitfalls
+
+- **A tracker ID without inventory never loads.** That is intended: add the items to `privacy.cookies` first.
+- **`theme.yaml` is cached.** Clear Bolt's cache after every change, or the banner keeps the old configuration (and the old `config_version`).
+- **Changing purposes, controllers, recipients or categories** without bumping `config_version` leaves earlier consents in force for processing they never covered (CB-42).
+- **`preconnect` / `dns-prefetch` to `googletagmanager.com`, `c.seznam.cz` …** contacts the provider before consent. Do not add them.
+- **Inline blocked scripts** (`<script type="text/plain">…code…</script>`) need `'unsafe-inline'` or a nonce under a strict CSP; prefer `src=` files.
+- **Analytics on a subdomain or with a custom cookie domain**: deletion on withdrawal covers the host and its parent domains; cookies set for other hosts cannot be deleted from this site.
+- **Advanced Consent Mode** is the operator's documented decision, not a default (CB-50); `verify.sh` warns while it is on.
+- **The banner include sits right after the skip link** in `partials/_master.twig` (bolt-theme-init) so keyboard users reach it early; it never takes focus on its own (CB-60).

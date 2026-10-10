@@ -48,14 +48,49 @@ fi
 
 echo "Target Theme: $ACTIVE_THEME ($THEME_DIR)"
 
-# Options: --no-banner (privacy page only, for sites without tracking)
+usage() {
+    echo "Usage: scaffold.sh --model=single|joint|separate|hybrid [--trackers=ga4,google_ads,sklik,meta_pixel]"
+    echo "                   [--embeds=youtube,google_maps,mapy_com] [--purposes=web_operation,contact_form,...]"
+    echo "                   [--controllers=N] [--necessary=session] [--no-banner]"
+    echo ""
+    echo "The intake answers (SKILL.md, Step 0) build the privacy: block of theme.yaml through"
+    echo "scripts/privacy-config.php. --model is required while theme.yaml has no privacy: block"
+    echo "(the controller model is never guessed, AG-02). --no-banner: privacy page only (no"
+    echo "trackers, no embeds)."
+}
+
 BANNER=1
+CONFIG_ARGS=()
+HAS_MODEL=0
 for arg in "$@"; do
     case "$arg" in
         --no-banner) BANNER=0 ;;
-        *) echo "Unknown argument: $arg"; echo "Usage: ./scaffold.sh [--no-banner]"; exit 1 ;;
+        --model=*) HAS_MODEL=1; CONFIG_ARGS+=("$arg") ;;
+        --trackers=*|--embeds=*|--purposes=*|--controllers=*|--necessary=*) CONFIG_ARGS+=("$arg") ;;
+        --help|-h) usage; exit 0 ;;
+        *) echo "Unknown argument: $arg"; usage; exit 1 ;;
     esac
 done
+
+THEME_YAML="$THEME_DIR/theme.yaml"
+if [ $BANNER -eq 0 ]; then
+    for arg in "${CONFIG_ARGS[@]}"; do
+        case "$arg" in
+            --trackers=?*|--embeds=?*) echo "ERROR: --no-banner contradicts $arg (trackers and embeds need the banner)."; exit 1 ;;
+        esac
+    done
+fi
+
+# 2. theme.yaml privacy: block — the single source of truth (data model, DM-01)
+if [ -f "$THEME_YAML" ] && grep -qE "^privacy:" "$THEME_YAML"; then
+    echo "Existing: $THEME_YAML already has a privacy: block — preserved."
+elif [ $HAS_MODEL -eq 0 ]; then
+    echo "ERROR: $THEME_YAML has no privacy: block yet. Run the intake (SKILL.md, Step 0) and pass"
+    echo "       at least --model=single|joint|separate|hybrid (plus --trackers / --embeds / --purposes)."
+    exit 1
+else
+    php "$SCRIPT_DIR/privacy-config.php" "${CONFIG_ARGS[@]}" --write="$THEME_YAML"
+fi
 
 copy_if_missing() {
     local src="$1"
@@ -69,10 +104,16 @@ copy_if_missing() {
     fi
 }
 
-# 2. Banner, Consent Mode partial and TypeScript module (only when the site uses tracking)
+# 3. Partials shared by the banner and the privacy page
+copy_if_missing "$EXAMPLES_DIR/_privacy-macros.twig" "$THEME_DIR/partials/_privacy-macros.twig"
+copy_if_missing "$EXAMPLES_DIR/_cookie-table.twig" "$THEME_DIR/partials/_cookie-table.twig"
+copy_if_missing "$EXAMPLES_DIR/_privacy-form-note.twig" "$THEME_DIR/partials/_privacy-form-note.twig"
+
+# 4. Banner, consent configuration, embed placeholder and TypeScript module
 if [ $BANNER -eq 1 ]; then
     copy_if_missing "$EXAMPLES_DIR/_cookie-banner.twig" "$THEME_DIR/partials/_cookie-banner.twig"
     copy_if_missing "$EXAMPLES_DIR/_consent-mode.twig" "$THEME_DIR/partials/_consent-mode.twig"
+    copy_if_missing "$EXAMPLES_DIR/_consent-embed.twig" "$THEME_DIR/partials/_consent-embed.twig"
 
     if [ -d "$THEME_DIR/js/src" ]; then
         copy_if_missing "$EXAMPLES_DIR/cookie-consent.ts" "$THEME_DIR/js/src/cookie-consent.ts"
@@ -93,10 +134,10 @@ if [ $BANNER -eq 1 ]; then
     fi
 fi
 
-# 3. Privacy policy static page (Pattern A)
+# 5. Privacy policy static page
 copy_if_missing "$EXAMPLES_DIR/gdpr.twig" "$THEME_DIR/static-pages/gdpr.twig"
 
-# 4. Routes for the static privacy page, inserted ABOVE Bolt's `frontend:` import — Bolt's
+# 6. Routes for the static privacy page, inserted ABOVE Bolt's `frontend:` import — Bolt's
 #    catch-all frontend routes would otherwise answer /zasady-ochrany-osobnich-udaju with 404.
 ROUTES_FILE="config/routes.yaml"
 if [ -f "$ROUTES_FILE" ]; then
@@ -105,7 +146,7 @@ if [ -f "$ROUTES_FILE" ]; then
     else
         ROUTES_BLOCK="$(mktemp)"
         cat > "$ROUTES_BLOCK" <<'ROUTES'
-# Privacy policy (bolt-cookie-consent, Pattern A: static page + XLIFF translations)
+# Privacy policy (bolt-cookie-consent: static page rendered from theme.yaml privacy:)
 privacy:
   path: /zasady-ochrany-osobnich-udaju
   defaults:
@@ -136,7 +177,7 @@ ROUTES
     fi
 fi
 
-# 5. Check _master.twig inclusion
+# 7. Check _master.twig inclusion
 MASTER_FILE="$THEME_DIR/partials/_master.twig"
 if [ -f "$MASTER_FILE" ]; then
     for partial in _cookie-banner.twig _consent-mode.twig; do
@@ -148,11 +189,13 @@ if [ -f "$MASTER_FILE" ]; then
     done
 fi
 
-# 6. Translations
+# 8. Translations
 echo "----------------------------------------------------------"
-echo "Translations: merge the cookie.* and privacy.* units into every catalog:"
+echo "Translations: merge the cookie.* and privacy.* units into every catalog (Czech is mandatory, CB-23):"
 echo "  php <bolt-skills>/scripts/merge-xliff.php $EXAMPLES_DIR/translations.cs.xlf translations/messages.cs.xlf"
 echo "  php <bolt-skills>/scripts/merge-xliff.php $EXAMPLES_DIR/translations.en.xlf translations/messages.en.xlf"
-echo "Tracking IDs: theme.yaml -> analytics.ga4_id / analytics.sklik_id / analytics.consent_mode"
+echo "Next: fill every [DOPLNIT] in $THEME_YAML with the operator, measure every [OVĚŘIT] item in a"
+echo "clean browser profile (DM-02), set the tracker IDs under analytics:, and hand the operator the"
+echo "list of open questions (AG-05)."
 echo "----------------------------------------------------------"
-echo "Done! Rebuild the theme (npm run prod), clear the cache, then run scripts/verify.sh."
+echo "Done! Rebuild the theme (npm run prod), clear the cache, then run scripts/verify.sh (--draft while placeholders remain)."

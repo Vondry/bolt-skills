@@ -1,129 +1,167 @@
 {#
-  Cookie Consent Banner — Czech ZEK § 89 / GDPR / Google Consent Mode v2 Compliant.
+  partials/_cookie-banner.twig — two-layer cookie banner (bolt-cookie-consent).
+  Requirement IDs refer to references/guidelines.cs.md.
 
-  Compliance Highlights:
-    1. Opt-in: Analytical & marketing cookies are BLOCKED until active user confirmation.
-    2. Equal Visual Prominence: 'Odmítnout vše' and 'Přijmout vše' share the SAME classes
-       (colour, weight, size, shadow) — only the label differs (no dark pattern).
-    3. Granular Preferences: Analytics and Marketing can be toggled independently (defaults OFF, no pre-ticked boxes).
-    4. Link to Full Policy: Links to {{ locale_link('/zasady-ochrany-osobnich-udaju') }}.
-    5. Easy Revocation: any [data-cookie-settings] button (footer "Nastavení cookies", privacy page)
-       and the global window.resetCookieConsent() re-open the banner.
-    6. Keyboard Accessibility: role="dialog", aria attributes, focus trap on Tab key.
+  Layer 1 (non-modal bar at the bottom, CB-04): who the controller is, what for, to whom, how to
+  withdraw (CB-14); "Odmítnout vše" and "Přijmout vše" as buttons with the SAME classes
+  (CB-10–CB-12) and "Nastavení cookies" (CB-13). The page stays usable (CB-03); it never takes
+  focus (CB-60) and never disappears on its own (CB-62). Hidden on the privacy page (PP-05).
 
-  Behaviour lives in js/src/cookie-consent.ts (imported by js/src/index.ts) — no inline
-  scripts or onclick handlers, so a strict Content-Security-Policy keeps working.
-  The ids (cookie-btn-accept, cookie-btn-reject, …) are kept for verify.sh and analytics tagging.
+  Layer 2 (<dialog>, "Nastavení cookies"): a switch per consent category, off by default (CB-20),
+  the item list of each category (CB-21) and "Uložit výběr", "Přijmout vše", "Odmítnout vše"
+  (CB-22). Also opened by every [data-cookie-settings] button (footer, privacy page — CB-30).
+
+  All data comes from theme.yaml (privacy:); nothing renders when no consent category is used.
+  Behaviour: js/src/cookie-consent.ts (data-cookie-* hooks, no inline scripts).
+
+  Adapting to the design: change the class variables below (tokens from bolt-tailwind-theme).
+  consent_button must stay shared by every Accept / Reject / Save button — verify.sh compares
+  them — and keep a text contrast of at least 4.5:1. Never colour Reject as a warning (CB-12).
 
   Translation keys: cookie.*
 #}
+{% import 'partials/_privacy-macros.twig' as privacy_ui %}
 
-{% set consent_button = 'w-full sm:w-auto rounded-sm bg-accent hover:bg-accent-hover px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-sm transition-colors cursor-pointer text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-night-ink' %}
+{% set privacy = config.get('theme/privacy')|default({}) %}
+{% set cookies = privacy.cookies|default([]) %}
+{% set used = cookies|column('category') %}
+{% set consent_categories = ['preferences', 'analytics', 'marketing', 'third_party']|filter(category => category in used)|merge([]) %}
 
-<div id="cookie-banner"
-     data-cookie-banner
-     role="dialog"
-     aria-modal="false"
-     aria-labelledby="cookie-banner-title"
-     aria-describedby="cookie-banner-desc"
-     tabindex="-1"
-     hidden
-     class="fixed inset-x-0 bottom-0 z-50 p-3 sm:p-5 font-body translate-y-full transition-transform duration-500 ease-out outline-none">
+{% if consent_categories is not empty %}
+    {% set locale = app.request.locale|default('cs') %}
+    {% set policy_url = locale_link('/zasady-ochrany-osobnich-udaju') %}
 
-    <div class="mx-auto w-full max-w-4xl bg-night text-night-ink rounded-md border border-night-stroke shadow-2xl overflow-hidden">
+    {# Design hooks #}
+    {% set consent_button = 'inline-flex min-h-11 w-full items-center justify-center rounded-sm bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-hover cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent' %}
+    {% set settings_button = 'inline-flex min-h-11 w-full items-center justify-center rounded-sm border border-night-ink-3 px-4 py-2.5 text-sm font-semibold text-night-ink transition-colors hover:bg-night-deep cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-night-ink' %}
 
-        {# Main Header & Description #}
-        <div class="p-5 sm:p-6 flex flex-col gap-4">
-            <div class="flex items-start gap-4">
-                <div class="flex size-10 shrink-0 items-center justify-center rounded-sm bg-accent text-accent-ink shadow-md">
-                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-5" fill="currentColor">
-                        <path d="M21 12.4A9 9 0 1 1 11.6 3a3.3 3.3 0 0 0 4.2 4.2A3.3 3.3 0 0 0 21 12.4ZM8.2 9.6a1.2 1.2 0 1 0 0-2.4a1.2 1.2 0 0 0 0 2.4Zm.8 6.8a1.4 1.4 0 1 0 0-2.8a1.4 1.4 0 0 0 0 2.8Zm5.4-1.8a1.1 1.1 0 1 0 0-2.2a1.1 1.1 0 0 0 0 2.2Z"/>
-                    </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <h2 id="cookie-banner-title" class="text-lg font-bold text-night-ink">
-                        {{ __('cookie.title') }}
-                    </h2>
-                    <p id="cookie-banner-desc" class="mt-1 text-sm text-night-ink-2 leading-relaxed">
-                        {{ __('cookie.text') }}
-                        <a href="{{ locale_link('/zasady-ochrany-osobnich-udaju') }}"
-                           target="_blank"
-                           rel="noopener"
-                           class="font-medium text-night-ink underline underline-offset-2 hover:text-accent-ink-2 transition-colors">
-                            {{ __('cookie.details') }}
-                        </a>.
+    {# CB-14: controllers (all of them, VAR-13), purposes and named third parties #}
+    {% set controller_names = privacy.controllers|default([])|map(controller => controller.name)|join(', ', ' ' ~ __('cookie.and') ~ ' ') %}
+    {% set purposes_text = consent_categories|map(category => __('cookie.category.' ~ category ~ '.short'))|join(', ', ' ' ~ __('cookie.and') ~ ' ') %}
+    {% set consent_recipients = [] %}
+    {% for purpose in privacy.purposes|default([])|filter(purpose => purpose.legal_basis == 'art6_1_a') %}
+        {% set consent_recipients = consent_recipients|merge(purpose.recipients|default([])) %}
+    {% endfor %}
+    {% set providers = [] %}
+    {% for recipient in privacy.recipients|default([])|filter(recipient => recipient.id in consent_recipients) %}
+        {% if recipient.name not in providers %}
+            {% set providers = providers|merge([recipient.name]) %}
+        {% endif %}
+    {% endfor %}
+
+    {# ---------------------------------------------------------------- Layer 1 #}
+    <section id="cookie-banner"
+             data-cookie-banner
+             role="dialog"
+             aria-modal="false"
+             aria-labelledby="cookie-banner-title"
+             aria-describedby="cookie-banner-desc"
+             hidden
+             class="fixed inset-x-0 bottom-0 z-40 p-2 font-body sm:p-4 print:hidden">
+        <div class="mx-auto flex max-w-5xl flex-col gap-4 rounded-md border border-night-stroke bg-night p-4 text-night-ink shadow-2xl sm:p-5 lg:flex-row lg:items-end lg:gap-8">
+
+            {# Scrolls on small screens so the buttons always stay visible at 360 px (CB-15) #}
+            <div class="max-h-[38vh] overflow-y-auto lg:max-h-none">
+                <h2 id="cookie-banner-title" class="mb-1 text-base font-semibold">{{ __('cookie.title') }}</h2>
+                <div id="cookie-banner-desc" class="space-y-1 text-sm leading-relaxed text-night-ink-2">
+                    <p>
+                        {{ __('cookie.text', { '%purposes%': purposes_text }) }}
+                        {% if providers is not empty %}
+                            {{ __('cookie.recipients', { '%providers%': providers|join(', ') }) }}
+                        {% endif %}
+                        {{ __('cookie.necessary_only') }}
+                    </p>
+                    <p>
+                        {% if privacy.controllers|default([])|length > 1 %}
+                            {{ __(privacy.controller_model|default('') in ['joint', 'hybrid'] ? 'cookie.controllers_joint' : 'cookie.controllers', { '%controllers%': controller_names }) }}
+                        {% else %}
+                            {{ __('cookie.controller', { '%controllers%': controller_names }) }}
+                        {% endif %}
+                        {{ __('cookie.withdraw') }}
                     </p>
                 </div>
+                <p class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    <a href="{{ policy_url }}" class="font-medium text-night-ink underline underline-offset-2 hover:text-accent-ink-2">{{ __('cookie.policy_link') }}</a>
+                    <a href="{{ locale_link('/zasady-ochrany-osobnich-udaju#cookies') }}" class="font-medium text-night-ink underline underline-offset-2 hover:text-accent-ink-2">{{ __('cookie.list_link') }}</a>
+                </p>
             </div>
 
-            {# Granular Preferences (Toggles) — revealed by the "Nastavení" button #}
-            <div id="cookie-prefs" hidden class="flex flex-col divide-y divide-night-stroke border-y border-night-stroke my-2">
-                {# 1. Necessary (always locked) #}
-                <div class="flex items-center justify-between py-3">
-                    <div class="flex flex-col">
-                        <span class="text-sm font-semibold text-night-ink">{{ __('cookie.necessary.title') }}</span>
-                        <span class="text-xs text-night-ink-3">{{ __('cookie.necessary.desc') }}</span>
-                    </div>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-night-ink-3 bg-night-deep px-2 py-1 rounded-sm">
-                        {{ __('cookie.always_active') }}
-                    </span>
+            <div class="grid shrink-0 grid-cols-2 gap-2 lg:w-80">
+                <button type="button" id="cookie-btn-reject" data-cookie-reject class="{{ consent_button }}">{{ __('cookie.reject') }}</button>
+                <button type="button" id="cookie-btn-accept" data-cookie-accept class="{{ consent_button }}">{{ __('cookie.accept') }}</button>
+                <button type="button" id="cookie-btn-settings" data-cookie-settings aria-haspopup="dialog" aria-controls="cookie-settings" class="col-span-2 {{ settings_button }}">{{ __('cookie.settings') }}</button>
+            </div>
+        </div>
+    </section>
+
+    {# ---------------------------------------------------------------- Layer 2 #}
+    <dialog id="cookie-settings"
+            data-cookie-dialog
+            aria-labelledby="cookie-settings-title"
+            class="m-auto w-[min(44rem,calc(100%-1rem))] max-h-[calc(100dvh-1rem)] overflow-hidden rounded-md bg-canvas p-0 font-body text-ink shadow-2xl backdrop:bg-night/70 print:hidden">
+        <div class="flex max-h-[calc(100dvh-1rem)] flex-col">
+            <header class="flex items-start justify-between gap-4 border-b border-stroke p-4 sm:p-5">
+                <div>
+                    <h2 id="cookie-settings-title" class="text-lg font-semibold">{{ __('cookie.settings') }}</h2>
+                    <p class="mt-1 text-sm text-ink-2">{{ __('cookie.settings_intro') }}</p>
                 </div>
+                <button type="button" data-cookie-close class="-m-2 shrink-0 rounded-sm p-2 text-ink-2 hover:text-ink cursor-pointer focus-visible:outline-2 focus-visible:outline-accent">
+                    <span class="sr-only">{{ __('cookie.close') }}</span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+            </header>
 
-                {# 2. Analytics (unchecked by default) #}
-                <label class="flex items-center justify-between py-3 cursor-pointer">
-                    <div class="flex flex-col pr-4">
-                        <span class="text-sm font-semibold text-night-ink">{{ __('cookie.analytics.title') }}</span>
-                        <span class="text-xs text-night-ink-3">{{ __('cookie.analytics.desc') }}</span>
-                    </div>
-                    <input type="checkbox" id="cookie-pref-analytics" data-cookie-pref="analytics" class="size-4 accent-accent rounded-sm cursor-pointer">
-                </label>
+            <div class="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+                {% for category in ['necessary']|merge(consent_categories) %}
+                    {% set items = cookies|filter(item => item.category == category) %}
+                    <section class="rounded-sm border border-stroke">
+                        <div class="flex items-start justify-between gap-4 p-4">
+                            <div>
+                                <h3 id="cookie-category-{{ category }}" class="font-semibold">{{ __('cookie.category.' ~ category ~ '.title') }}</h3>
+                                <p id="cookie-category-{{ category }}-desc" class="mt-1 text-sm text-ink-2">{{ __('cookie.category.' ~ category ~ '.desc') }}</p>
+                            </div>
 
-                {# 3. Marketing (unchecked by default) #}
-                <label class="flex items-center justify-between py-3 cursor-pointer">
-                    <div class="flex flex-col pr-4">
-                        <span class="text-sm font-semibold text-night-ink">{{ __('cookie.marketing.title') }}</span>
-                        <span class="text-xs text-night-ink-3">{{ __('cookie.marketing.desc') }}</span>
-                    </div>
-                    <input type="checkbox" id="cookie-pref-marketing" data-cookie-pref="marketing" class="size-4 accent-accent rounded-sm cursor-pointer">
-                </label>
+                            {% set switch_classes = 'group relative inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-ink-3 transition-colors aria-checked:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent' %}
+                            {% if category == 'necessary' %}
+                                {# Always on and not changeable, with the reason in the description (CB-20) #}
+                                <span class="flex shrink-0 flex-col items-end gap-1">
+                                    <button type="button" role="switch" aria-checked="true" aria-disabled="true" disabled
+                                            aria-labelledby="cookie-category-necessary" aria-describedby="cookie-category-necessary-desc"
+                                            class="{{ switch_classes }} opacity-60">
+                                        <span aria-hidden="true" class="pointer-events-none inline-block size-5 translate-x-0.5 rounded-full bg-white shadow transition-transform group-aria-checked:translate-x-5.5"></span>
+                                    </button>
+                                    <span class="text-xs text-ink-3">{{ __('cookie.always_active') }}</span>
+                                </span>
+                            {% else %}
+                                <button type="button" role="switch" aria-checked="false" data-cookie-category="{{ category }}"
+                                        aria-labelledby="cookie-category-{{ category }}" aria-describedby="cookie-category-{{ category }}-desc"
+                                        class="{{ switch_classes }} cursor-pointer">
+                                    <span aria-hidden="true" class="pointer-events-none inline-block size-5 translate-x-0.5 rounded-full bg-white shadow transition-transform group-aria-checked:translate-x-5.5"></span>
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <details class="border-t border-stroke">
+                            <summary class="cursor-pointer px-4 py-2 text-sm font-medium text-ink-2 hover:text-ink">
+                                {{ __('cookie.show_items', { '%count%': items|length }) }}
+                            </summary>
+                            <div class="px-4 pb-4">
+                                {% include 'partials/_cookie-table.twig' with { items: items } only %}
+                            </div>
+                        </details>
+                    </section>
+                {% endfor %}
+
+                <p class="text-sm text-ink-2">
+                    <a href="{{ policy_url }}" class="font-medium text-accent underline underline-offset-2 hover:text-accent-hover">{{ __('cookie.policy_link') }}</a>
+                </p>
             </div>
+
+            <footer class="grid gap-2 border-t border-stroke p-4 sm:grid-cols-3 sm:p-5">
+                <button type="button" id="cookie-dialog-reject" data-cookie-reject class="{{ consent_button }}">{{ __('cookie.reject') }}</button>
+                <button type="button" id="cookie-dialog-save" data-cookie-save class="{{ consent_button }}">{{ __('cookie.save') }}</button>
+                <button type="button" id="cookie-dialog-accept" data-cookie-accept class="{{ consent_button }}">{{ __('cookie.accept') }}</button>
+            </footer>
         </div>
-
-        {# Action Buttons: the first layer offers Accept and Reject with identical styling #}
-        <div class="p-4 sm:p-5 bg-night-deep border-t border-night-stroke flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
-            <button type="button"
-                    id="cookie-btn-toggle-prefs"
-                    data-cookie-toggle-prefs
-                    aria-expanded="false"
-                    aria-controls="cookie-prefs"
-                    data-label-open="{{ __('cookie.customize') }}"
-                    data-label-close="{{ __('cookie.hide_details') }}"
-                    class="order-3 sm:order-1 sm:mr-auto text-sm text-night-ink-2 hover:text-night-ink underline underline-offset-4 py-2 cursor-pointer transition-colors text-left sm:text-center">
-                {{ __('cookie.customize') }}
-            </button>
-
-            <button type="button"
-                    id="cookie-btn-reject"
-                    data-cookie-reject
-                    class="order-1 sm:order-2 {{ consent_button }}">
-                {{ __('cookie.reject') }}
-            </button>
-
-            <button type="button"
-                    id="cookie-btn-accept"
-                    data-cookie-accept
-                    class="order-2 sm:order-3 {{ consent_button }}">
-                {{ __('cookie.accept') }}
-            </button>
-
-            {# Save customized choices (replaces Accept while preferences are open) #}
-            <button type="button"
-                    id="cookie-btn-save"
-                    data-cookie-save
-                    hidden
-                    class="order-2 sm:order-3 {{ consent_button }}">
-                {{ __('cookie.save') }}
-            </button>
-        </div>
-    </div>
-</div>
+    </dialog>
+{% endif %}

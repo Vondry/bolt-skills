@@ -1,102 +1,51 @@
 {#
-  partials/_consent-mode.twig — Google Consent Mode v2 defaults and tracking loaders.
-  Included in <head> of partials/_master.twig BEFORE any other tracking script.
-  IDs come from theme.yaml:  analytics: { ga4_id: 'G-…', sklik_id: 123456 }
+  partials/_consent-mode.twig — consent configuration for js/src/cookie-consent.ts (bolt-cookie-consent).
+  Included in <head> of partials/_master.twig.
 
-  Two Consent Mode variants (decide in the site plan, describe the choice in the privacy policy):
+  Prints JSON only — no executable inline script, so a strict Content-Security-Policy keeps
+  working — and prints nothing when theme.yaml lists no consent category (only necessary
+  items: no banner is needed, the footer then shows only the privacy policy link).
 
-    basic (default, strict opt-in)  gtag.js and Sklik's rc.js are NOT loaded before consent.
-                                    js/src/cookie-consent.ts calls window.loadAnalytics() /
-                                    window.loadSklik() once the visitor grants analytics / marketing
-                                    consent (and on every later visit with stored consent).
-    advanced                        gtag.js loads on every visit with all storage denied and sends
-                                    cookieless pings until consent (rc.js sends consent=0 hits).
-                                    Set analytics.consent_mode: 'advanced' in theme.yaml.
-                                    This transmits data (IP, user agent) to Google before consent;
-                                    many authorities regard that as requiring consent too.
+  Everything comes from theme.yaml:
+    analytics.ga4_id / google_ads_id / sklik_id   tracker IDs
+    analytics.consent_mode                        basic (default) | advanced — operator's decision (CB-50)
+    privacy.cookies                               inventory; a tracker runs only when its category
+                                                  has items there (INV-03: nothing unclassified)
+    privacy.config_version / privacy.consent      re-ask rules (CB-41, CB-42)
 
-  The stored consent record (localStorage 'bolt-cookie-consent', version 1) is read here so
-  returning visitors start with their previous choice.
+  Never add preconnect / dns-prefetch hints for tracker domains here: they contact the third
+  party before consent (CB-01).
 #}
-{% set ga4_id = config.get('theme/analytics/ga4_id') %}
-{% set sklik_id = config.get('theme/analytics/sklik_id') %}
-{% set consent_mode = config.get('theme/analytics/consent_mode')|default('basic') %}
+{% set privacy = config.get('theme/privacy')|default({}) %}
+{% set analytics = config.get('theme/analytics')|default({}) %}
+{% set cookies = privacy.cookies|default([]) %}
+{% set used = cookies|column('category') %}
+{% set consent_categories = ['preferences', 'analytics', 'marketing', 'third_party']|filter(category => category in used)|merge([]) %}
 
-{% if ga4_id or sklik_id %}
-<script>
-    (function () {
-        var STORAGE_KEY = 'bolt-cookie-consent';
-        var CONSENT_VERSION = 1;
-        var GA_ID = {{ ga4_id|default('')|json_encode|raw }};
-        var MODE = {{ consent_mode|json_encode|raw }};
+{% if consent_categories is not empty %}
+    {# First-party cookie names per category, deleted when consent is withdrawn (CB-31). #}
+    {% set first_party = {} %}
+    {% for category in consent_categories %}
+        {% set names = [] %}
+        {% for item in cookies|filter(item => item.category == category and item.party|default('third') == 'first' and item.technology|default('cookie') == 'cookie') %}
+            {% set names = names|merge(item.name|split(',')|map(name => name|trim)) %}
+        {% endfor %}
+        {% set first_party = first_party|merge({(category): names}) %}
+    {% endfor %}
 
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        window.gtag = gtag;
-
-        var analytics = false;
-        var marketing = false;
-        try {
-            var stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            if (stored.version === CONSENT_VERSION) {
-                analytics = stored.analytics === true;
-                marketing = stored.marketing === true;
-            }
-        } catch (e) {}
-
-        gtag('consent', 'default', {
-            analytics_storage: analytics ? 'granted' : 'denied',
-            ad_storage: marketing ? 'granted' : 'denied',
-            ad_user_data: marketing ? 'granted' : 'denied',
-            ad_personalization: marketing ? 'granted' : 'denied'
-        });
-        gtag('set', 'ads_data_redaction', true);
-
-        var loaded = false;
-        window.loadAnalytics = function () {
-            if (loaded || !GA_ID) return;
-            loaded = true;
-            gtag('js', new Date());
-            gtag('config', GA_ID, {
-                allow_ad_personalization_signals: false,
-                allow_google_signals: false
-            });
-            var s = document.createElement('script');
-            s.async = true;
-            s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
-            document.head.appendChild(s);
-        };
-
-        // Advanced mode loads immediately (denied until consent); basic mode only with consent.
-        if (MODE === 'advanced' || analytics) {
-            window.loadAnalytics();
-        }
-
-        {% if sklik_id %}
-        // Seznam Sklik retargeting: the consent flag is sent with every hit;
-        // js/src/cookie-consent.ts updates it and re-sends after a decision.
-        window.retargetingConf = { rtgId: {{ sklik_id|json_encode|raw }}, consent: marketing ? 1 : 0 };
-
-        var sklikLoaded = false;
-        window.loadSklik = function () {
-            if (sklikLoaded) return;
-            sklikLoaded = true;
-            var r = document.createElement('script');
-            r.async = true;
-            r.src = 'https://c.seznam.cz/js/rc.js';
-            r.onload = function () {
-                if (window.rc && window.rc.retargetingHit) {
-                    window.rc.retargetingHit(window.retargetingConf);
-                }
-            };
-            document.head.appendChild(r);
-        };
-
-        // Same rule as analytics: basic mode loads rc.js only with marketing consent.
-        if (MODE === 'advanced' || marketing) {
-            window.loadSklik();
-        }
-        {% endif %}
-    })();
-</script>
+    {# gaCookieExpires: 13 months in seconds instead of GA's 2-year default (CB-24). #}
+    <script type="application/json" id="cookie-consent-config">
+        {{- {
+            version: privacy.config_version|default(1),
+            validityMonths: privacy.consent.validity_months|default(12),
+            reaskMonths: privacy.consent.reask_after_reject_months|default(6),
+            mode: analytics.consent_mode|default('basic') == 'advanced' ? 'advanced' : 'basic',
+            categories: consent_categories,
+            cookies: first_party,
+            ga4: 'analytics' in consent_categories ? analytics.ga4_id|default(null) : null,
+            googleAds: 'marketing' in consent_categories ? analytics.google_ads_id|default(null) : null,
+            sklik: 'marketing' in consent_categories ? analytics.sklik_id|default(null) : null,
+            gaCookieExpires: 34128000,
+        }|json_encode|raw -}}
+    </script>
 {% endif %}

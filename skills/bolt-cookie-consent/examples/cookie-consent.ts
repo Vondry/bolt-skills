@@ -1,33 +1,70 @@
 /**
- * Cookie Consent Manager — Czech ZEK § 89 / GDPR / Google Consent Mode v2 / Seznam Sklik.
+ * Cookie consent — Czech ZEK § 89/3, GDPR, ÚOOÚ / EDPB practice (references/guidelines.cs.md).
  *
- * The single implementation of the consent banner (partials/_cookie-banner.twig).
- * Imported by js/src/index.ts:  import './cookie-consent';
+ * The single implementation of consent behaviour. Imported by js/src/index.ts:
+ *   import './cookie-consent';
+ * There are no inline scripts: partials/_consent-mode.twig only prints the configuration as
+ * JSON (#cookie-consent-config, generated from the `analytics:` and `privacy:` blocks of
+ * theme.yaml), so a strict Content-Security-Policy keeps working.
  *
- * Markup contract:
- *   [data-cookie-banner]          the banner (role="dialog", starts `hidden` + translate-y-full)
- *   [data-cookie-accept]          accept all
- *   [data-cookie-reject]          reject all (same styling as accept — no dark pattern)
- *   [data-cookie-save]            save the toggled preferences (shown while preferences are open)
- *   [data-cookie-toggle-prefs]    show/hide the granular preferences (#cookie-prefs);
- *                                 data-label-open / data-label-close hold the button labels
- *   [data-cookie-pref="analytics" | "marketing"]   preference checkboxes (unchecked by default)
- *   [data-cookie-settings]        any button that re-opens the banner (footer, privacy page)
+ * Before a choice nothing non-essential loads (CB-01). Google tags follow Consent Mode v2:
+ *   basic (default)  gtag.js is injected only after analytics or marketing consent
+ *   advanced         gtag.js loads on every visit with all storage denied (operator's
+ *                    explicit decision only, CB-50)
+ * Seznam Sklik, blocked <script type="text/plain"> tags and embeds always wait for consent.
  *
- * Public API (kept for templates and third-party code):
- *   window.cookieConsent.{ acceptAll, rejectAll, savePreferences, togglePrefs, reset }
- *   window.resetCookieConsent()   — re-open the banner (withdraw consent as easily as giving it)
- *   window event 'cookie-consent' — CustomEvent<CookieConsentData> after every decision
+ * Markup contract (partials/_cookie-banner.twig, partials/_consent-embed.twig, footer):
+ *   [data-cookie-banner]                         first layer, non-modal, never steals focus (CB-60)
+ *   [data-cookie-dialog]                         <dialog> second layer (Nastavení cookies)
+ *   [data-cookie-accept] / [data-cookie-reject]  accept all / reject all (both layers)
+ *   [data-cookie-save]                           save the switched categories only (DP-07)
+ *   [data-cookie-settings]                       opens the second layer with the current state
+ *                                                (layer-1 button, footer, privacy page — CB-30)
+ *   [data-cookie-close]                          closes the second layer without a choice
+ *   button[role="switch"][data-cookie-category]  category switches, aria-checked="false" (CB-20)
+ *   [data-cookie-banner-defer]                   on a page: do not show the first layer (PP-05)
+ *   [data-consent-embed][data-consent-category]  placeholder with a <template> holding the embed
+ *   [data-consent-embed-load]                    loads that embed by granting its category (CB-02)
+ *   script[type="text/plain"][data-consent-category]   further trackers (Meta Pixel, …)
  *
- * The consent record is stored in localStorage (key 'bolt-cookie-consent', versioned) and read
- * by partials/_consent-mode.twig in <head>, before any tracking script runs.
+ * Public API:
+ *   window.cookieConsent.open()                  open the second layer
+ *   window.cookieConsent.has('marketing')        is a category granted?
+ *   window.cookieConsent.conversion({ googleAds: 'AW-…/label', sklik: 123, value, currency })
+ *   window event 'cookie-consent'                CustomEvent<ConsentRecord> after every change
  */
 
-export interface CookieConsentData {
+type Category = 'preferences' | 'analytics' | 'marketing' | 'third_party';
+
+interface ConsentConfig {
     version: number;
-    analytics: boolean;
-    marketing: boolean;
-    timestamp: string;
+    validityMonths: number;
+    reaskMonths: number;
+    mode: 'basic' | 'advanced';
+    categories: Category[];
+    /** First-party cookie names per category (`_ga_*` = prefix), deleted on withdrawal (CB-31). */
+    cookies: { [category: string]: string[] };
+    ga4: string | null;
+    googleAds: string | null;
+    sklik: number | null;
+    gaCookieExpires: number;
+}
+
+export interface ConsentRecord {
+    id: string;
+    version: number;
+    categories: { [category: string]: boolean };
+    /** false while only an embed was allowed and the banner has not been answered yet. */
+    complete: boolean;
+    decidedAt: string;
+    expiresAt: string;
+}
+
+interface ConversionOptions {
+    googleAds?: string;
+    sklik?: number;
+    value?: number;
+    currency?: string;
 }
 
 declare global {
@@ -36,240 +73,356 @@ declare global {
         gtag?: (...args: unknown[]) => void;
         rc?: {
             retargetingHit?: (conf: Record<string, unknown>) => void;
-        };
-        retargetingConf?: {
-            rtgId: number;
-            consent: number;
-            [key: string]: unknown;
+            conversionHit?: (conf: Record<string, unknown>) => void;
         };
         cookieConsent?: {
-            acceptAll: () => void;
-            rejectAll: () => void;
-            savePreferences: () => void;
-            togglePrefs: () => void;
-            reset: () => void;
+            open: () => void;
+            has: (category: Category) => boolean;
+            conversion: (options: ConversionOptions) => void;
         };
-        resetCookieConsent?: () => void;
-        loadAnalytics?: () => void;
-        loadSklik?: () => void;
     }
 }
 
 const STORAGE_KEY = 'bolt-cookie-consent';
-const CONSENT_VERSION = 1;
-const FOCUSABLE = 'button:not([hidden]):not([disabled]), input:not([hidden]):not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+const GTAG_SRC = 'https://www.googletagmanager.com/gtag/js?id=';
+const SKLIK_SRC = 'https://c.seznam.cz/js/rc.js';
 
-export function readConsent(): CookieConsentData | null {
+function readConfig(): ConsentConfig | null {
+    const node = document.getElementById('cookie-consent-config');
+    if (!node?.textContent) return null;
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-            const parsed = JSON.parse(raw) as Partial<CookieConsentData>;
-            if (parsed && parsed.version === CONSENT_VERSION) {
-                return parsed as CookieConsentData;
-            }
-        }
+        return JSON.parse(node.textContent) as ConsentConfig;
     } catch {
-        /* storage disabled or corrupted value */
+        return null;
     }
-    return null;
 }
 
-export function persistConsent(analytics: boolean, marketing: boolean): CookieConsentData {
-    const data: CookieConsentData = {
-        version: CONSENT_VERSION,
-        analytics: Boolean(analytics),
-        marketing: Boolean(marketing),
-        timestamp: new Date().toISOString(),
-    };
-
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch {
-        /* storage disabled or quota exceeded — consent still applies to this page view */
-    }
-
-    return data;
+function anyGranted(record: ConsentRecord | null): boolean {
+    if (!record) return false;
+    return Object.keys(record.categories).some((key) => record.categories[key] === true);
 }
 
 /**
- * Delete Google Analytics cookies after consent is refused or withdrawn.
- * GA sets its cookies on the registrable domain (e.g. `.example.cz` while browsing
- * `www.example.cz`), so every parent domain is tried, not only the current host.
+ * The stored choice, or null when the banner must be shown again: no choice yet, expired
+ * (CB-41: 12 months after consent, 6 months after rejection) or — for visitors who granted
+ * anything — given for an older configVersion (CB-42). A rejection stays valid across versions
+ * until it expires, so the banner never re-appears sooner than 6 months after it (DP-05).
  */
-export function removeTrackingCookies(): void {
-    const prefixes = ['_ga', '_gid', '_gat', '_gac_'];
-    const names = document.cookie
-        .split(';')
-        .map((cookie) => cookie.split('=')[0]?.trim())
-        .filter((name): name is string => Boolean(name) && prefixes.some((prefix) => name.startsWith(prefix)));
-
-    const hostname = window.location.hostname;
-    const domains = new Set<string | undefined>([undefined, hostname, `.${hostname}`]);
-    const parts = hostname.split('.');
-    for (let index = 1; index < parts.length - 1; index += 1) {
-        domains.add(`.${parts.slice(index).join('.')}`);
-    }
-
-    for (const name of names) {
-        for (const domain of domains) {
-            const domainPart = domain ? `; Domain=${domain}` : '';
-            document.cookie = `${name}=; Max-Age=0; Path=/${domainPart}; SameSite=Lax`;
-        }
+function readRecord(config: ConsentConfig): ConsentRecord | null {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const record = JSON.parse(raw) as ConsentRecord;
+        if (!record || typeof record.categories !== 'object' || !record.expiresAt) return null;
+        if (Date.parse(record.expiresAt) <= Date.now()) return null;
+        if (record.version !== config.version && anyGranted(record)) return null;
+        return record;
+    } catch {
+        return null;
     }
 }
 
-export function applyConsent(data: Pick<CookieConsentData, 'analytics' | 'marketing'>): void {
-    // 1. Google Consent Mode v2
-    if (typeof window.gtag === 'function') {
+function randomId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** Persists the choice with configuration version and timestamp (CB-40). */
+function writeRecord(config: ConsentConfig, categories: { [category: string]: boolean }, complete: boolean, previous: ConsentRecord | null): ConsentRecord {
+    const now = new Date();
+    const expires = new Date(now.getTime());
+    const record: ConsentRecord = {
+        id: previous?.id ?? randomId(),
+        version: config.version,
+        categories,
+        complete,
+        decidedAt: now.toISOString(),
+        expiresAt: '',
+    };
+    expires.setMonth(expires.getMonth() + (anyGranted(record) ? config.validityMonths : config.reaskMonths));
+    record.expiresAt = expires.toISOString();
+
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
+    } catch {
+        /* storage disabled — the choice still applies to this page view */
+    }
+    return record;
+}
+
+function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+/** Deletes first-party cookies on the host and every parent domain (GA sets `.example.cz`). */
+function deleteCookies(patterns: string[]): void {
+    if (!patterns.length) return;
+    const matches = (name: string): boolean => patterns.some((pattern) => (
+        pattern.endsWith('*') ? name.startsWith(pattern.slice(0, -1)) : name === pattern
+    ));
+    const names = document.cookie.split(';')
+        .map((cookie) => cookie.split('=')[0].trim())
+        .filter((name) => name !== '' && matches(name));
+
+    const parts = window.location.hostname.split('.');
+    const domains: Array<string | null> = [null];
+    for (let index = 0; index < parts.length - 1; index += 1) {
+        domains.push(`.${parts.slice(index).join('.')}`);
+    }
+
+    names.forEach((name) => {
+        domains.forEach((domain) => {
+            document.cookie = `${name}=; Max-Age=0; Path=/${domain ? `; Domain=${domain}` : ''}; SameSite=Lax`;
+        });
+    });
+}
+
+class ConsentManager {
+    private record: ConsentRecord | null;
+    /** Categories whose scripts already run on this page view — a withdrawal needs a reload. */
+    private readonly active: { [category: string]: boolean } = {};
+    private gtagLoaded = false;
+    private readonly googleConfigured: { [id: string]: boolean } = {};
+    private sklikReady: Promise<void> | null = null;
+
+    constructor(private readonly config: ConsentConfig) {
+        this.record = readRecord(config);
+    }
+
+    get current(): ConsentRecord | null {
+        return this.record;
+    }
+
+    has(category: Category): boolean {
+        return this.record?.categories[category] === true;
+    }
+
+    /** Stores a choice and applies it. `complete` = the visitor answered the banner. */
+    decide(categories: { [category: string]: boolean }, complete = true): void {
+        const previous = this.record;
+        const choice: { [category: string]: boolean } = {};
+        this.config.categories.forEach((category) => {
+            choice[category] = categories[category] === true;
+        });
+        this.record = writeRecord(this.config, choice, complete, previous);
+
+        // Withdrawal (CB-31): delete first-party cookies, stop running scripts by reloading.
+        const withdrawn = this.config.categories.filter((category) => previous?.categories[category] === true && !choice[category]);
+        withdrawn.forEach((category) => deleteCookies(this.config.cookies[category] ?? []));
+        if (withdrawn.some((category) => this.active[category])) {
+            window.location.reload();
+            return;
+        }
+        this.apply();
+    }
+
+    /** Runs everything the current record allows. Safe to call repeatedly. */
+    apply(): void {
+        const analytics = this.has('analytics');
+        const marketing = this.has('marketing');
+
+        this.applyGoogle(analytics, marketing);
+        if (marketing) this.loadSklik();
+        this.config.categories.forEach((category) => {
+            if (this.has(category)) {
+                this.activateScripts(category);
+                this.activateEmbeds(category);
+            }
+        });
+
+        window.dispatchEvent(new CustomEvent('cookie-consent', { detail: this.record }));
+    }
+
+    /** Google Consent Mode v2 (CB-50). Defaults are always denied; updates follow the record. */
+    private applyGoogle(analytics: boolean, marketing: boolean): void {
+        const { ga4, googleAds, mode } = this.config;
+        if (!ga4 && !googleAds) return;
+
+        if (!window.gtag) {
+            window.dataLayer = window.dataLayer || [];
+            window.gtag = function gtag() {
+                // gtag.js expects the Arguments object, not an array
+                // eslint-disable-next-line prefer-rest-params
+                window.dataLayer!.push(arguments);
+            };
+            window.gtag('consent', 'default', {
+                analytics_storage: 'denied',
+                ad_storage: 'denied',
+                ad_user_data: 'denied',
+                ad_personalization: 'denied',
+            });
+            window.gtag('set', 'ads_data_redaction', true);
+            window.gtag('js', new Date());
+        }
+
         window.gtag('consent', 'update', {
-            analytics_storage: data.analytics ? 'granted' : 'denied',
-            ad_storage: data.marketing ? 'granted' : 'denied',
-            ad_user_data: data.marketing ? 'granted' : 'denied',
-            ad_personalization: data.marketing ? 'granted' : 'denied',
+            analytics_storage: analytics ? 'granted' : 'denied',
+            ad_storage: marketing ? 'granted' : 'denied',
+            ad_user_data: marketing ? 'granted' : 'denied',
+            ad_personalization: marketing ? 'granted' : 'denied',
+        });
+
+        const advanced = mode === 'advanced';
+        if (ga4 && (analytics || advanced)) this.configureGoogle(ga4, { cookie_expires: this.config.gaCookieExpires });
+        if (googleAds && (marketing || advanced)) this.configureGoogle(googleAds, {});
+        if (analytics && ga4) this.active.analytics = true;
+        if (marketing && googleAds) this.active.marketing = true;
+    }
+
+    private configureGoogle(id: string, options: Record<string, unknown>): void {
+        if (this.googleConfigured[id]) return;
+        this.googleConfigured[id] = true;
+        window.gtag!('config', id, options);
+        if (!this.gtagLoaded) {
+            this.gtagLoaded = true;
+            loadScript(GTAG_SRC + encodeURIComponent(id)).catch(() => { /* blocked by the visitor's browser */ });
+        }
+    }
+
+    /** Seznam Sklik retargeting: rc.js only with marketing consent, every hit with consent=1. */
+    private loadSklik(): Promise<void> | null {
+        const rtgId = this.config.sklik;
+        if (!rtgId) return null;
+        if (!this.sklikReady) {
+            this.active.marketing = true;
+            this.sklikReady = loadScript(SKLIK_SRC).then(() => {
+                window.rc?.retargetingHit?.({ rtgId, consent: 1 });
+            });
+            this.sklikReady.catch(() => { /* blocked by the visitor's browser */ });
+        }
+        return this.sklikReady;
+    }
+
+    /** <script type="text/plain" data-consent-category="marketing" [src]> → real script. */
+    private activateScripts(category: Category): void {
+        document.querySelectorAll<HTMLScriptElement>(`script[type="text/plain"][data-consent-category="${category}"]`).forEach((blocked) => {
+            const script = document.createElement('script');
+            Array.from(blocked.attributes).forEach((attribute) => {
+                if (attribute.name !== 'type') script.setAttribute(attribute.name, attribute.value);
+            });
+            script.text = blocked.text;
+            blocked.replaceWith(script);
+            this.active[category] = true;
         });
     }
 
-    // Basic Consent Mode: partials/_consent-mode.twig defines window.loadAnalytics(), which
-    // injects gtag.js only now — after the visitor granted analytics consent.
-    if (data.analytics && typeof window.loadAnalytics === 'function') {
-        window.loadAnalytics();
+    private activateEmbeds(category: Category): void {
+        document.querySelectorAll<HTMLElement>(`[data-consent-embed][data-consent-category="${category}"]`).forEach((placeholder) => {
+            const template = placeholder.querySelector('template');
+            if (!template) return;
+            // Keep the sized wrapper (aspect ratio), swap the placeholder text for the embed.
+            placeholder.replaceChildren(template.content.cloneNode(true));
+            placeholder.removeAttribute('data-consent-embed');
+            this.active[category] = true;
+        });
     }
 
-    // If analytics was refused or withdrawn, wipe its cookies
-    if (!data.analytics) {
-        removeTrackingCookies();
-    }
-
-    // 2. Seznam Sklik retargeting: the consent flag travels with every hit. In basic mode
-    //    rc.js is injected only now (window.loadSklik from partials/_consent-mode.twig).
-    if (data.marketing && typeof window.loadSklik === 'function') {
-        window.loadSklik();
-    }
-    if (window.retargetingConf) {
-        window.retargetingConf.consent = data.marketing ? 1 : 0;
-        if (typeof window.rc === 'object' && typeof window.rc.retargetingHit === 'function') {
-            window.rc.retargetingHit(window.retargetingConf);
+    conversion(options: ConversionOptions): void {
+        if (!this.has('marketing')) return;
+        if (options.googleAds && window.gtag) {
+            window.gtag('event', 'conversion', {
+                send_to: options.googleAds,
+                value: options.value,
+                currency: options.currency ?? 'CZK',
+            });
+        }
+        if (options.sklik) {
+            const id = options.sklik;
+            this.loadSklik()?.then(() => {
+                window.rc?.conversionHit?.({ id, value: options.value ?? null, consent: 1 });
+            });
         }
     }
-
-    // 3. Dispatch global CustomEvent for other tracking scripts
-    window.dispatchEvent(new CustomEvent('cookie-consent', { detail: data }));
 }
 
 function initCookieConsent(): void {
+    const config = readConfig();
+    if (!config || !config.categories.length) return;
+
+    const manager = new ConsentManager(config);
     const banner = document.querySelector<HTMLElement>('[data-cookie-banner]');
-    if (!banner) return;
+    const dialog = document.querySelector<HTMLDialogElement>('[data-cookie-dialog]');
+    const switches = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('[data-cookie-dialog] [role="switch"][data-cookie-category]'));
 
-    const prefs = banner.querySelector<HTMLElement>('#cookie-prefs');
-    const analyticsBox = banner.querySelector<HTMLInputElement>('[data-cookie-pref="analytics"]');
-    const marketingBox = banner.querySelector<HTMLInputElement>('[data-cookie-pref="marketing"]');
-    const btnAccept = banner.querySelector<HTMLElement>('[data-cookie-accept]');
-    const btnSave = banner.querySelector<HTMLElement>('[data-cookie-save]');
-    const btnToggle = banner.querySelector<HTMLElement>('[data-cookie-toggle-prefs]');
+    const all = (value: boolean): { [category: string]: boolean } => {
+        const choice: { [category: string]: boolean } = {};
+        config.categories.forEach((category) => {
+            choice[category] = value;
+        });
+        return choice;
+    };
 
-    let lastFocused: HTMLElement | null = null;
+    const finish = (choice: { [category: string]: boolean }): void => {
+        if (banner) banner.hidden = true;
+        if (dialog?.open) dialog.close();
+        manager.decide(choice);
+    };
 
-    const trapFocus = (event: KeyboardEvent): void => {
-        if (event.key !== 'Tab' || banner.hidden) return;
-        const focusables = Array.from(banner.querySelectorAll<HTMLElement>(FOCUSABLE))
-            .filter((el) => el.offsetParent !== null);
-        if (!focusables.length) return;
+    const open = (): void => {
+        if (!dialog) return;
+        switches().forEach((control) => {
+            control.setAttribute('aria-checked', String(manager.has(control.dataset.cookieCategory as Category)));
+        });
+        if (!dialog.open) dialog.showModal();
+    };
 
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
+    // Event delegation: footer and privacy-page buttons may be rendered anywhere.
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+
+        const control = target.closest<HTMLElement>('[data-cookie-accept], [data-cookie-reject], [data-cookie-save], [data-cookie-settings], [data-cookie-close], [data-consent-embed-load], [role="switch"][data-cookie-category]');
+        if (!control) return;
+
+        if (control.matches('[data-cookie-accept]')) {
+            finish(all(true));
+        } else if (control.matches('[data-cookie-reject]')) {
+            finish(all(false));
+        } else if (control.matches('[data-cookie-save]')) {
+            const choice = all(false);
+            switches().forEach((item) => {
+                choice[item.dataset.cookieCategory as string] = item.getAttribute('aria-checked') === 'true';
+            });
+            finish(choice);
+        } else if (control.matches('[data-cookie-settings]')) {
             event.preventDefault();
-            last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
+            open();
+        } else if (control.matches('[data-cookie-close]')) {
+            dialog?.close();
+        } else if (control.matches('[role="switch"]')) {
+            control.setAttribute('aria-checked', String(control.getAttribute('aria-checked') !== 'true'));
+        } else if (control.matches('[data-consent-embed-load]')) {
+            // CB-02: loading an embed grants only that embed's category.
+            const category = control.closest<HTMLElement>('[data-consent-embed]')?.dataset.consentCategory;
+            if (!category) return;
+            const current = manager.current;
+            const choice = current ? { ...current.categories } : all(false);
+            choice[category] = true;
+            manager.decide(choice, current?.complete ?? false);
         }
-    };
-
-    const showBanner = (): void => {
-        lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        banner.hidden = false;
-        // Two frames: the first commits `hidden=false`, the second starts the slide-in transition.
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            banner.classList.remove('translate-y-full');
-            banner.focus();
-        }));
-        document.addEventListener('keydown', trapFocus);
-    };
-
-    const hideBanner = (): void => {
-        banner.classList.add('translate-y-full');
-        document.removeEventListener('keydown', trapFocus);
-
-        let done = false;
-        const finish = (): void => {
-            if (done) return;
-            done = true;
-            banner.hidden = true;
-            lastFocused?.focus();
-            lastFocused = null;
-        };
-        banner.addEventListener('transitionend', (event) => {
-            if (event.target === banner) finish();
-        }, { once: true });
-        // Fallback for reduced motion (no transition fires)
-        window.setTimeout(finish, 600);
-    };
-
-    const decide = (analytics: boolean, marketing: boolean): void => {
-        applyConsent(persistConsent(analytics, marketing));
-        hideBanner();
-    };
-
-    const setPrefsOpen = (open: boolean): void => {
-        if (!prefs) return;
-        prefs.hidden = !open;
-        if (btnSave) btnSave.hidden = !open;
-        if (btnAccept) btnAccept.hidden = open;
-        if (btnToggle) {
-            btnToggle.setAttribute('aria-expanded', String(open));
-            const label = open ? btnToggle.dataset.labelClose : btnToggle.dataset.labelOpen;
-            if (label) btnToggle.textContent = label;
-        }
-    };
-
-    const api = {
-        acceptAll: (): void => decide(true, true),
-        rejectAll: (): void => decide(false, false),
-        savePreferences: (): void => decide(Boolean(analyticsBox?.checked), Boolean(marketingBox?.checked)),
-        togglePrefs: (): void => setPrefsOpen(Boolean(prefs?.hidden)),
-        reset: (): void => {
-            try {
-                localStorage.removeItem(STORAGE_KEY);
-            } catch {
-                /* ignore */
-            }
-            if (analyticsBox) analyticsBox.checked = false;
-            if (marketingBox) marketingBox.checked = false;
-            setPrefsOpen(false);
-            applyConsent({ analytics: false, marketing: false });
-            showBanner();
-        },
-    };
-
-    window.cookieConsent = api;
-    window.resetCookieConsent = api.reset;
-
-    banner.querySelector('[data-cookie-accept]')?.addEventListener('click', api.acceptAll);
-    banner.querySelector('[data-cookie-reject]')?.addEventListener('click', api.rejectAll);
-    banner.querySelector('[data-cookie-save]')?.addEventListener('click', api.savePreferences);
-    btnToggle?.addEventListener('click', api.togglePrefs);
-    document.querySelectorAll<HTMLElement>('[data-cookie-settings]').forEach((button) => {
-        button.addEventListener('click', api.reset);
     });
 
-    const stored = readConsent();
-    if (stored) {
-        if (analyticsBox) analyticsBox.checked = stored.analytics;
-        if (marketingBox) marketingBox.checked = stored.marketing;
-        applyConsent(stored);
-    } else {
-        showBanner();
+    window.cookieConsent = {
+        open,
+        has: (category) => manager.has(category),
+        conversion: (options) => manager.conversion(options),
+    };
+
+    manager.apply();
+
+    // First layer: only without a complete choice, and not on the privacy page (PP-05).
+    const record = manager.current;
+    if (banner && (!record || !record.complete) && !document.querySelector('[data-cookie-banner-defer]')) {
+        banner.hidden = false;
     }
 }
 

@@ -27,9 +27,12 @@ contact:
   hours: ~                      # e.g. 'Po–Pá 8:00–16:00'
   bio: ~                        # one-sentence description for the footer
 
-# Tracking IDs (only when the site plan lists tracking; see bolt-cookie-consent).
+# Tracking IDs (only when the site plan lists tracking; see bolt-cookie-consent). A tracker runs
+# only after consent and only when the privacy: block (appended by bolt-cookie-consent's
+# scaffold) lists its cookies.
 analytics:
   ga4_id: ~                     # e.g. 'G-XXXXXXXXXX'
+  google_ads_id: ~              # e.g. 'AW-XXXXXXXXX' (conversions, remarketing)
   sklik_id: ~                   # Seznam Sklik retargeting ID
   consent_mode: basic           # basic: trackers load only after consent | advanced: cookieless pings before consent
 

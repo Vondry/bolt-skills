@@ -120,7 +120,7 @@ The skills meet in a few shared places: the master layout, the theme folder stru
 | Pure components | `components/ui/`, `components/nav/`, `components/brand/` — never call `setcontent`, receive all data as parameters |
 | Smart containers | `containers/header/_menu.twig`, `containers/footer/_footer.twig`, `containers/<area>/_<name>.twig` — may call `setcontent` and `menu_array()` |
 | Pages | `pages/<name>/<name>.twig` (listing or singleton page), `pages/<name>/<name>.record.twig` (record detail), `pages/<name>/components/` (page-scoped components) |
-| Partials | `partials/_master.twig`, `partials/_locale-switcher.twig`, `partials/_cookie-banner.twig`, `partials/_consent-mode.twig` |
+| Partials | `partials/_master.twig`, `partials/_locale-switcher.twig`, `partials/_cookie-banner.twig`, `partials/_consent-mode.twig`, `partials/_consent-embed.twig`, `partials/_cookie-table.twig`, `partials/_privacy-macros.twig`, `partials/_privacy-form-note.twig` |
 | Static pages | `static-pages/<name>.twig`, served through `TemplateController` routes (see [Static Routes](#static-routes)) |
 | Error & maintenance pages | `helper-pages/` |
 | Extension overrides | `extensions/sitemap.xml.twig`, `extensions/llms.txt.twig` |
@@ -128,7 +128,7 @@ The skills meet in a few shared places: the master layout, the theme folder stru
 | CSS | Source `css/tailwind/index.css` → build output `css/index.css` (never edit the output) |
 | JavaScript | Source `js/src/index.ts` (imports the modules) → build output `js/app.js` |
 | Asset URLs | `{{ asset('css/index.css') }}?v={{ theme.assets_version }}`. Bolt registers the active theme as the default asset package on frontend and error pages, so paths are relative to the theme folder. Bump `assets_version` in `theme.yaml` with every CSS/JS release |
-| Site facts | `theme.yaml` → `contact:` (email, phone, address, company ID), `socials:`, `analytics:` (tracking IDs). Read in Twig as `theme.contact.email` or `config.get('theme/contact/email')` |
+| Site facts | `theme.yaml` → `contact:` (email, phone, address, company ID), `socials:`, `analytics:` (tracking IDs), `privacy:` (controllers, purposes, recipients, cookie inventory — the single source for the cookie banner and the privacy page, `bolt-cookie-consent`). Read in Twig as `theme.contact.email` or `config.get('theme/contact/email')` |
 
 ### Master Layout Skeleton (`partials/_master.twig`)
 
@@ -163,7 +163,7 @@ The skills meet in a few shared places: the master layout, the theme folder stru
         {{ seo.metatags() }}
     {% endblock seo %}
 
-    {# bolt-cookie-consent: Google Consent Mode v2 defaults — must run before any tracking script. #}
+    {# bolt-cookie-consent: consent configuration (JSON) for js/src/cookie-consent.ts — no tracker loads before consent. #}
     {% include 'partials/_consent-mode.twig' ignore missing %}
 
     {# Bolt registers the active theme as the default asset package, so asset() paths are
@@ -182,6 +182,10 @@ The skills meet in a few shared places: the master layout, the theme folder stru
         {{ __('a11y.skip_to_content') }}
     </a>
 
+    {# bolt-cookie-consent: cookie banner (renders only when theme.yaml privacy.cookies needs consent).
+       Early in the DOM so keyboard users reach it right after the skip link (CB-60). #}
+    {% include 'partials/_cookie-banner.twig' ignore missing %}
+
     {% block header %}
         {% include 'containers/header/_menu.twig' ignore missing %}
     {% endblock header %}
@@ -193,9 +197,6 @@ The skills meet in a few shared places: the master layout, the theme folder stru
     {% block footer %}
         {% include 'containers/footer/_footer.twig' ignore missing %}
     {% endblock footer %}
-
-    {# bolt-cookie-consent: opt-in banner (present only when the site uses tracking). #}
-    {% include 'partials/_cookie-banner.twig' ignore missing %}
 
     {% block scripts %}{% endblock scripts %}
 </body>
@@ -220,8 +221,10 @@ All behaviour ships with `bolt-theme-init` (`js/src/*.ts`) and `bolt-cookie-cons
 | `[data-sticky-header]` | The sticky `<header>` element | Height subtracted from anchor scroll targets (`auto-scroll.ts`) |
 | `[data-locale-switch]` | Every link in `partials/_locale-switcher.twig` | Keeps scroll position, query string and hash across a language switch (`locale-switcher.ts`) |
 | `.photoswipe-gallery` > `a.photoswipe-gallery__link` with `data-pswp-width` / `data-pswp-height` | Galleries (`components/ui/picture.twig` with `pswp: true`) | Lightbox with deep-linking (`photoswipe.ts`) |
-| `[data-cookie-banner]`, `[data-cookie-accept]`, `[data-cookie-reject]`, `[data-cookie-save]`, `[data-cookie-toggle-prefs]`, `[data-cookie-pref]` | `partials/_cookie-banner.twig` | Consent banner (`cookie-consent.ts`) |
-| `[data-cookie-settings]` | Footer "Nastavení cookies" button, privacy page | Re-opens the consent banner (`cookie-consent.ts`; also `window.resetCookieConsent()`) |
+| `[data-cookie-banner]`, `[data-cookie-dialog]`, `[data-cookie-accept]`, `[data-cookie-reject]`, `[data-cookie-save]`, `[data-cookie-close]`, `[role="switch"][data-cookie-category]` | `partials/_cookie-banner.twig` | Two-layer consent banner (`cookie-consent.ts`) |
+| `[data-cookie-settings]` | Banner, footer "Nastavení cookies" button, privacy page, embed placeholders | Opens the consent settings (`cookie-consent.ts`; also `window.cookieConsent.open()`) |
+| `[data-consent-embed]`, `[data-consent-embed-load]`, `script[type="text/plain"][data-consent-category]` | `partials/_consent-embed.twig`, further trackers | Load only after consent with their category (`cookie-consent.ts`) |
+| `[data-cookie-banner-defer]` | Privacy page | The banner does not cover that page |
 
 ### Links, Locales & Translations
 
@@ -258,7 +261,7 @@ privacy_locale:
 
 **Goal:** decide everything later phases depend on, before any file changes.
 
-**Inputs:** project brief, design (Figma file or exported tokens), sitemap and copy, operator details for the privacy policy (legal name, company ID / IČO, registered address, contact person, data protection officer if any), tracking IDs (GA4, Sklik, Meta), hosting details (web server, document root, Docker or not), domain.
+**Inputs:** project brief, design (Figma file or exported tokens), sitemap and copy, operator details for the privacy policy (legal name, company ID / IČO, registered address, registry entry, privacy e-mail, data protection officer if any — for every business on the site), the answers to `bolt-cookie-consent`'s intake (trackers, embeds, controller model, processing purposes, recipients), tracking IDs (GA4, Google Ads, Sklik, Meta), hosting details (web server, document root, Docker or not), domain.
 
 ### 0.1 Write the Site Plan
 
@@ -276,8 +279,9 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 - Pages & URLs per locale; anchor sections on the homepage
 - Static pages (TemplateController routes): /zasady-ochrany-osobnich-udaju, …
 - Features: gallery yes/no, downloads yes/no, carousel yes/no, catalog/products yes/no, articles yes/no
-- Tracking: none | GA4 <id> | Sklik <id> | Meta <id>; Consent Mode: basic | advanced
-- Privacy policy: Pattern A (static page + XLIFF) | Pattern B (singleton ContentType)
+- Tracking: none | GA4 <id> | Google Ads <id> | Sklik <id> | Meta <id>; Consent Mode: basic | advanced
+- Embeds: none | YouTube | Google Maps | Mapy.com
+- Privacy (bolt-cookie-consent intake): controller model single | joint | separate | hybrid; controllers; purposes; recipients; open [DOPLNIT] questions for the operator
 - Public API consumers: none (disable) | <who> (lock down instead)
 - Error-page metaphor: <industry object or scene>
 - Expected verification warnings (with reason): …
@@ -293,8 +297,8 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 | **Photo galleries / lightbox?** | `ImageDimensionsExtension` (3.2); `photoswipe.ts` imported (4.5); `components/ui/picture.twig` with `pswp: true` inside `.photoswipe-gallery` | Remove the `photoswipe` import, the `photoswipe` npm dependency and its CSS `@import` |
 | **Downloadable files?** | `FileSizeExtension` (3.2); `field.path|file_size|format_bytes` | `FileSizeExtension` optional |
 | **Carousel?** | Load `css/splide_4.1.2.min.css` and `js/splide_4.1.2.min.js` (from `bolt-theme-init`) in the `head` block of the pages that use it | Delete the Splide files |
-| **Analytics or marketing tracking?** | Cookie banner, Consent Mode v2 and Sklik consent (6.5). Decide basic (trackers load only after consent, default) vs. advanced Consent Mode (`analytics.consent_mode` in `theme.yaml`) | No banner (`bolt-cookie-consent/scripts/scaffold.sh --no-banner`). The privacy page is still required (technical cookies, contact data). Run `verify-all.sh --skip=bolt-cookie-consent` and check the privacy page manually |
-| **Client edits the privacy text?** | Pattern B: singleton ContentType (5.1) | Pattern A: static page + XLIFF + route (5.3) |
+| **Analytics, marketing tracking or third-party embeds?** | Two-layer cookie banner, Consent Mode v2, Sklik and embeds behind consent (6.5). Decide basic (trackers load only after consent, default) vs. advanced Consent Mode (`analytics.consent_mode` in `theme.yaml`) — advanced only on the operator's explicit decision | No banner (`bolt-cookie-consent/scripts/scaffold.sh --no-banner`). The privacy page is still required (server logs, contact data); `verify.sh` then checks the page only |
+| **More than one business on the website?** | Ask `bolt-cookie-consent`'s two controller-model questions (joint / separate / hybrid) — never guess the model | Controller model `single` |
 | **Apache?** | `bolt-htaccess` (2.1); root `.htaccess` only when the domain's document root is the project root | Nginx: use the Nginx block of `bolt-asset-caching` (2.2); run `verify-all.sh --skip=bolt-htaccess` |
 | **Docker?** | `bolt-timezone` INI and compose layers (1.1); Nginx block (2.2) if the container uses Nginx | `bolt-timezone` config and Kernel layers only |
 | **External consumers of the REST/GraphQL API?** | Lock down permissions instead of removing routes (1.3); run `verify-all.sh --skip=bolt-disable-api` and test the endpoints manually | Fully disable the API (default) |
@@ -404,7 +408,7 @@ Verifications 3.1 (partial) and 3.2 pass, `make cscheck` passes. Commit.
 - Links the theme in `config/bolt/config.yaml` and runs `npm install`, `npm update --save` and `npm run prod`.
 
 ### 4.2 Theme Settings & Shell Translations
-- Fill `theme.yaml`: `name` (= folder), `assets_version: '1.0'`, `logo.default` / `logo.light` (paths relative to the theme), `contact:` (name, IČO, address, email, phone, hours, bio — used by the footer, contact containers, privacy page, helper pages and `llms.txt`), `analytics:` **[if tracking]** (`ga4_id`, `sklik_id`, `consent_mode`), `socials:`.
+- Fill `theme.yaml`: `name` (= folder), `assets_version: '1.0'`, `logo.default` / `logo.light` (paths relative to the theme), `contact:` (name, IČO, address, email, phone, hours, bio — used by the footer, contact containers, privacy page, helper pages and `llms.txt`), `analytics:` **[if tracking]** (`ga4_id`, `google_ads_id`, `sklik_id`, `consent_mode`), `socials:`. The `privacy:` block is appended by `bolt-cookie-consent` in 6.5.
 - Merge `$SKILLS/bolt-theme-init/examples/translations.<locale>.xlf` (keys of the master layout and fallbacks) — see 5.5 for the loop.
 
 ### 4.3 Navigation Shell (`bolt-menu`, templates)
@@ -444,7 +448,7 @@ Verifications 3.1 (partial) and 3.2 pass, `make cscheck` passes. Commit.
   - `locales:` equal to `app_locales` on every localized ContentType; every `required` content field also `localize: true`;
   - `record_template` / `listing_template` pointing at `pages/<name>/…` per the contract;
   - number fields use `type: number` (Bolt has no `integer` type).
-  - **[if catalog]** `products` ContentType. **[if privacy Pattern B]** privacy singleton.
+  - **[if catalog]** `products` ContentType.
 - `php bin/console cache:clear`
 - *Verify:* `bash $SKILLS/bolt-contenttypes/scripts/verify.sh`
 
@@ -452,7 +456,7 @@ Verifications 3.1 (partial) and 3.2 pass, `make cscheck` passes. Commit.
 Update `fields:` in `config/extensions/appolo-boltseo.yaml` to the real field names from 5.1 (title, description/teaser, image).
 
 ### 5.3 Static Routes
-Add a `TemplateController` route (plus the `/{_locale}/` variant on multilingual sites) above the `frontend:` import for every static page in the site plan. Use the snippet in [Static Routes](#static-routes). The privacy policy routes (Pattern A) are inserted by `bolt-cookie-consent`'s scaffold in 6.5; the templates themselves are created in Phase 6.
+Add a `TemplateController` route (plus the `/{_locale}/` variant on multilingual sites) above the `frontend:` import for every static page in the site plan. Use the snippet in [Static Routes](#static-routes). The privacy policy routes are inserted by `bolt-cookie-consent`'s scaffold in 6.5; the templates themselves are created in Phase 6.
 
 ### 5.4 Menu Content (`bolt-menu`, `menu.yaml`; also `bolt-add-language` Step 4)
 - Rewrite `config/bolt/menu.yaml` to the information architecture: `main` (with `class: cta` and `class: has-submenu` where needed) and `footer` columns with `submenu:` lists.
@@ -507,14 +511,16 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - *Verify:* `bash $SKILLS/bolt-helper-pages/scripts/verify.sh`
 
 ### 6.5 Privacy Policy & Cookie Consent (`bolt-cookie-consent`)
-- **[if tracking]** `bash $SKILLS/bolt-cookie-consent/scripts/scaffold.sh` — **[if no tracking]** add `--no-banner`. The script:
-  - copies `partials/_cookie-banner.twig` (Accept and Reject with identical styling, `data-cookie-*` hooks, no inline scripts), `partials/_consent-mode.twig` (Consent Mode v2 defaults; basic mode loads `gtag.js` / Sklik `rc.js` only after consent), `js/src/cookie-consent.ts` (the single implementation, parent-domain cookie cleanup) and `static-pages/gdpr.twig` — existing files are kept;
-  - enables `import './cookie-consent'` in `js/src/index.ts`;
-  - inserts the `privacy` / `privacy_locale` routes above `frontend:` in `config/routes.yaml` (Pattern A).
-- **Privacy page (always).** Pattern A: `static-pages/gdpr.twig` behind those routes, controller identity from `theme.yaml` (`contact.name`, `contact.ico`, `contact.address`). Pattern B: the singleton from 5.1 and its page in `pages/`. Content per the skill's Section 2.
-- Set `analytics.ga4_id` / `analytics.sklik_id` / `analytics.consent_mode` in `theme.yaml`; the footer shows "Nastavení cookies" (`[data-cookie-settings]`) as soon as an ID is set.
+- Use the intake answers from the site plan (trackers, embeds, controller model, purposes); if any is missing, ask — the controller model and every legal fact come from the operator, never from a guess.
+- `bash $SKILLS/bolt-cookie-consent/scripts/scaffold.sh --model=<model> --trackers=… --embeds=… --purposes=…` — **[if no trackers and no embeds]** `--no-banner`. The script:
+  - appends the `privacy:` block to `theme.yaml` (controllers, purposes, recipients, cookie inventory from the skill's catalog, `[DOPLNIT]` for every value only the operator knows, `[OVĚŘIT]` for what must be measured) and the missing `analytics:` ID keys;
+  - copies the partials (`_cookie-banner.twig` with two layers and identical Accept / Reject styling, `_consent-mode.twig` with the JSON configuration, `_consent-embed.twig`, `_cookie-table.twig`, `_privacy-macros.twig`, `_privacy-form-note.twig`), `js/src/cookie-consent.ts` and `static-pages/gdpr.twig` — existing files are kept;
+  - enables `import './cookie-consent'` in `js/src/index.ts` and inserts the `privacy` / `privacy_locale` routes above `frontend:` in `config/routes.yaml`.
+- Adapt the banner's class variables to the design (shared `consent_button` for Accept, Reject and Save), replace third-party iframes with `partials/_consent-embed.twig`, and add `partials/_privacy-form-note.twig` next to every form's submit button.
+- Set the tracker IDs under `analytics:`; the banner, the footer's "Nastavení cookies" and the privacy page all follow `privacy.cookies`.
 - Merge `$SKILLS/bolt-cookie-consent/examples/translations.<locale>.xlf` (`cookie.*`, `privacy.*`) and translate them for other locales.
-- *Verify:* `bash $SKILLS/bolt-cookie-consent/scripts/verify.sh` **[if tracking]** (also compares the Accept / Reject classes and checks the privacy route). Without tracking, check the privacy page manually and skip this skill in `verify-all.sh`.
+- Hand the operator the list of `[DOPLNIT]` questions; measure every `[OVĚŘIT]` item in a clean browser profile.
+- *Verify:* `bash $SKILLS/bolt-cookie-consent/scripts/verify.sh --draft` while placeholders remain; without `--draft` for sign-off (Phase 8).
 
 ### Gate 6
 - `cd public/theme/<theme> && npm run prod && cd -`
@@ -529,7 +535,7 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 **Goal:** real content in every locale and production assets.
 
 ### 7.1 Seed Content
-- Create and publish every singleton record (homepage, contact/settings, privacy **[Pattern B]**) and the initial records of each ContentType in the Bolt admin. Pages whose singleton record does not exist render empty or return 404.
+- Create and publish every singleton record (homepage, contact/settings) and the initial records of each ContentType in the Bolt admin. Pages whose singleton record does not exist render empty or return 404.
 - Upload images through the media library so their dimensions are stored (used by galleries and `image|media`).
 
 ### 7.2 Translations (`bolt-add-language`, Step 7 checks)
@@ -569,7 +575,7 @@ export BOLT_BASE_URL=http://localhost:8080           # this project's running si
 vendor/vondry/bolt-skills/scripts/verify-all.sh --skip=<skills that do not apply>
 ```
 - The runner executes the skills in phase order (Appendix A) and verifies `bolt-add-language` once per secondary locale read from `config/services.yaml` (override with `--locales=en,de`). Single-language sites skip it automatically.
-- Skip only what the decision matrix allows: `bolt-htaccess` (Nginx), `bolt-cookie-consent` (no tracking), `bolt-disable-api` (API consumers, endpoints tested manually).
+- Skip only what the decision matrix allows: `bolt-htaccess` (Nginx), `bolt-disable-api` (API consumers, endpoints tested manually). `bolt-cookie-consent` always runs: without trackers it checks the privacy page only.
 - Use `--verbose` or run the individual script to see details.
 - **Target:** zero FAIL; every WARN either fixed or listed under "Expected verification warnings" in the site plan.
 
@@ -591,7 +597,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 - Mobile drawer: opens, closes on Escape, backdrop and link click; focus stays inside while open. Dropdowns open with click and ArrowDown, close with Escape.
 - Skip link jumps to `#obsah`; anchor links land below the sticky header.
 - Language switcher keeps scroll position, query string and hash **[if multilingual]**.
-- Cookie banner **[if tracking]**: no tracking request before consent (browser Network tab), Reject and Accept look equal, "Nastavení cookies" in the footer re-opens it, Consent Mode updates in GA DebugView.
+- Cookie banner **[if tracking]**: the acceptance checklist of `bolt-cookie-consent` (`references/guidelines.cs.md`) in a clean browser profile, desktop and 360 px — no non-essential cookie or request before a choice, Reject and Accept equal and both visible at 360 px, Reject → reload → nothing, footer "Nastavení cookies" → withdraw → cookies deleted, keyboard and screen reader in both layers, Consent Mode updates in GA DebugView.
 - Maintenance page: set `maintenance_mode: true`, check in a private window (logged-in editors still see the site), set it back.
 - 500 page: only rendered with `APP_ENV=prod`; check it on staging.
 - Admin: save a record twice and confirm its publish date did not shift (timezone).
@@ -644,7 +650,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `bolt-contenttypes` | 5.1 | 5.1, 8.2 | every site |
 | `bolt-theme-templates` | 6.1 | 6.1, 8.2 | every site |
 | `bolt-helper-pages` | 6.4 | 6.4, 8.2 | every site |
-| `bolt-cookie-consent` | 6.5 (banner, consent mode, privacy page and its routes) | 6.5, 8.2 | privacy page everywhere; banner when tracking is used |
+| `bolt-cookie-consent` | 0.1 (intake), 6.5 (privacy data, banner, privacy page and its routes) | 6.5, 8.2 | privacy page everywhere; banner when trackers or embeds are used |
 
 ---
 
@@ -658,5 +664,5 @@ The skills implement the Integration Contract; these points still need judgement
 4. **`bolt-add-language` checks are text searches** (codes in `services.yaml`, `contenttypes.yaml`, `menu.yaml`, the switcher). Also confirm in the browser that every `/<code>/…` page renders translated text.
 5. **Helper pages are single-locale** until bolt/core#3726 is available: error pages render in the default locale.
 6. **Sitemap override** (`extensions/sitemap.xml.twig`) is needed until bolt/sitemap-extension PR #5 is merged; remove it afterwards.
-7. **Consent Mode choice is legal, not technical.** Basic mode (default) loads trackers only after consent; advanced mode sends cookieless pings before consent — decide in the site plan and describe it in the privacy policy.
+7. **Consent Mode choice is legal, not technical.** Basic mode (default) loads trackers only after consent; advanced mode sends cookieless pings before consent — only on the operator's explicit decision, recorded in the site plan; the privacy page describes the active mode automatically.
 8. **`make db-update` / `db-reset` are development tools**; production uses `make db-migrate` (`doctrine:migrations:migrate`).

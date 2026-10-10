@@ -1,0 +1,26 @@
+{#
+  partials/_privacy-macros.twig — helpers for the `privacy:` block of theme.yaml (bolt-cookie-consent).
+  Import: {% import 'partials/_privacy-macros.twig' as privacy_ui %}
+
+  Localized values in theme.yaml are maps keyed by locale ({ cs: '…', en: '…' }); plain strings
+  pass through. To build a translation parameter (a plain string, not printed markup) use the
+  same fallback inline:  value[app.request.locale] ?? value.cs ?? value
+#}
+
+{# Localized value for the current request locale, falling back to Czech (CB-23). #}
+{% macro t(value) -%}
+    {%- if value is iterable -%}
+        {{- value[app.request.locale|default('cs')] ?? value.cs ?? '' -}}
+    {%- else -%}
+        {{- value -}}
+    {%- endif -%}
+{%- endmacro %}
+
+{# YYYY-MM-DD (quoted or parsed to a timestamp by YAML) → 10. 10. 2026; placeholders pass through. #}
+{% macro date(value) -%}
+    {%- if value is not iterable and (value matches '/^\\d+$/' or value matches '/^\\d{4}-\\d{2}-\\d{2}$/') -%}
+        {{- value|date('j. n. Y') -}}
+    {%- else -%}
+        {{- value -}}
+    {%- endif -%}
+{%- endmacro %}

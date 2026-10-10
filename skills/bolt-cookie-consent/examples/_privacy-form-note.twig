@@ -1,0 +1,29 @@
+{#
+  partials/_privacy-form-note.twig — short notice next to a form's submit button (PP-02):
+  who processes the data, why, and a link to the privacy policy. No consent checkbox is needed
+  when the legal basis is a contract or legitimate interest; where the basis is consent, add an
+  unticked checkbox to the form itself.
+
+  {% include 'partials/_privacy-form-note.twig' with { purpose: 'contact_form' } %}
+
+  `purpose` is an id from theme.yaml privacy.purposes. For a form where the visitor picks the
+  recipient (separate controllers, VAR-21) pass `controller_text: 'the selected person'`
+  (translated) to say that the selected person is the controller of the enquiry.
+  Translation keys: privacy.form_note, privacy.form_note_link
+#}
+{% set privacy = config.get('theme/privacy')|default({}) %}
+{% set purpose_id = purpose|default('contact_form') %}
+{% set purpose_data = privacy.purposes|default([])|filter(item => item.id == purpose_id)|first %}
+{% set locale = app.request.locale|default('cs') %}
+
+{% if purpose_data %}
+    {% set controller_ids = purpose_data.controllers|default([]) %}
+    {% set names = privacy.controllers|default([])|filter(controller => controller.id in controller_ids)|map(controller => controller.name)|join(', ') %}
+    <p class="text-xs leading-relaxed text-ink-3">
+        {{ __('privacy.form_note', {
+            '%controller%': controller_text|default(names),
+            '%purpose%': purpose_data.title[locale] ?? purpose_data.title.cs ?? purpose_data.title,
+        }) }}
+        <a href="{{ locale_link('/zasady-ochrany-osobnich-udaju#ucely') }}" class="underline underline-offset-2 hover:text-ink">{{ __('privacy.form_note_link') }}</a>
+    </p>
+{% endif %}

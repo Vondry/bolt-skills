@@ -1,82 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="en">
   <file id="messages.en">
-    <!-- Cookie Banner Units -->
-    <unit id="cookie_title" name="cookie.title"><segment><source>cookie.title</source><target>Cookie Settings</target></segment></unit>
-    <unit id="cookie_text" name="cookie.text"><segment><source>cookie.text</source><target>We use cookies to ensure website functionality, measure traffic, and personalize ads. You can change your choice anytime in the footer.</target></segment></unit>
-    <unit id="cookie_details" name="cookie.details"><segment><source>cookie.details</source><target>Details</target></segment></unit>
+    <!-- Cookie banner — layer 1 -->
+    <unit id="cookie_title" name="cookie.title"><segment><source>cookie.title</source><target>Cookie consent</target></segment></unit>
+    <unit id="cookie_text" name="cookie.text"><segment><source>cookie.text</source><target>With your consent we use cookies and similar technologies for %purposes%.</target></segment></unit>
+    <unit id="cookie_recipients" name="cookie.recipients"><segment><source>cookie.recipients</source><target>Data from them is also received by %providers%.</target></segment></unit>
+    <unit id="cookie_necessary_only" name="cookie.necessary_only"><segment><source>cookie.necessary_only</source><target>Without consent we only use strictly necessary cookies.</target></segment></unit>
+    <unit id="cookie_controller" name="cookie.controller"><segment><source>cookie.controller</source><target>Controller: %controllers%.</target></segment></unit>
+    <unit id="cookie_controllers" name="cookie.controllers"><segment><source>cookie.controllers</source><target>Controllers: %controllers%.</target></segment></unit>
+    <unit id="cookie_controllers_joint" name="cookie.controllers_joint"><segment><source>cookie.controllers_joint</source><target>Controllers: %controllers% (joint controllers).</target></segment></unit>
+    <unit id="cookie_withdraw" name="cookie.withdraw"><segment><source>cookie.withdraw</source><target>You can change or withdraw your consent at any time via “Cookie settings” in the footer.</target></segment></unit>
+    <unit id="cookie_policy_link" name="cookie.policy_link"><segment><source>cookie.policy_link</source><target>Privacy policy</target></segment></unit>
+    <unit id="cookie_list_link" name="cookie.list_link"><segment><source>cookie.list_link</source><target>List of cookies</target></segment></unit>
     <unit id="cookie_reject" name="cookie.reject"><segment><source>cookie.reject</source><target>Reject all</target></segment></unit>
     <unit id="cookie_accept" name="cookie.accept"><segment><source>cookie.accept</source><target>Accept all</target></segment></unit>
-    <unit id="cookie_customize" name="cookie.customize"><segment><source>cookie.customize</source><target>Settings</target></segment></unit>
-    <unit id="cookie_save" name="cookie.save"><segment><source>cookie.save</source><target>Save preferences</target></segment></unit>
-    <unit id="cookie_always_active" name="cookie.always_active"><segment><source>cookie.always_active</source><target>Always active</target></segment></unit>
-    <unit id="cookie_nec_title" name="cookie.necessary.title"><segment><source>cookie.necessary.title</source><target>Necessary technical cookies</target></segment></unit>
-    <unit id="cookie_nec_desc" name="cookie.necessary.desc"><segment><source>cookie.necessary.desc</source><target>Ensure core website functionality and security. Cannot be disabled.</target></segment></unit>
-    <unit id="cookie_ana_title" name="cookie.analytics.title"><segment><source>cookie.analytics.title</source><target>Analytical cookies</target></segment></unit>
-    <unit id="cookie_ana_desc" name="cookie.analytics.desc"><segment><source>cookie.analytics.desc</source><target>Help us understand visitor behavior and improve our site (Google Analytics).</target></segment></unit>
-    <unit id="cookie_mkt_title" name="cookie.marketing.title"><segment><source>cookie.marketing.title</source><target>Marketing cookies</target></segment></unit>
-    <unit id="cookie_mkt_desc" name="cookie.marketing.desc"><segment><source>cookie.marketing.desc</source><target>Used to measure ad effectiveness and retargeting (Seznam Sklik, Meta).</target></segment></unit>
+    <unit id="cookie_settings" name="cookie.settings"><segment><source>cookie.settings</source><target>Cookie settings</target></segment></unit>
+    <unit id="cookie_and" name="cookie.and"><segment><source>cookie.and</source><target>and</target></segment></unit>
+    <!-- Cookie banner — layer 2 -->
+    <unit id="cookie_settings_intro" name="cookie.settings_intro"><segment><source>cookie.settings_intro</source><target>Choose which categories to allow. Only what is necessary is on by default, and you can change your choice at any time.</target></segment></unit>
+    <unit id="cookie_save" name="cookie.save"><segment><source>cookie.save</source><target>Save selection</target></segment></unit>
+    <unit id="cookie_close" name="cookie.close"><segment><source>cookie.close</source><target>Close without saving</target></segment></unit>
+    <unit id="cookie_always_active" name="cookie.always_active"><segment><source>cookie.always_active</source><target>Always on</target></segment></unit>
+    <unit id="cookie_show_items" name="cookie.show_items"><segment><source>cookie.show_items</source><target>Show list (%count%)</target></segment></unit>
+    <unit id="cookie_category_necessary_title" name="cookie.category.necessary.title"><segment><source>cookie.category.necessary.title</source><target>Necessary</target></segment></unit>
+    <unit id="cookie_category_necessary_desc" name="cookie.category.necessary.desc"><segment><source>cookie.category.necessary.desc</source><target>They are needed for the website to work, so they cannot be switched off; by law they do not require consent.</target></segment></unit>
+    <unit id="cookie_category_preferences_title" name="cookie.category.preferences.title"><segment><source>cookie.category.preferences.title</source><target>Preferences</target></segment></unit>
+    <unit id="cookie_category_preferences_desc" name="cookie.category.preferences.desc"><segment><source>cookie.category.preferences.desc</source><target>They remember your choices (such as language) so you do not have to set them again.</target></segment></unit>
+    <unit id="cookie_category_preferences_short" name="cookie.category.preferences.short"><segment><source>cookie.category.preferences.short</source><target>remembering your preferences</target></segment></unit>
+    <unit id="cookie_category_analytics_title" name="cookie.category.analytics.title"><segment><source>cookie.category.analytics.title</source><target>Analytics</target></segment></unit>
+    <unit id="cookie_category_analytics_desc" name="cookie.category.analytics.desc"><segment><source>cookie.category.analytics.desc</source><target>They help us find out how many people visit the website and which pages they use, so we can improve it.</target></segment></unit>
+    <unit id="cookie_category_analytics_short" name="cookie.category.analytics.short"><segment><source>cookie.category.analytics.short</source><target>traffic measurement</target></segment></unit>
+    <unit id="cookie_category_marketing_title" name="cookie.category.marketing.title"><segment><source>cookie.category.marketing.title</source><target>Marketing</target></segment></unit>
+    <unit id="cookie_category_marketing_desc" name="cookie.category.marketing.desc"><segment><source>cookie.category.marketing.desc</source><target>They let us show you ads based on your previous visit (remarketing) and measure whether an ad led to an enquiry or a purchase.</target></segment></unit>
+    <unit id="cookie_category_marketing_short" name="cookie.category.marketing.short"><segment><source>cookie.category.marketing.short</source><target>advertising (remarketing, conversion tracking)</target></segment></unit>
+    <unit id="cookie_category_third_party_title" name="cookie.category.third_party.title"><segment><source>cookie.category.third_party.title</source><target>Third-party content</target></segment></unit>
+    <unit id="cookie_category_third_party_desc" name="cookie.category.third_party.desc"><segment><source>cookie.category.third_party.desc</source><target>They load embedded videos and maps directly from their providers, who may store their own cookies.</target></segment></unit>
+    <unit id="cookie_category_third_party_short" name="cookie.category.third_party.short"><segment><source>cookie.category.third_party.short</source><target>embedded content (videos, maps)</target></segment></unit>
+    <!-- Cookie list (banner and privacy page) -->
+    <unit id="cookie_table_name" name="cookie.table.name"><segment><source>cookie.table.name</source><target>Name</target></segment></unit>
+    <unit id="cookie_table_provider" name="cookie.table.provider"><segment><source>cookie.table.provider</source><target>Provider</target></segment></unit>
+    <unit id="cookie_table_purpose" name="cookie.table.purpose"><segment><source>cookie.table.purpose</source><target>Purpose</target></segment></unit>
+    <unit id="cookie_table_expiry" name="cookie.table.expiry"><segment><source>cookie.table.expiry</source><target>Expiry</target></segment></unit>
+    <unit id="cookie_table_party" name="cookie.table.party"><segment><source>cookie.table.party</source><target>Party</target></segment></unit>
+    <unit id="cookie_technology_cookie" name="cookie.technology.cookie"><segment><source>cookie.technology.cookie</source><target>cookie</target></segment></unit>
+    <unit id="cookie_technology_localStorage" name="cookie.technology.localStorage"><segment><source>cookie.technology.localStorage</source><target>localStorage</target></segment></unit>
+    <unit id="cookie_technology_sessionStorage" name="cookie.technology.sessionStorage"><segment><source>cookie.technology.sessionStorage</source><target>sessionStorage</target></segment></unit>
+    <unit id="cookie_technology_pixel" name="cookie.technology.pixel"><segment><source>cookie.technology.pixel</source><target>pixel</target></segment></unit>
+    <unit id="cookie_technology_iframe" name="cookie.technology.iframe"><segment><source>cookie.technology.iframe</source><target>embedded frame</target></segment></unit>
+    <unit id="cookie_party_first" name="cookie.party.first"><segment><source>cookie.party.first</source><target>first party (this website)</target></segment></unit>
+    <unit id="cookie_party_third" name="cookie.party.third"><segment><source>cookie.party.third</source><target>third party</target></segment></unit>
+    <unit id="cookie_transfer_outside_eea" name="cookie.transfer_outside_eea"><segment><source>cookie.transfer_outside_eea</source><target>transfer outside the EU/EEA</target></segment></unit>
+    <!-- Embeds behind consent -->
+    <unit id="cookie_embed_text" name="cookie.embed.text"><segment><source>cookie.embed.text</source><target>The content loads from %provider%, who receives your IP address and may store cookies. Loading it allows the Third-party content category.</target></segment></unit>
+    <unit id="cookie_embed_load" name="cookie.embed.load"><segment><source>cookie.embed.load</source><target>Load content</target></segment></unit>
     <unit id="footer_cookie_settings" name="footer.cookie_settings"><segment><source>footer.cookie_settings</source><target>Cookie settings</target></segment></unit>
-
-    <!-- Privacy Policy Units -->
-    <unit id="priv_title" name="privacy.title"><segment><source>privacy.title</source><target>Privacy &amp; Cookie Policy</target></segment></unit>
-    <unit id="priv_updated" name="privacy.last_updated"><segment><source>privacy.last_updated</source><target>Last updated: 2026</target></segment></unit>
-    <unit id="priv_ctrl_h" name="privacy.controller.heading"><segment><source>privacy.controller.heading</source><target>1. Data Controller</target></segment></unit>
-    <unit id="priv_ctrl_lbl" name="privacy.controller.label"><segment><source>privacy.controller.label</source><target>Controller:</target></segment></unit>
-    <unit id="priv_ctrl_txt" name="privacy.controller.text"><segment><source>privacy.controller.text</source><target>Website operator, Company ID and seat according to website contacts.</target></segment></unit>
-    <unit id="priv_contacts_lbl" name="privacy.contacts.label"><segment><source>privacy.contacts.label</source><target>Contacts:</target></segment></unit>
-    <unit id="priv_proc_h" name="privacy.processing.heading"><segment><source>privacy.processing.heading</source><target>2. Data Processed and Purposes</target></segment></unit>
-    <unit id="priv_proc_intro" name="privacy.processing.intro"><segment><source>privacy.processing.intro</source><target>We process personal data for the following purposes:</target></segment></unit>
-    <unit id="priv_proc_inq_lbl" name="privacy.processing.inquiry.label"><segment><source>privacy.processing.inquiry.label</source><target>Inquiries and communication:</target></segment></unit>
-    <unit id="priv_proc_inq_txt" name="privacy.processing.inquiry.text"><segment><source>privacy.processing.inquiry.text</source><target>name, email, phone to respond to your inquiry</target></segment></unit>
-    <unit id="priv_proc_ana_lbl" name="privacy.processing.analytics.label"><segment><source>privacy.processing.analytics.label</source><target>Traffic measurement:</target></segment></unit>
-    <unit id="priv_proc_ana_txt" name="privacy.processing.analytics.text"><segment><source>privacy.processing.analytics.text</source><target>anonymized site visit info in Google Analytics under consent mode</target></segment></unit>
-    <unit id="priv_proc_mkt_lbl" name="privacy.processing.retargeting.label"><segment><source>privacy.processing.retargeting.label</source><target>Retargeting &amp; marketing:</target></segment></unit>
-    <unit id="priv_proc_mkt_txt" name="privacy.processing.retargeting.text"><segment><source>privacy.processing.retargeting.text</source><target>marketing measurement (Sklik, Meta) strictly after user consent</target></segment></unit>
-    <unit id="priv_track_h" name="privacy.tracking.heading"><segment><source>privacy.tracking.heading</source><target>3. Tracking Codes Used</target></segment></unit>
-    <unit id="priv_tbl_svc" name="privacy.table.service"><segment><source>privacy.table.service</source><target>Service</target></segment></unit>
-    <unit id="priv_tbl_id" name="privacy.table.id"><segment><source>privacy.table.id</source><target>Identifier</target></segment></unit>
-    <unit id="priv_tbl_type" name="privacy.table.type"><segment><source>privacy.table.type</source><target>Type</target></segment></unit>
-    <unit id="priv_tbl_consent" name="privacy.table.consent"><segment><source>privacy.table.consent</source><target>Consent requirement</target></segment></unit>
-    <unit id="priv_tbl_prov" name="privacy.table.provider"><segment><source>privacy.table.provider</source><target>Provider</target></segment></unit>
-    <unit id="priv_tbl_purp" name="privacy.table.purpose"><segment><source>privacy.table.purpose</source><target>Purpose</target></segment></unit>
-    <unit id="priv_tbl_dur" name="privacy.table.duration"><segment><source>privacy.table.duration</source><target>Retention duration</target></segment></unit>
-    <unit id="priv_sklik_id" name="privacy.sklik.id"><segment><source>privacy.sklik.id</source><target>Sklik Retargeting Code</target></segment></unit>
-    <unit id="priv_type_mkt" name="privacy.type.marketing"><segment><source>privacy.type.marketing</source><target>Marketing</target></segment></unit>
-    <unit id="priv_type_ana" name="privacy.type.analytics"><segment><source>privacy.type.analytics</source><target>Analytics</target></segment></unit>
-    <unit id="priv_cons_req" name="privacy.consent.required"><segment><source>privacy.consent.required</source><target>Active consent required</target></segment></unit>
-    <unit id="priv_cons_ana" name="privacy.consent.analytics"><segment><source>privacy.consent.analytics</source><target>Consent for analytics cookies</target></segment></unit>
-    <unit id="priv_ga_h" name="privacy.ga.heading"><segment><source>privacy.ga.heading</source><target>4. Google Analytics (Consent Mode v2)</target></segment></unit>
-    <unit id="priv_ga_cmb" name="privacy.ga.consent_mode_before"><segment><source>privacy.ga.consent_mode_before</source><target>Google Analytics is loaded in consent mode. Before consent is granted, it is set to</target></segment></unit>
-    <unit id="priv_ga_cma" name="privacy.ga.consent_mode_after"><segment><source>privacy.ga.consent_mode_after</source><target>and ad parameters are disabled. No cookies are stored.</target></segment></unit>
-    <unit id="priv_ga_ac" name="privacy.ga.after_consent"><segment><source>privacy.ga.after_consent</source><target>After consent is granted, Google Analytics may process visit statistics:</target></segment></unit>
-    <unit id="priv_ga_ip" name="privacy.ga.ip"><segment><source>privacy.ga.ip</source><target>IP address (anonymized)</target></segment></unit>
-    <unit id="priv_ga_dev" name="privacy.ga.device"><segment><source>privacy.ga.device</source><target>Browser, device type and operating system</target></segment></unit>
-    <unit id="priv_ga_beh" name="privacy.ga.behaviour"><segment><source>privacy.ga.behaviour</source><target>Website behavior (visited pages, visit duration)</target></segment></unit>
-    <unit id="priv_ga_prov" name="privacy.ga.provider"><segment><source>privacy.ga.provider</source><target>Provided by Google Ireland Ltd. Data may be processed under EU-U.S. Data Privacy Framework mechanisms.</target></segment></unit>
-    <unit id="priv_sklik_h" name="privacy.sklik.heading"><segment><source>privacy.sklik.heading</source><target>5. Sklik Retargeting</target></segment></unit>
-    <unit id="priv_sklik_intro" name="privacy.sklik.intro"><segment><source>privacy.sklik.intro</source><target>Seznam.cz retargeting is loaded only upon your explicit consent:</target></segment></unit>
-    <unit id="priv_sklik_nc" name="privacy.sklik.no_consent"><segment><source>privacy.sklik.no_consent</source><target>Without consent, the retargeting script is not loaded.</target></segment></unit>
-    <unit id="priv_sklik_acc" name="privacy.sklik.accepted"><segment><source>privacy.sklik.accepted</source><target>After consent confirmation (active retargeting)</target></segment></unit>
-    <unit id="priv_ck_h" name="privacy.cookies.heading"><segment><source>privacy.cookies.heading</source><target>6. Cookie Overview</target></segment></unit>
-    <unit id="priv_ck_retarget" name="privacy.cookies.retargeting"><segment><source>privacy.cookies.retargeting</source><target>Retargeting and ad personalization</target></segment></unit>
-    <unit id="priv_ck_d90" name="privacy.cookies.days_90"><segment><source>privacy.cookies.days_90</source><target>90 days</target></segment></unit>
-    <unit id="priv_ck_at" name="privacy.cookies.analytics_type"><segment><source>privacy.cookies.analytics_type</source><target>Analytics</target></segment></unit>
-    <unit id="priv_ck_stat" name="privacy.cookies.statistics"><segment><source>privacy.cookies.statistics</source><target>Website traffic statistics</target></segment></unit>
-    <unit id="priv_ck_gadur" name="privacy.cookies.ga_duration"><segment><source>privacy.cookies.ga_duration</source><target>Up to 2 years for cookies; 14 months for data</target></segment></unit>
-    <unit id="priv_ck_own" name="privacy.cookies.own_provider"><segment><source>privacy.cookies.own_provider</source><target>First-party (website)</target></segment></unit>
-    <unit id="priv_ck_tech" name="privacy.cookies.technical_type"><segment><source>privacy.cookies.technical_type</source><target>Strictly necessary technical</target></segment></unit>
-    <unit id="priv_ck_cchoice" name="privacy.cookies.consent_choice"><segment><source>privacy.cookies.consent_choice</source><target>Saving the user consent choice</target></segment></unit>
-    <unit id="priv_ck_cdur" name="privacy.cookies.consent_duration"><segment><source>privacy.cookies.consent_duration</source><target>1 year or until browser storage is cleared</target></segment></unit>
-    <unit id="priv_rights_h" name="privacy.rights.heading"><segment><source>privacy.rights.heading</source><target>7. Your Rights and Consent Management</target></segment></unit>
-    <unit id="priv_rights_w_lbl" name="privacy.rights.withdraw.label"><segment><source>privacy.rights.withdraw.label</source><target>Withdraw consent:</target></segment></unit>
-    <unit id="priv_rights_del_lbl" name="privacy.rights.retargeting_delete.label"><segment><source>privacy.rights.retargeting_delete.label</source><target>Erasure request:</target></segment></unit>
-    <unit id="priv_rights_del_txt" name="privacy.rights.retargeting_delete.text"><segment><source>privacy.rights.retargeting_delete.text</source><target>by emailing the data controller</target></segment></unit>
-    <unit id="priv_rights_comp_lbl" name="privacy.rights.complaint.label"><segment><source>privacy.rights.complaint.label</source><target>Right to lodge a complaint:</target></segment></unit>
-    <unit id="priv_rights_comp_txt" name="privacy.rights.complaint.text"><segment><source>privacy.rights.complaint.text</source><target>You have the right to lodge a complaint with the supervisory authority (Czech Data Protection Authority - ÚOOÚ)</target></segment></unit>
-    <unit id="priv_ico_lbl" name="privacy.ico.label"><segment><source>privacy.ico.label</source><target>Company ID:</target></segment></unit>
-    <unit id="priv_track_lbl" name="privacy.tracking.label"><segment><source>privacy.tracking.label</source><target>Tracking technologies:</target></segment></unit>
-    <unit id="cookie_hide_details" name="cookie.hide_details"><segment><source>cookie.hide_details</source><target>Hide details</target></segment></unit>
-    <unit id="priv_rights_w_btn" name="privacy.rights.withdraw.button"><segment><source>privacy.rights.withdraw.button</source><target>Open cookie settings</target></segment></unit>
+    <!-- Privacy policy page -->
+    <unit id="privacy_title" name="privacy.title"><segment><source>privacy.title</source><target>Privacy policy</target></segment></unit>
+    <unit id="privacy_effective" name="privacy.effective"><segment><source>privacy.effective</source><target>Effective from %date% · version %version%</target></segment></unit>
+    <unit id="privacy_summary_label" name="privacy.summary.label"><segment><source>privacy.summary.label</source><target>Summary</target></segment></unit>
+    <unit id="privacy_summary_default" name="privacy.summary.default"><segment><source>privacy.summary.default</source><target>This page explains who processes your personal data, for what purposes, on what legal basis and for how long, who we share it with and what your rights are. We only process the data needed for each purpose.</target></segment></unit>
+    <unit id="privacy_summary_consent" name="privacy.summary.consent"><segment><source>privacy.summary.consent</source><target>We use optional cookies (for example for traffic measurement or advertising) only with your consent, which you can withdraw at any time in Cookie settings.</target></segment></unit>
+    <unit id="privacy_controller_title" name="privacy.controller.title"><segment><source>privacy.controller.title</source><target>Who is the controller</target></segment></unit>
+    <unit id="privacy_controllers_title" name="privacy.controllers.title"><segment><source>privacy.controllers.title</source><target>Who the controllers are</target></segment></unit>
+    <unit id="privacy_controller_legal_form" name="privacy.controller.legal_form"><segment><source>privacy.controller.legal_form</source><target>Legal form</target></segment></unit>
+    <unit id="privacy_controller_address" name="privacy.controller.address"><segment><source>privacy.controller.address</source><target>Registered office / place of business</target></segment></unit>
+    <unit id="privacy_controller_ico" name="privacy.controller.ico"><segment><source>privacy.controller.ico</source><target>Company ID (IČO)</target></segment></unit>
+    <unit id="privacy_controller_registry" name="privacy.controller.registry"><segment><source>privacy.controller.registry</source><target>Registration</target></segment></unit>
+    <unit id="privacy_controller_email" name="privacy.controller.email"><segment><source>privacy.controller.email</source><target>Data protection e-mail</target></segment></unit>
+    <unit id="privacy_controller_dpo" name="privacy.controller.dpo"><segment><source>privacy.controller.dpo</source><target>Data protection officer</target></segment></unit>
+    <unit id="privacy_controller_no_dpo" name="privacy.controller.no_dpo"><segment><source>privacy.controller.no_dpo</source><target>not appointed</target></segment></unit>
+    <unit id="privacy_toc" name="privacy.toc"><segment><source>privacy.toc</source><target>Contents</target></segment></unit>
+    <unit id="privacy_purposes_title" name="privacy.purposes.title"><segment><source>privacy.purposes.title</source><target>Why and for how long we process data</target></segment></unit>
+    <unit id="privacy_purposes_of_controller" name="privacy.purposes.of_controller"><segment><source>privacy.purposes.of_controller</source><target>Processing by %controller%</target></segment></unit>
+    <unit id="privacy_purposes_purpose" name="privacy.purposes.purpose"><segment><source>privacy.purposes.purpose</source><target>Purpose</target></segment></unit>
+    <unit id="privacy_purposes_controller" name="privacy.purposes.controller"><segment><source>privacy.purposes.controller</source><target>Controller</target></segment></unit>
+    <unit id="privacy_purposes_data" name="privacy.purposes.data"><segment><source>privacy.purposes.data</source><target>Personal data</target></segment></unit>
+    <unit id="privacy_purposes_basis" name="privacy.purposes.basis"><segment><source>privacy.purposes.basis</source><target>Legal basis</target></segment></unit>
+    <unit id="privacy_purposes_retention" name="privacy.purposes.retention"><segment><source>privacy.purposes.retention</source><target>Retention</target></segment></unit>
+    <unit id="privacy_purposes_provision" name="privacy.purposes.provision"><segment><source>privacy.purposes.provision</source><target>Obligation to provide</target></segment></unit>
+    <unit id="privacy_basis_art6_1_a" name="privacy.basis.art6_1_a"><segment><source>privacy.basis.art6_1_a</source><target>Consent (Art. 6(1)(a) GDPR)</target></segment></unit>
+    <unit id="privacy_basis_art6_1_b" name="privacy.basis.art6_1_b"><segment><source>privacy.basis.art6_1_b</source><target>Performance of a contract or steps before entering into it (Art. 6(1)(b) GDPR)</target></segment></unit>
+    <unit id="privacy_basis_art6_1_c" name="privacy.basis.art6_1_c"><segment><source>privacy.basis.art6_1_c</source><target>Compliance with a legal obligation (Art. 6(1)(c) GDPR)</target></segment></unit>
+    <unit id="privacy_basis_art6_1_f" name="privacy.basis.art6_1_f"><segment><source>privacy.basis.art6_1_f</source><target>Legitimate interest (Art. 6(1)(f) GDPR)</target></segment></unit>
+    <unit id="privacy_basis_interest" name="privacy.basis.interest"><segment><source>privacy.basis.interest</source><target>Legitimate interest: %interest%.</target></segment></unit>
+    <unit id="privacy_automated_none" name="privacy.automated.none"><segment><source>privacy.automated.none</source><target>We do not carry out automated decision-making or profiling with legal or similarly significant effects.</target></segment></unit>
+    <unit id="privacy_recipients_title" name="privacy.recipients.title"><segment><source>privacy.recipients.title</source><target>Who we share data with</target></segment></unit>
+    <unit id="privacy_recipients_intro" name="privacy.recipients.intro"><segment><source>privacy.recipients.intro</source><target>We only share data with these recipients and only to the extent needed for the purpose.</target></segment></unit>
+    <unit id="privacy_recipients_name" name="privacy.recipients.name"><segment><source>privacy.recipients.name</source><target>Recipient</target></segment></unit>
+    <unit id="privacy_recipients_role" name="privacy.recipients.role"><segment><source>privacy.recipients.role</source><target>Role</target></segment></unit>
+    <unit id="privacy_recipients_purpose" name="privacy.recipients.purpose"><segment><source>privacy.recipients.purpose</source><target>Purpose</target></segment></unit>
+    <unit id="privacy_recipients_country" name="privacy.recipients.country"><segment><source>privacy.recipients.country</source><target>Country of processing</target></segment></unit>
+    <unit id="privacy_recipients_none" name="privacy.recipients.none"><segment><source>privacy.recipients.none</source><target>We do not share personal data with any other recipients.</target></segment></unit>
+    <unit id="privacy_role_processor" name="privacy.role.processor"><segment><source>privacy.role.processor</source><target>processor</target></segment></unit>
+    <unit id="privacy_role_controller" name="privacy.role.controller"><segment><source>privacy.role.controller</source><target>independent controller</target></segment></unit>
+    <unit id="privacy_role_joint_controller" name="privacy.role.joint_controller"><segment><source>privacy.role.joint_controller</source><target>joint controller</target></segment></unit>
+    <unit id="privacy_transfer_adequacy" name="privacy.transfer.adequacy"><segment><source>privacy.transfer.adequacy</source><target>Transfer outside the EU/EEA based on a European Commission adequacy decision (for the USA, the EU-U.S. Data Privacy Framework).</target></segment></unit>
+    <unit id="privacy_transfer_scc" name="privacy.transfer.scc"><segment><source>privacy.transfer.scc</source><target>Transfer outside the EU/EEA based on standard contractual clauses approved by the European Commission.</target></segment></unit>
+    <unit id="privacy_rights_title" name="privacy.rights.title"><segment><source>privacy.rights.title</source><target>Your rights</target></segment></unit>
+    <unit id="privacy_rights_access" name="privacy.rights.access"><segment><source>privacy.rights.access</source><target>Right of access – you can ask what data we process about you and get a copy (Art. 15 GDPR).</target></segment></unit>
+    <unit id="privacy_rights_rectification" name="privacy.rights.rectification"><segment><source>privacy.rights.rectification</source><target>Right to rectification of inaccurate data (Art. 16 GDPR).</target></segment></unit>
+    <unit id="privacy_rights_erasure" name="privacy.rights.erasure"><segment><source>privacy.rights.erasure</source><target>Right to erasure when we no longer need the data or process it unlawfully (Art. 17 GDPR).</target></segment></unit>
+    <unit id="privacy_rights_restriction" name="privacy.rights.restriction"><segment><source>privacy.rights.restriction</source><target>Right to restriction of processing (Art. 18 GDPR).</target></segment></unit>
+    <unit id="privacy_rights_portability" name="privacy.rights.portability"><segment><source>privacy.rights.portability</source><target>Right to data portability for data you gave us based on consent or a contract (Art. 20 GDPR).</target></segment></unit>
+    <unit id="privacy_rights_withdraw" name="privacy.rights.withdraw"><segment><source>privacy.rights.withdraw</source><target>Right to withdraw consent at any time; withdrawal does not affect the lawfulness of processing before it (Art. 7(3) GDPR).</target></segment></unit>
+    <unit id="privacy_rights_complaint" name="privacy.rights.complaint"><segment><source>privacy.rights.complaint</source><target>Right to lodge a complaint with the Office for Personal Data Protection (ÚOOÚ), Pplk. Sochora 27, 170 00 Prague 7,</target></segment></unit>
+    <unit id="privacy_objection_title" name="privacy.objection.title"><segment><source>privacy.objection.title</source><target>Right to object</target></segment></unit>
+    <unit id="privacy_objection_text" name="privacy.objection.text"><segment><source>privacy.objection.text</source><target>Where we process your data based on legitimate interest (Art. 6(1)(f) GDPR), you can object at any time on grounds relating to your particular situation. We will then stop processing it unless we demonstrate compelling legitimate grounds that override your interests or need it to establish or defend legal claims (Art. 21(1) GDPR).</target></segment></unit>
+    <unit id="privacy_objection_marketing" name="privacy.objection.marketing"><segment><source>privacy.objection.marketing</source><target>You can object to processing for direct marketing at any time without giving a reason; we will then stop processing the data for that purpose (Art. 21(2) and (3) GDPR).</target></segment></unit>
+    <unit id="privacy_cookies_title" name="privacy.cookies.title"><segment><source>privacy.cookies.title</source><target>Cookies and similar technologies</target></segment></unit>
+    <unit id="privacy_cookies_intro" name="privacy.cookies.intro"><segment><source>privacy.cookies.intro</source><target>We store necessary items without consent because the website needs them to work (Section 89(3) of Act No. 127/2005 Coll.). Other categories load only after you consent in the cookie banner, and you can change your consent at any time.</target></segment></unit>
+    <unit id="privacy_cookies_intro_necessary_only" name="privacy.cookies.intro_necessary_only"><segment><source>privacy.cookies.intro_necessary_only</source><target>The website only uses the necessary technical items listed below, which do not require consent under Section 89(3) of Act No. 127/2005 Coll. We use no analytics or marketing cookies.</target></segment></unit>
+    <unit id="privacy_cookies_none" name="privacy.cookies.none"><segment><source>privacy.cookies.none</source><target>The website stores no cookies or similar data on your device and loads no third-party content that would do so.</target></segment></unit>
+    <unit id="privacy_cookies_consent_mode_basic" name="privacy.cookies.consent_mode_basic"><segment><source>privacy.cookies.consent_mode_basic</source><target>Google tools (Google Analytics, Google Ads) load only after you consent to the relevant category (Google Consent Mode v2, basic mode). Nothing is sent to Google before consent.</target></segment></unit>
+    <unit id="privacy_cookies_consent_mode_advanced" name="privacy.cookies.consent_mode_advanced"><segment><source>privacy.cookies.consent_mode_advanced</source><target>Google tools (Google Analytics, Google Ads) use Google Consent Mode v2 in advanced mode: before consent they load without storing cookies and send signals without identifiers, which still contain technical data such as the IP address and browser type. Full measurement starts only after your consent.</target></segment></unit>
+    <unit id="privacy_joint_title" name="privacy.joint.title"><segment><source>privacy.joint.title</source><target>Joint controllership</target></segment></unit>
+    <unit id="privacy_joint_any_controller" name="privacy.joint.any_controller"><segment><source>privacy.joint.any_controller</source><target>You can exercise your rights with any of the controllers (Art. 26(3) GDPR).</target></segment></unit>
+    <unit id="privacy_contact_title" name="privacy.contact.title"><segment><source>privacy.contact.title</source><target>How to exercise your rights</target></segment></unit>
+    <unit id="privacy_contact_text" name="privacy.contact.text"><segment><source>privacy.contact.text</source><target>Send questions and requests about personal data to</target></segment></unit>
+    <unit id="privacy_contact_response" name="privacy.contact.response"><segment><source>privacy.contact.response</source><target>We will reply without undue delay and within one month at the latest; in complex cases we may extend this by two further months and will let you know (Art. 12(3) GDPR).</target></segment></unit>
+    <unit id="privacy_contact_authority" name="privacy.contact.authority"><segment><source>privacy.contact.authority</source><target>If you are not satisfied with our reply, you can contact the Office for Personal Data Protection (ÚOOÚ), Pplk. Sochora 27, 170 00 Prague 7 (uoou.gov.cz).</target></segment></unit>
+    <unit id="privacy_changelog_title" name="privacy.changelog.title"><segment><source>privacy.changelog.title</source><target>Change history</target></segment></unit>
+    <unit id="privacy_changelog_version" name="privacy.changelog.version"><segment><source>privacy.changelog.version</source><target>Version %version%</target></segment></unit>
+    <unit id="privacy_form_note" name="privacy.form_note"><segment><source>privacy.form_note</source><target>The form data is processed by %controller% for the purpose: %purpose%.</target></segment></unit>
+    <unit id="privacy_form_note_link" name="privacy.form_note_link"><segment><source>privacy.form_note_link</source><target>More in the privacy policy.</target></segment></unit>
   </file>
 </xliff>

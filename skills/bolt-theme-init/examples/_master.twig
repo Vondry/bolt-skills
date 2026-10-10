@@ -26,7 +26,7 @@
         {{ seo.metatags() }}
     {% endblock seo %}
 
-    {# bolt-cookie-consent: Google Consent Mode v2 defaults — must run before any tracking script. #}
+    {# bolt-cookie-consent: consent configuration (JSON) for js/src/cookie-consent.ts — no tracker loads before consent. #}
     {% include 'partials/_consent-mode.twig' ignore missing %}
 
     {# Bolt registers the active theme as the default asset package, so asset() paths are
@@ -45,6 +45,10 @@
         {{ __('a11y.skip_to_content') }}
     </a>
 
+    {# bolt-cookie-consent: cookie banner (renders only when theme.yaml privacy.cookies needs consent).
+       Early in the DOM so keyboard users reach it right after the skip link (CB-60). #}
+    {% include 'partials/_cookie-banner.twig' ignore missing %}
+
     {% block header %}
         {% include 'containers/header/_menu.twig' ignore missing %}
     {% endblock header %}
@@ -56,9 +60,6 @@
     {% block footer %}
         {% include 'containers/footer/_footer.twig' ignore missing %}
     {% endblock footer %}
-
-    {# bolt-cookie-consent: opt-in banner (present only when the site uses tracking). #}
-    {% include 'partials/_cookie-banner.twig' ignore missing %}
 
     {% block scripts %}{% endblock scripts %}
 </body>

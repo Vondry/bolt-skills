@@ -1,0 +1,41 @@
+{#
+  partials/_cookie-table.twig — the items of one cookie category (CB-21), shared by the banner's
+  second layer and the privacy policy page, so both always list the same data (theme.yaml
+  privacy.cookies).
+
+  {% include 'partials/_cookie-table.twig' with { items: items } only %}
+#}
+{% import 'partials/_privacy-macros.twig' as privacy_ui %}
+
+<div class="overflow-x-auto">
+    <table class="w-full min-w-[36rem] border-collapse text-left text-xs sm:text-sm">
+        <thead>
+            <tr class="border-b border-stroke text-ink-2">
+                <th scope="col" class="py-2 pr-3 font-semibold">{{ __('cookie.table.name') }}</th>
+                <th scope="col" class="py-2 pr-3 font-semibold">{{ __('cookie.table.provider') }}</th>
+                <th scope="col" class="py-2 pr-3 font-semibold">{{ __('cookie.table.purpose') }}</th>
+                <th scope="col" class="py-2 pr-3 font-semibold">{{ __('cookie.table.expiry') }}</th>
+                <th scope="col" class="py-2 font-semibold">{{ __('cookie.table.party') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                <tr class="border-b border-stroke align-top last:border-b-0">
+                    <th scope="row" class="py-2 pr-3 font-mono font-normal break-all">
+                        {{ item.name }}
+                        <span class="block font-body text-ink-3">{{ __('cookie.technology.' ~ item.technology|default('cookie')) }}</span>
+                    </th>
+                    <td class="py-2 pr-3">{{ privacy_ui.t(item.provider) }}</td>
+                    <td class="py-2 pr-3">{{ privacy_ui.t(item.purpose) }}</td>
+                    <td class="py-2 pr-3">{{ privacy_ui.t(item.expiry) }}</td>
+                    <td class="py-2">
+                        {{ __('cookie.party.' ~ item.party|default('third')) }}
+                        {% if item.transfer|default(false) %}
+                            <span class="block text-ink-3">{{ __('cookie.transfer_outside_eea') }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
