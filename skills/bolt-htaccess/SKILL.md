@@ -83,6 +83,21 @@ Create `/.htaccess` at the root of the project (alongside `composer.json` and `c
 # /.htaccess
 RewriteEngine on
 
+# HSTS also on the redirects below (www → canonical host, HTTP → HTTPS): they are answered here,
+# before public/.htaccess adds its headers. Browsers ignore the header on plain HTTP.
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+# Canonical host: the site answers on one host; the other one redirects to it in a single hop
+# (straight to HTTPS). Default: without www — www.example.cz → https://example.cz. For a site whose
+# canonical host is www, replace the two lines with (it also redirects localhost and staging hosts —
+# add a RewriteCond %{HTTP_HOST} !^(localhost|staging\.) [NC] for those):
+#   RewriteCond %{HTTP_HOST} !^www\. [NC]
+#   RewriteRule (.*) https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule (.*) https://%1%{REQUEST_URI} [L,R=301]
+
 # HTTPS redirect — works both on direct Apache TLS and behind a TLS-terminating proxy:
 # redirect when Apache itself did not receive HTTPS AND no proxy reported an HTTPS request.
 RewriteCond %{HTTPS} off
@@ -94,12 +109,24 @@ RewriteRule (.*) public/$1 [QSA,L]
 ```
 
 #### Directive Breakdown:
+- **HSTS block:** the redirects below are answered by this file, before `public/.htaccess` adds its headers — without it the `www` → canonical and HTTP → HTTPS redirects carry no `Strict-Transport-Security`.
+- **Canonical host (`www` → without `www`):** both `example.cz` and `www.example.cz` must work, but only one may serve the site. Otherwise every page exists twice (Bolt's canonical link follows the requested host when `BOLT_CANONICAL` is empty), sessions and HSTS are split between two origins, and the second host is easily forgotten in checks. The rule needs no domain name, so the file is identical in every project; it redirects straight to `https://`, one hop. Also set `BOLT_CANONICAL=https://example.cz` (`bolt-security-hardening`, Step 1). The certificate must cover both hosts (`example.cz` + `www.example.cz`, or a wildcard).
 - `RewriteEngine on`: Initializes the Apache rewrite engine. Without `mod_rewrite` the file causes an error 500 for every request — the site fails closed instead of exposing the project root.
 - `RewriteCond %{HTTPS} off`: Apache itself did not receive the request over TLS (plain HTTP on a direct connection — or any request behind a proxy that terminates TLS).
 - `RewriteCond %{HTTP:X-Forwarded-Proto} !https`: No reverse proxy, load balancer or Cloudflare reported that the visitor used HTTPS. A missing header also matches, so direct HTTP requests are redirected.
 - The two conditions are combined with AND: redirect only when neither Apache nor a proxy saw HTTPS. Do **not** use `^http$` for the header condition — without a proxy the header is absent, the condition never matches, and plain HTTP is never redirected.
 - `RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]`: Issues an HTTP 301 Permanent Redirect to HTTPS.
 - `RewriteRule (.*) public/$1 [QSA,L]`: Transparently rewrites the URL into the `public/` directory without changing the URL visible in the user's browser. `QSA` preserves query parameters (`?page=2`), and `L` stops further rewriting in the root context.
+
+**Document root on `public/`** (no root file): put the canonical-host and HTTPS rules at the top of the `<IfModule mod_rewrite.c>` block of `public/.htaccess` instead:
+
+```apache
+    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+```
 
 ---
 
@@ -271,7 +298,7 @@ BOLT_BASE_URL=https://staging.example.cz skills/bolt-htaccess/scripts/verify.sh
 ```
 
 The script performs:
-- **Root `.htaccess` Check:** Confirms `RewriteEngine on`, HTTPS redirect rules, and rewrite to `./public`.
+- **Root `.htaccess` Check:** Confirms `RewriteEngine on`, HTTPS redirect rules, the canonical-host redirect (`www`), and rewrite to `./public`.
 - **Public `.htaccess` Check:** Confirms `AddDefaultCharset UTF-8` and the front controller rules.
 - **Allowlist Check:** Tests sample paths against the theme and upload allowlists — built assets and accepted uploads pass, templates, configs, sources, the theme root and `.html` / `.php` uploads are denied.
 - **Safety-net Check:** Tests the `FilesMatch` deny list against sensitive file names, confirms no public asset type is blocked, and that `node_modules`, `.git` and `.env*` are denied.
@@ -292,8 +319,10 @@ curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/css/i
 curl -s -o /dev/null -w "%{http_code}\n" https://example.com/files/anything.html
 # Headers of an upload: Content-Security-Policy … sandbox, X-Content-Type-Options: nosniff
 curl -sI https://example.com/files/<an uploaded image> | grep -iE "content-security|nosniff|strict-transport"
-# Plain HTTP: 301 to https://
-curl -s -o /dev/null -w "%{http_code}\n" http://example.com/
+# Plain HTTP: 301 to https:// — on both hosts; www: 301 straight to https://example.com/
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://example.com/
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://www.example.com/
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" https://www.example.com/
 # Secrets and the project root: 403 / 404
 curl -s -o /dev/null -w "%{http_code}\n" https://example.com/.env
 curl -s -o /dev/null -w "%{http_code}\n" https://example.com/var/data/bolt.sqlite

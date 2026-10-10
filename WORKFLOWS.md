@@ -352,7 +352,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 - *Verify:* `bash $SKILLS/bolt-code-quality/scripts/verify.sh`
 
 ### 1.5 Application Security Baseline (`bolt-security-hardening`, Steps 1–5)
-- **`.env`:** production-safe defaults (`APP_ENV=prod`, `APP_DEBUG=0`, empty `APP_SECRET`, `SYMFONY_TRUSTED_HOSTS` from the site plan); the local `.env.local` gets `APP_ENV=dev`, the `APP_SECRET` that `bolt:setup` wrote into `.env` (move it — never commit it) and an empty `SYMFONY_TRUSTED_HOSTS`.
+- **`.env`:** production-safe defaults (`APP_ENV=prod`, `APP_DEBUG=0`, empty `APP_SECRET`, `SYMFONY_TRUSTED_HOSTS` from the site plan); the local `.env.local` gets `APP_ENV=dev`, the `APP_SECRET` that `bolt:setup` wrote into `.env` (move it — never commit it), an empty `SYMFONY_TRUSTED_HOSTS` and an empty `BOLT_CANONICAL`. `.env` sets `BOLT_CANONICAL` to the canonical host of the site plan.
 - Copy `config/packages/security_hardening.yaml` and `config/validator/user.yaml`; `login_throttling` (5 / 15 minutes) in `security.yaml`; `bolt.remember_lifetime: 604800`.
 - Merge the security keys into `config/bolt/config.yaml` (upload whitelist, HTML cleaner without `iframe`, `query_search` off, no version disclosure, `verify_peer: true`, reset-password notice off) and `config/bolt/permissions.yaml` (file editor for config / themes off, `ROLE_DEVELOPER` not assignable).
 - `php bin/console lint:yaml config --parse-tags && php bin/console cache:clear`
@@ -622,7 +622,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `/theme/<theme>/theme.yaml`, `/theme/<theme>/package.json`, `/theme/<theme>/index.twig` **[Apache]** | 403 |
 | `/api/docs.html`, `/api/contents`, `POST /api/graphql` | 401, 403 or 404 |
 | `/thumbs/320x240/<image from public/files>` | `Cache-Control: public`, never `private, max-age=0` |
-| `http://<domain>/` on staging | 301 to `https://` |
+| `http://<domain>/`, `http://www.<domain>/`, `https://www.<domain>/` | 301 straight to `https://<domain>/` (one canonical host, valid certificate on both) |
 | `/` with header `Host: evil.invalid` | 400 |
 | `/_profiler`, `/_fragment` | 404 |
 | `/.env`, `/composer.json`, `/var/data/bolt.sqlite`, `/files/anything.html` | 403 or 404 |

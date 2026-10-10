@@ -1,5 +1,20 @@
 RewriteEngine on
 
+# HSTS also on the redirects below (www → canonical host, HTTP → HTTPS): they are answered here,
+# before public/.htaccess adds its headers. Browsers ignore the header on plain HTTP.
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+# Canonical host: the site answers on one host; the other one redirects to it in a single hop
+# (straight to HTTPS). Default: without www — www.example.cz → https://example.cz. For a site whose
+# canonical host is www, replace the two lines with (it also redirects localhost and staging hosts —
+# add a RewriteCond %{HTTP_HOST} !^(localhost|staging\.) [NC] for those):
+#   RewriteCond %{HTTP_HOST} !^www\. [NC]
+#   RewriteRule (.*) https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule (.*) https://%1%{REQUEST_URI} [L,R=301]
+
 # HTTPS redirect — works both on direct Apache TLS and behind a TLS-terminating proxy:
 # redirect when Apache itself did not receive HTTPS AND no proxy reported an HTTPS request.
 RewriteCond %{HTTPS} off

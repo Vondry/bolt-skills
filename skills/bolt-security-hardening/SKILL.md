@@ -58,6 +58,7 @@ APP_DEBUG=0
 APP_SECRET=
 SYMFONY_TRUSTED_HOSTS='^(www\.)?example\.cz$'
 SYMFONY_TRUSTED_PROXIES=
+BOLT_CANONICAL=https://example.cz
 ```
 
 **`.env.local` on the server** — created once over SFTP, never uploaded from a local machine:
@@ -73,12 +74,14 @@ APP_SECRET=<64 hex characters: php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
 APP_ENV=dev
 APP_SECRET=<any random value>
 SYMFONY_TRUSTED_HOSTS=
+BOLT_CANONICAL=
 ```
 
 * **`APP_SECRET` empty in `.env`.** With no secret Symfony refuses to start (HTTP 500, `A non-empty secret is required` in `var/log/prod.log`). That is the intended failure: the secret signs remember-me cookies, CSRF tokens and `/_fragment` URLs, so a value from git is a public value.
 * **Bolt writes the secret into `.env`.** `bin/console bolt:setup` and `bin/console bolt:reset-secret` put a new `APP_SECRET` into the committed `.env` — that is how every Bolt project ends up with its secret in git. Right after running either, move the line to `.env.local` and leave `APP_SECRET=` empty in `.env`. Generate later secrets with `php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'` instead.
 * **Rotate a secret that was ever committed.** Generate a new one into the server's `.env.local`, delete the old line from `.env`. Every editor is logged out once; nothing else changes. The old value stays in git history — that is why it must not be used any more.
 * **`SYMFONY_TRUSTED_HOSTS`** is a regular expression of every domain the site answers to (add the staging domain if staging runs with this `.env`). Any other `Host` gets HTTP 400. Without it, a request with `Host: evil.tld` to `/bolt/reset-password` makes Bolt mail a reset link to `https://evil.tld/…` — one click by the admin hands over the token. Bolt's `framework.yaml` already reads the variable (`trusted_hosts: ['%env(default::SYMFONY_TRUSTED_HOSTS)%']`); a project whose `framework.yaml` says `trusted_hosts: ~` must get that line back.
+* **Both hosts, one site.** `example.cz` and `www.example.cz` must both answer over valid HTTPS, but only one serves the site — the other redirects to it with 301 (`bolt-htaccess` Step 1, default: without www). `BOLT_CANONICAL` makes every canonical link name that host; empty, Bolt names whichever host was requested, so each page exists twice. Keep both hosts in `SYMFONY_TRUSTED_HOSTS`. The live checks (`verify.sh`, section 8) always test both.
 * **`TRUSTED_PROXIES`** (Bolt's sample `.env`) is read by nothing in Symfony 6.4; delete it. `SYMFONY_TRUSTED_PROXIES` is wired up in Step 2.
 * **`.env.local.php`** (`composer dump-env prod`) overrides every `.env*` file. Do not upload one generated on a developer machine.
 
@@ -314,7 +317,7 @@ Without a reachable `BOLT_BASE_URL` only the file checks run.
 | 5 | `permissions.yaml` | — (warnings: file editor for config / themes, developer role assignable) |
 | 6 | `nelmio_security.yaml` | bundle missing or no clickjacking protection |
 | 7 | Dependencies (`composer audit`, Bolt major version) | — (warnings) |
-| 8 | Live: foreign `Host` header, profiler, debug token, stack traces in a 404, `/.env` and friends, headers of a page, of the login and of an upload, cookie flags, `/_fragment` | foreign host answers 200, profiler / debug token / stack trace visible, a secret file downloadable, no clickjacking protection |
+| 8 | Live, on **both** the bare domain and `www` (derived from `BOLT_BASE_URL`): valid certificate, HTTP → HTTPS redirect, HSTS, exactly one host serving the site; then on every serving host: foreign `Host` header, profiler, debug token, stack traces in a 404, `/.env` and friends, headers of a page and of an upload, cookie flags, `/_fragment` | a host without a valid certificate, plain HTTP not redirected, foreign host answers 200, profiler / debug token / stack trace visible, a secret file downloadable, no clickjacking protection |
 
 Warnings (generator tag, query search, CSP missing, …) are hardening that is still open; each line
 says the fix.
@@ -323,6 +326,7 @@ says the fix.
 
 ## Common Pitfalls
 
+* **Only one host checked.** `www.example.cz` is easily forgotten: no certificate, no redirect, or a second copy of the site. `verify.sh` derives the other host from `BOLT_BASE_URL` and checks both (a missing DNS record is a warning, an invalid certificate a failure).
 * **Trusted hosts in a second config file.** Merged into the env entry, which trusts everything when the variable is empty — use `SYMFONY_TRUSTED_HOSTS` (Step 1).
 * **`APP_SECRET` back in `.env` after `bolt:setup` / `bolt:reset-secret`.** Both commands write the secret there; move it to `.env.local` before committing (Step 1).
 * **Site answers 500 after deploying this skill.** `A non-empty secret is required` → the server's `.env.local` has no `APP_SECRET` (Step 1). `Untrusted Host` (400) → the domain is missing from `SYMFONY_TRUSTED_HOSTS`.

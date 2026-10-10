@@ -66,6 +66,14 @@ if [ -f "$ROOT_HTACCESS" ] && grep -qE 'X-Forwarded-Proto\}[[:space:]]+\^http\$'
     WARNINGS=$((WARNINGS + 1))
 fi
 
+# Canonical host: www and the bare domain must not both serve the site (Step 1). The rule may sit in
+# the root file or, with the document root on public/, in public/.htaccess.
+if ! grep -qsE 'RewriteCond[[:space:]]+%\{HTTP_HOST\}[[:space:]]+!?\^www' "$ROOT_HTACCESS" "$PUBLIC_HTACCESS"; then
+    echo "  WARNING: no canonical-host redirect (www → bare domain or back) — both hosts serve the site."
+    echo "           Add the RewriteCond %{HTTP_HOST} ^www\\.(.+)\$ rule of examples/root.htaccess (SKILL.md Step 1)."
+    WARNINGS=$((WARNINGS + 1))
+fi
+
 # -------------------------------------------------------------
 # 2. Check public/.htaccess (Tier 2: Charset & Front Controller)
 # -------------------------------------------------------------

@@ -6,7 +6,7 @@
 #
 #   .env.local on the server   — APP_SECRET (+ DATABASE_URL, MAILER_DSN when not the defaults).
 #                                Created once over SFTP, never uploaded from a local machine.
-#   .env.local on your machine — APP_ENV=dev, your own APP_SECRET, SYMFONY_TRUSTED_HOSTS=
+#   .env.local on your machine — APP_ENV=dev, your own APP_SECRET, SYMFONY_TRUSTED_HOSTS=, BOLT_CANONICAL=
 #
 # DO NOT put secrets in this file. Real environment variables win over .env files.
 
@@ -36,4 +36,6 @@ CORS_ALLOW_ORIGIN=^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$
 MAILER_DSN=smtp://localhost
 ###< symfony/mailer ###
 
-BOLT_CANONICAL=
+# The one host that serves the site; the other (www / without www) redirects to it (bolt-htaccess).
+# Canonical links then always name this host.
+BOLT_CANONICAL=https://example.cz
