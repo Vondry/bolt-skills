@@ -13,8 +13,9 @@ propose instead of ask:
 | 6 | **Reference screenshots** — every page at every breakpoint the design has | visual QA in Phase 6 | 6.1 |
 
 Save the reference screenshots and a short `design-notes.md` (token table, inventory, open
-questions) in `var/bolt-build/design/` of the project (git-ignored runtime folder), so later
-sessions can re-read them without calling the design tool again.
+questions) in `var/bolt-build/design/` of the project, so later sessions can re-read them without
+calling the design tool again. Bolt's `.gitignore` does not cover all of `var/`: add
+`/var/bolt-build/` to the project's `.gitignore` in Phase 1.
 
 ---
 

@@ -50,7 +50,8 @@ From the project root:
 ```bash
 bash $SKILLS/bolt-audit/scripts/audit.sh --base-url=https://staging.example.cz   # or without --base-url
 #   --project=/path/to/project   audit another directory
-#   --out=DIR                     report directory (default var/bolt-audit/<timestamp>/, git-ignored)
+#   --out=DIR                     report directory (default var/bolt-audit/<timestamp>/, kept out of git
+#                                 through the clone's local .git/info/exclude)
 #   --skip=bolt-htaccess          skills that do not apply on purpose
 #   --only=bolt-cookie-consent    re-run selected skills
 #   --strict                      exit 1 when a skill fails (CI)

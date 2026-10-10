@@ -60,7 +60,7 @@ bash vendor/tomvondracek/bolt-skills/skills/bolt-audit/scripts/audit.sh \
     --base-url=https://staging.example.cz      # optional: live HTTP checks against this project
 ```
 
-The audit changes nothing in the project. It writes a profile, the logs of all verification scripts, a comparison of the project's files with the skills' examples and a summary to `var/bolt-audit/<timestamp>/`; the agent then reviews each skill and writes `AUDIT.md` with findings by severity and the skill step that fixes each one.
+The audit changes nothing in the project. It writes a profile, the logs of all verification scripts, a comparison of the project's files with the skills' examples and a summary to `var/bolt-audit/<timestamp>/` (kept out of `git status` through the clone's local `.git/info/exclude`); the agent then reviews each skill and writes `AUDIT.md` with findings by severity and the skill step that fixes each one.
 
 ---
 

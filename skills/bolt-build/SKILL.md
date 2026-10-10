@@ -94,7 +94,7 @@ Where the design and the intake answers flow in:
 
 | Phase | Input from the intake / design | Concretely |
 | :--- | :--- | :--- |
-| 1 | E1, E3, E6, E9, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` (no database configuration); the user runs `! php bin/console bolt:setup --no-fixtures` (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit, `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI |
+| 1 | E1, E3, E6, E9, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` (no database configuration); the user runs `! php bin/console bolt:setup --no-fixtures` (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit (with `/var/bolt-build/` in `.gitignore`), `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI |
 | 2 | E5, E6 | Apache vs. Nginx branch of `bolt-htaccess` / `bolt-asset-caching` |
 | 3 | S6 | keep / remove `ImageDimensionsExtension` (gallery), `FileSizeExtension` (downloads); note removals as expected warnings |
 | 4 | E8, D1–D5, O1, O9, token table | `bolt-theme-init` scaffold `<theme>`; `theme.yaml` contact, socials, logo, `analytics:`; `bolt-menu --profile=<S4> --templates --force`; tokens and self-hosted fonts from `design-notes.md` into `css/tailwind/index.css`; JS imports per features |

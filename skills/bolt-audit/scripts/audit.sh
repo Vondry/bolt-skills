@@ -5,8 +5,10 @@ set -e
 #
 #   bash audit.sh [--project=PATH] [--base-url=URL] [--out=DIR] [--skip=a,b] [--only=a,b] [--strict]
 #
-# Writes only to the report directory (default: <project>/var/bolt-audit/<timestamp>/; var/ is
-# git-ignored in Bolt projects). It never runs a scaffold, an installer or a cache clear. The
+# Writes only to the report directory (default: <project>/var/bolt-audit/<timestamp>/). Bolt's
+# .gitignore covers only var/cache, var/log and var/data, so the default directory is added to the
+# clone's local .git/info/exclude (never to the committed .gitignore). It never runs a scaffold, an
+# installer or a cache clear. The
 # skills' verify scripts read the project; their `bin/console lint:*` calls and the kernel boot
 # may warm var/cache, which is runtime data.
 #
@@ -54,7 +56,18 @@ AUDIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILLS_DIR="$(cd "$AUDIT_DIR/.." && pwd)"
 MAP="$AUDIT_DIR/references/example-map.tsv"
 STAMP="$(date +%Y%m%d-%H%M%S)"
+DEFAULT_OUT=0
+[ -z "$OUT" ] && DEFAULT_OUT=1
 OUT="${OUT:-$PROJECT/var/bolt-audit/$STAMP}"
+# Keep the default report directory out of `git status` without touching the committed .gitignore.
+if [ $DEFAULT_OUT -eq 1 ] && git -C "$PROJECT" rev-parse --git-dir > /dev/null 2>&1 \
+    && ! git -C "$PROJECT" check-ignore -q "var/bolt-audit/$STAMP" 2>/dev/null; then
+    EXCLUDE="$(git -C "$PROJECT" rev-parse --git-path info/exclude)"
+    case "$EXCLUDE" in /*) ;; *) EXCLUDE="$PROJECT/$EXCLUDE" ;; esac
+    mkdir -p "$(dirname "$EXCLUDE")"
+    echo "/var/bolt-audit/" >> "$EXCLUDE"
+    echo "Added /var/bolt-audit/ to $EXCLUDE (local git ignore, not committed)."
+fi
 mkdir -p "$OUT/logs" "$OUT/diffs"
 OUT="$(cd "$OUT" && pwd)"
 
@@ -175,7 +188,8 @@ run_skill() {
     [ $fails -lt 0 ] && fails=0
     if [ $status -ne 0 ]; then
         record "$label" "FAIL" "$fails" "$warns" ""
-    elif grep -qiE "VERIFICATION PASSED with [1-9]|warning|notice" "$log"; then
+    # Same rule as verify-all.sh: lines like "PASSED (0 warning(s))" are not warnings.
+    elif grep -vE '(^|[^0-9])0 warning' "$log" | grep -qiE 'warn|notice|⚠|\[!\]'; then
         record "$label" "WARN" 0 "$warns" ""
     else
         record "$label" "PASS" 0 0 ""
