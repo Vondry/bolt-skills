@@ -21,6 +21,7 @@ The phases are ordered by real dependencies: every step only needs what earlier 
 - **Applied vs. verified.** Several skills are applied across more than one phase (for example `bolt-extension-setup` installs packages in Phase 3 and adds theme templates in Phase 6). Their verification only passes once every part exists. [Appendix A](#appendix-a-skill-to-phase-map) lists where each skill is applied and where its verification is expected to pass. Do not chase failures from a verification that is scheduled for a later phase.
 - **Precedence.** The skills implement the [Integration Contract](#integration-contract-single-source-of-truth); if a project deviates from it, record the deviation in the site plan. What the verification scripts cannot check automatically is listed in [Appendix B](#appendix-b-known-limitations).
 - **Translations.** Every skill that renders text ships its units in `examples/translations.<locale>.xlf`. Merge them into the project's catalogs with `php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php <skill catalog> translations/messages.<locale>.xlf` — it adds missing units and never overwrites existing translations.
+- **Running it end to end.** The `bolt-build` skill executes this workflow from a design (Figma, Pencil, images, an existing site or a brief): it reads the design, asks every question of Phase 0 and the skills in one upfront intake, and then runs Phases 1–8 autonomously, logging progress in the project's `AGENTS.md`.
 - **Existing projects.** To check a site that already exists instead of building one, use the `bolt-audit` skill: it runs every skill's verification read-only, reviews the skills one by one and reports findings with the phase and skill that fix them.
 - **Commit after every gate** (`git commit -m "Phase N: …"`) so any phase can be rolled back on its own.
 - **Final verification** runs all skills in phase order: `vendor/tomvondracek/bolt-skills/scripts/verify-all.sh` (see [Phase 8](#phase-8-qa--sign-off)).
@@ -315,7 +316,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 **Goal:** the project boots with correct time handling, known locales, no public API and code-quality tooling in place.
 
 **Prerequisites:**
-- A Bolt 6.1 project that boots: `composer create-project bolt/project <dir>`, `DATABASE_URL` set in `.env.local`, `php bin/console bolt:setup`, local server reachable at the URL recorded as `BOLT_BASE_URL`.
+- A Bolt 6.1 project that boots: `composer create-project bolt/project <dir>`, SQLite from Bolt's default `.env` (set `DATABASE_URL` in `.env.local` only for another database), `php bin/console bolt:setup --no-fixtures` (no sample content), local server reachable at the URL recorded as `BOLT_BASE_URL`.
 - Skills installed: `composer require --dev tomvondracek/bolt-skills`.
 - Git initialised with a clean baseline commit.
 - Node.js and npm available (needed from Phase 4).

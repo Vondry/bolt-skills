@@ -25,6 +25,7 @@ Compatible with **Google Antigravity**, **Claude Code**, **Gemini**, **Cursor**,
 | **`bolt-menu`** | Configure, structure, and verify navigation menus in `config/bolt/menu.yaml` (header, footer, submenus, anchors, CTAs) with Twig Component/Container patterns. | [`skills/bolt-menu/`](skills/bolt-menu/SKILL.md) |
 | **`bolt-cookie-consent`** | Asks which trackers (Google Ads, GA4, Sklik, Meta), embeds and controller model the site uses, then builds a Czech ZEK § 89 / GDPR two-layer opt-in cookie banner (equal Accept / Reject, Google Consent Mode v2) and the Privacy Policy page from one `theme.yaml` data model, verified against ÚOOÚ / EDPB guidelines. | [`skills/bolt-cookie-consent/`](skills/bolt-cookie-consent/SKILL.md) |
 | **`bolt-theme-templates`** | Build and verify Twig + Tailwind v4 templates under Component/Container/Page architecture (pure UI components, smart containers, zero-HTML page orchestrators). | [`skills/bolt-theme-templates/`](skills/bolt-theme-templates/SKILL.md) |
+| **`bolt-build`** | Build a complete website from a design (Figma MCP, Pencil .pen MCP, images/PDF, an existing site or a brief): reads the design, asks every question upfront, then runs the whole workflow autonomously with progress tracking, visual QA and a final audit. | [`skills/bolt-build/`](skills/bolt-build/SKILL.md) |
 | **`bolt-audit`** | Read-only audit of an existing Bolt CMS 6 project against all skills: profile, every verification script, comparison with the examples, per-skill review and a prioritized `AUDIT.md` report. | [`skills/bolt-audit/`](skills/bolt-audit/SKILL.md) |
 
 ---
@@ -32,6 +33,7 @@ Compatible with **Google Antigravity**, **Claude Code**, **Gemini**, **Cursor**,
 ## End-to-End Website Scaffolding Workflow
 
 To orchestrate and scaffold a complete, production-grade Bolt CMS website from a Figma design, tokens, or project brief:
+- Ask your agent to build the site with the **`bolt-build`** skill and give it the design: a Figma link (Figma MCP), a `.pen` file (Pencil MCP), exported images or PDF, an existing website or a brief. It reads the design, asks all questions in one upfront intake, gets your approval of the site plan, and then runs every phase below on its own — progress is logged in the project's `AGENTS.md`, so a later session continues where it stopped.
 - Read **[`WORKFLOWS.md`](WORKFLOWS.md)** for the phase-by-phase execution graph (Phase 0 intake through Phase 8 sign-off), the Integration Contract shared by all theme skills, the decision matrix, the skill-to-phase map, and troubleshooting tips.
 - Execute the master verification suite **`scripts/verify-all.sh`** to validate the skills in workflow order:
   ```bash
