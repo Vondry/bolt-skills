@@ -1,0 +1,24 @@
+# config/validator/user.yaml (bolt-security-hardening)
+#
+# Password policy for Bolt users, added to Bolt's own rule (6 characters). Applies when a user is
+# added or edited in the admin (also one's own profile) and by `bin/console bolt:add-user`.
+# Loaded through framework.validation.mapping.paths (config/packages/security_hardening.yaml).
+#
+# Not covered: the "forgotten password" form validates with its own form constraints (6 characters).
+
+Bolt\Entity\User:
+  properties:
+    plainPassword:
+      - Length:
+          min: 12
+          max: 4096
+          groups: [ Default, add_user, edit_user ]
+      # Rejects guessable passwords ("Okna2024", "password1234"). 2 = medium.
+      - PasswordStrength:
+          minScore: 2
+          groups: [ Default, add_user, edit_user ]
+      # Rejects passwords from known breaches (haveibeenpwned.com; only the first 5 characters of
+      # the SHA-1 hash leave the server). skipOnError: hosts that block outgoing HTTPS still save.
+      - NotCompromisedPassword:
+          skipOnError: true
+          groups: [ Default, add_user, edit_user ]

@@ -1,0 +1,39 @@
+# .env — committed, uploaded with the code (bolt-security-hardening)
+#
+# Production-safe defaults. If the server's .env.local is ever missing, the site runs in prod mode
+# without debug and refuses to start without a secret (HTTP 500, "A non-empty secret is required"
+# in var/log/prod.log) instead of running with a value from git.
+#
+#   .env.local on the server   — APP_SECRET (+ DATABASE_URL, MAILER_DSN when not the defaults).
+#                                Created once over SFTP, never uploaded from a local machine.
+#   .env.local on your machine — APP_ENV=dev, your own APP_SECRET, SYMFONY_TRUSTED_HOSTS=
+#
+# DO NOT put secrets in this file. Real environment variables win over .env files.
+
+###> symfony/framework-bundle ###
+APP_ENV=prod
+APP_DEBUG=0
+# Set in .env.local (server and local). Generate: php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
+APP_SECRET=
+# Hosts the site answers to (a regular expression). Any other Host header gets HTTP 400, so
+# password-reset links can never point to an attacker's domain.
+SYMFONY_TRUSTED_HOSTS='^(www\.)?example\.cz$'
+# Address range of a TLS-terminating proxy in front of the site, if any (empty: none).
+SYMFONY_TRUSTED_PROXIES=
+BOLT_CONFIG_FOLDER='config/bolt'
+###< symfony/framework-bundle ###
+
+###> doctrine/doctrine-bundle ###
+# SQLite in var/data/ (never upload var/ — it would overwrite the live database).
+DATABASE_URL=sqlite:///%kernel.project_dir%/var/data/bolt.sqlite
+###< doctrine/doctrine-bundle ###
+
+###> nelmio/cors-bundle ###
+CORS_ALLOW_ORIGIN=^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$
+###< nelmio/cors-bundle ###
+
+###> symfony/mailer ###
+MAILER_DSN=smtp://localhost
+###< symfony/mailer ###
+
+BOLT_CANONICAL=

@@ -10,10 +10,5 @@ thumbnails:
   save_files: true
   allow_upscale: false
 
-# Upload whitelist for the media library. Keep it restrictive on production: files are
-# served from the site's own origin, so uploaded .html / .js / .svg could run scripts
-# there (stored XSS), and .twig / .yaml / .css / .scss have no business in public/files/.
-# Bolt's stock list also contains twig, html, js, css and scss — remove them.
-accept_file_types: [ gif, jpg, jpeg, png, webp, avif, ico, zip, tgz, txt, doc, docx, pdf, epub, xls, xlsx, ppt, pptx, mp3, ogg, wav, m4a, mp4, m4v, ogv, wmv, avi, webm ]
-# Add `svg` only when editors are trusted and SVGs are sanitized (an SVG opened directly runs its scripts).
-accept_media_types: [ gif, jpg, jpeg, png, pdf, mp3, tiff, avif, webp ]
+# The upload whitelist (accept_file_types / accept_media_types) is part of
+# bolt-security-hardening (examples/config_snippet.yaml).

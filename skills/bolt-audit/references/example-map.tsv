@@ -54,6 +54,15 @@ bolt-runtime-extensions	LocaleLinkExtension.php	src/LocaleLinkExtension.php	logi
 bolt-runtime-extensions	ImageDimensionsExtension.php	src/ImageDimensionsExtension.php	logic
 bolt-runtime-extensions	FileSizeExtension.php	src/FileSizeExtension.php	logic
 bolt-runtime-extensions	services_snippet.yaml	config/services.yaml	snippet
+bolt-security-hardening	security_hardening.yaml	config/packages/security_hardening.yaml	logic
+bolt-security-hardening	nelmio_security.yaml	config/packages/nelmio_security.yaml	logic
+bolt-security-hardening	validator/user.yaml	config/validator/user.yaml	logic
+bolt-security-hardening	config_snippet.yaml	config/bolt/config.yaml	snippet
+bolt-security-hardening	permissions_snippet.yaml	config/bolt/permissions.yaml	snippet
+bolt-security-hardening	env	.env	snippet
+bolt-security-hardening	routes_snippet.yaml	config/routes.yaml	snippet
+bolt-security-hardening	docker/nginx_security.conf	docker/nginx/conf.d/default.conf	snippet
+bolt-security-hardening	docker/php_security.ini	docker/php/conf.d/bolt.prod.ini	snippet
 bolt-tailwind-theme	index.css	{theme}/css/tailwind/index.css	design
 bolt-tailwind-theme	fonts_snippet.css	{theme}/css/tailwind/index.css	snippet
 bolt-theme-init	_master.twig	{theme}/partials/_master.twig	design

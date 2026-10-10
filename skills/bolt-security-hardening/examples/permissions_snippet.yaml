@@ -1,0 +1,16 @@
+# config/bolt/permissions.yaml — changes (bolt-security-hardening). Merge into the existing file.
+
+# Roles an administrator may hand out in the user editor. ROLE_DEVELOPER can impersonate any user
+# (switch_user) and ROLE_WEBSERVICE writes through the API; neither is needed by editors. Existing
+# accounts keep their roles ("roles not in this list are left as is").
+assignable_roles: [ ROLE_ADMIN, ROLE_CHIEF_EDITOR, ROLE_EDITOR, ROLE_USER ]
+
+global:
+  # The admin's file editor for config/ and the theme: saving a Twig template is running code on
+  # the server, so one stolen admin password would become full control of the site. Configuration
+  # and templates are deployed with the code (SFTP / git); nobody edits them in the browser.
+  managefiles:config: []
+  managefiles:themes: []
+  list_files:config: []
+  list_files:themes: []
+  # Unchanged: managefiles:files and list_files:files stay [ ROLE_EDITOR ] (the media library).

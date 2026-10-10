@@ -9,13 +9,11 @@
 # Responses from Symfony, such as /llms.txt, set their own charset.
 AddDefaultCharset UTF-8
 
-# Theme sources sit in the public folder but are never needed by browsers: Twig templates and
-# theme.yaml are read by PHP from disk, and the build tooling (package.json, tsconfig.json, rollup /
-# postcss configs, TypeScript sources, docs) only produces the built CSS/JS. The same goes for
-# Photoshop sources (.psd) and macOS folder metadata (.DS_Store, which lists file names). Never
-# serve them.
+# Safety net for the folders outside the allowlist below (the public root, assets/, bundles/):
+# sources, configuration, dumps and backups are never served, wherever they end up. The theme,
+# uploads and thumbnails are protected more strictly by the allowlist in the mod_rewrite block.
 <IfModule mod_authz_core.c>
-    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd)|^\.DS_Store|^(package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
+    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd|ini|sql|sqlite3?|bak|old|orig|swp|log|sh|dist)|^\.DS_Store|^(composer|package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
         Require all denied
     </FilesMatch>
     # Environment files (.env, .env.local, …) must never be served, wherever they end up.
@@ -24,7 +22,7 @@ AddDefaultCharset UTF-8
     </FilesMatch>
 </IfModule>
 <IfModule !mod_authz_core.c>
-    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd)|^\.DS_Store|^(package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
+    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd|ini|sql|sqlite3?|bak|old|orig|swp|log|sh|dist)|^\.DS_Store|^(composer|package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
         Order allow,deny
         Deny from all
     </FilesMatch>
@@ -32,6 +30,34 @@ AddDefaultCharset UTF-8
         Order allow,deny
         Deny from all
     </FilesMatch>
+</IfModule>
+
+# Security headers (bolt-htaccess + bolt-security-hardening). Pages rendered by Symfony get their
+# headers from nelmio_security (config/packages/nelmio_security.yaml); these lines cover the files
+# Apache serves directly (CSS, JS, images, uploads) and add what nelmio does not send.
+<IfModule mod_headers.c>
+    # HTTPS only from now on. Browsers ignore the header on plain HTTP, so sending it always is safe.
+    # Add "; includeSubDomains" only when every subdomain has a certificate.
+    Header always set Strict-Transport-Security "max-age=31536000"
+
+    # Do not advertise the PHP version.
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+
+    # Files Apache serves itself get the basics nelmio_security sends with every page. (PHP
+    # responses are left alone, otherwise the headers would be sent twice.) The conditions test the
+    # file on disk: after the root .htaccess rewrite, the request URI starts with /public/.
+    <If "%{REQUEST_FILENAME} !~ m#\.php$#">
+        Header always set X-Content-Type-Options "nosniff"
+        Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    </If>
+
+    # Uploads and thumbnails never run scripts — not even an HTML or SVG file opened directly
+    # (the sandbox gives it no origin and no scripts). PDFs are left out: Chrome refuses to show a
+    # PDF under a sandbox policy.
+    <If "%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# && %{REQUEST_FILENAME} !~ m#\.pdf$#i">
+        Header always set Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
+    </If>
 </IfModule>
 
 # Static file caching — the ONE mod_expires block of this file (bolt-htaccess + bolt-asset-caching).
@@ -78,6 +104,20 @@ AddDefaultCharset UTF-8
     # Theme build folders: node_modules/ (created by npm inside public/theme/<theme>/) exposes
     # every dependency's sources and versions; .git/ exposes the repository. Deny both.
     RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
+
+    # Allowlist: in the folders that mix public files with sources or uploads, only known static
+    # files are served and everything else is 403 — a forgotten file type stays private.
+    # theme/<theme>/: the built assets in css/, js/, img/, images/ and fonts/. Templates, theme.yaml,
+    # package.json, build configs, TypeScript sources and anything at the theme root are denied.
+    RewriteCond $0 !^theme/[^/]+/(css|js|img|images|fonts)/([^/]+/)*[^/]+\.(css|js|avif|gif|ico|jpe?g|png|svg|webp|woff2?|ttf|otf|webmanifest|xml|pdf|mp4|webm)$ [NC]
+    RewriteRule ^theme/.* - [F,L]
+
+    # files/ (uploads) and thumbs/ (thumbnails): only the file types an upload may have — the
+    # accept_file_types / accept_media_types lists of bolt-security-hardening, plus svg for SVGs
+    # uploaded earlier (served under the sandbox policy above). A missing thumbnail still reaches
+    # Bolt below, which generates it.
+    RewriteCond $0 !\.(avif|gif|ico|jpe?g|png|svg|tiff?|webp|pdf|txt|docx?|xlsx?|pptx?|epub|zip|tgz|mp3|ogg|wav|m4a|mp4|m4v|ogv|webm|wmv|avi)$ [NC]
+    RewriteRule ^(files|thumbs)/.* - [F,L]
 
     # Determine the RewriteBase automatically and set it as environment variable.
     # If you are using Apache aliases to do mass virtual hosting or installed the

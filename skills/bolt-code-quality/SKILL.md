@@ -15,7 +15,7 @@ Maintaining strict code standards and static analysis is essential for stable Bo
 1. **Easy Coding Standard (ECS)** via `ecs.php`: Enforces PSR-12, clean code, `declare(strict_types=1)`, import ordering, and custom fixer rules.
 2. **PHPStan Level 8** via `phpstan.dist.neon`: Rigorous type checking on `src/` with Symfony and Doctrine extension support.
 3. **Task Automation** via `Makefile`: Standard developer targets (`cscheck`, `csfix`, `stancheck`, `csclear`), development database workflows (`db-update`, `db-reset`) and the production migration target (`db-migrate`).
-4. **Automated CI/CD** via `.gitlab-ci.yml`: Matrix testing across PHP 8.2–8.5 with Composer caching and Twig, XLIFF, and YAML syntax validation.
+4. **Automated CI/CD** via `.gitlab-ci.yml`: Matrix testing across PHP 8.2–8.5 with Composer caching, Twig, XLIFF, and YAML syntax validation, and `composer audit` / `npm audit` for known vulnerabilities (`make audit` locally).
 
 ---
 
@@ -206,7 +206,7 @@ parameters:
 Create or update the project's `Makefile`:
 
 ```makefile
-.PHONY: help install install_prod start stop server cache csclear cscheck csfix stancheck db-update db-reset db-migrate
+.PHONY: help install install_prod start stop server cache csclear cscheck csfix stancheck audit db-update db-reset db-migrate
 .DEFAULT_GOAL := help
 
 help:
@@ -249,6 +249,10 @@ csfix: ## to fix coding style
 
 stancheck: ## to run phpstan
 	composer phpstan
+
+audit: ## to check PHP and npm dependencies for known vulnerabilities (bolt-security-hardening)
+	composer audit --locked
+	cd public/theme/<theme_name> && npm audit --omit=dev
 
 # DEVELOPMENT ONLY: `--complete` drops tables Doctrine does not map (e.g. tables created by other
 # tools), and `migrations:version --add --all` marks every migration as executed WITHOUT running
@@ -346,6 +350,22 @@ yaml:
     PHP_VERSION: "8.3"
   script:
     - php bin/console lint:yaml config --parse-tags
+
+# Known vulnerabilities in the locked PHP packages (bolt-security-hardening, Step 8). Also add a
+# weekly pipeline schedule (Build → Pipeline schedules) so new advisories show up without a commit.
+composer-audit:
+  extends: .lint
+  variables:
+    PHP_VERSION: "8.3"
+  script:
+    - composer audit --locked
+
+# Known vulnerabilities in the theme's runtime npm packages (dev tooling is not shipped).
+npm-audit:
+  stage: lint
+  image: node:22-alpine
+  script:
+    - cd public/theme/<theme_name> && npm audit --omit=dev --audit-level=high
 ```
 
 ---

@@ -1,0 +1,43 @@
+# config/bolt/config.yaml — security-relevant keys (bolt-security-hardening). Merge into the
+# existing file; keys not listed here stay as they are.
+
+# Do not advertise Bolt: no "X-Powered-By: Bolt" header, no <meta name="generator">.
+headers:
+  allow_floc: false
+  powered_by: false
+omit_meta_generator_tag: true
+
+# Listing pages filter by any field of the ContentType through the query string
+# (/entries?title--like=a). That reveals fields the templates never show, one guess at a time,
+# and runs LIKE queries on demand. Keep it off unless a listing page filters through query
+# parameters (Bolt's /search page does not need it).
+query_search:
+  enable: false
+  ignore_empty: true
+
+# Sanitised HTML (every redactor / article field, see bolt-contenttypes rule 7). <iframe> is left
+# out: its src is not filtered, so an editor could embed any page, including javascript: URLs.
+# Video and maps go through partials/_consent-embed.twig (bolt-cookie-consent) instead.
+htmlcleaner:
+  allowed_tags: [ div, span, p, br, hr, s, u, strong, em, i, b, li, ul, ol, mark, blockquote, cite, pre, code, tt, h1, h2, h3, h4, h5, h6, dd, dl, dt, table, tbody, thead, tfoot, th, td, tr, a, img, address, abbr, caption, sub, sup, figure, figcaption, article, section, small ]
+  allowed_attributes: [ id, class, style, name, value, href, src, alt, title, width, height, target, colspan, rowspan, rel, download, hreflang ]
+  allowed_frame_targets: [ _blank, _self, _parent, _top ]
+
+# Upload whitelist. Uploads are served from the site's own origin, so .html, .js and .svg could
+# run scripts there (stored XSS); .twig, .yaml, .css and .scss have no business in public/files/.
+# Bolt's stock list contains twig, html, js, css, scss and svg — never use it.
+# Keep public/.htaccess (bolt-htaccess allowlist for files/ and thumbs/) in line with these lists.
+accept_file_types: [ gif, jpg, jpeg, png, webp, avif, ico, zip, tgz, txt, doc, docx, pdf, epub, xls, xlsx, ppt, pptx, mp3, ogg, wav, m4a, mp4, m4v, ogv, wmv, avi, webm ]
+# No svg: the Redactor and Article upload buttons accept media types without cleaning SVGs.
+accept_media_types: [ gif, jpg, jpeg, png, pdf, mp3, tiff, avif, webp ]
+
+# TLS certificates are checked when Bolt fetches embeds (oEmbed). Bolt's sample config sets false.
+curl_options:
+  verify_peer: true
+
+reset_password_settings:
+  # true tells the visitor that a reset was already requested — i.e. that the e-mail address has
+  # an account (user enumeration).
+  show_already_requested_password_notice: false
+  # Send from the site's own domain (SPF/DKIM); a leftover address from another project fails.
+  mail_from: "no-reply@example.cz"

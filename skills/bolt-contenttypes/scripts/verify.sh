@@ -125,6 +125,28 @@ function validateFields(\$fields, \$prefix, \$isLocalized, &\$errors, &\$warning
             }
         }
 
+        // Rule: rich text is sanitised on output (Bolt only defaults sanitise for text, textarea, html, markdown)
+        if (in_array(\$type, ['redactor', 'article'], true) && (\$fieldDef['sanitise'] ?? false) !== true) {
+            \$errors[] = sprintf(
+                \"[UNSANITISED RICH TEXT] '%s' (type: %s) lacks 'sanitise: true'. Redactor and Article render their HTML unescaped, so an editor can store scripts that run for every visitor (stored XSS). Add 'sanitise: true' (rule 7).\",
+                \$path,
+                \$type
+            );
+        } elseif (array_key_exists('sanitise', \$fieldDef) && \$fieldDef['sanitise'] === false) {
+            \$errors[] = sprintf(
+                \"[SANITISE DISABLED] '%s' sets 'sanitise: false' — its HTML is output without cleaning (stored XSS). Remove the line (rule 7).\",
+                \$path
+            );
+        }
+
+        // Rule: never render field content as a Twig template
+        if (!empty(\$fieldDef['allow_twig'])) {
+            \$errors[] = sprintf(
+                \"[ALLOW_TWIG] '%s' sets 'allow_twig: true' — its content runs as a server-side Twig template, so an editor account becomes control of the site. Remove it (rule 7).\",
+                \$path
+            );
+        }
+
         // Rule: Slug field must specify 'uses'
         if (\$type === 'slug' && empty(\$fieldDef['uses'])) {
             \$errors[] = sprintf(

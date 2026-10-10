@@ -29,16 +29,18 @@ echo "=========================================================="
 
 FAILED=0
 WARNINGS=0
+ROOT_HTACCESS=".htaccess"
+PUBLIC_HTACCESS="public/.htaccess"
 
 # -------------------------------------------------------------
 # 1. Check Root .htaccess (Tier 1: HTTPS & public/ rewrite)
 # -------------------------------------------------------------
-echo -n "[1/4] Checking root .htaccess... "
-ROOT_HTACCESS=".htaccess"
+echo -n "[1/6] Checking root .htaccess... "
 
 if [ ! -f "$ROOT_HTACCESS" ]; then
     echo "FAILED"
     echo "  Error: Root .htaccess file does not exist at $BASE_DIR/.htaccess"
+    echo "  (Not needed when the vhost's document root is public/ — then skip this skill's root check.)"
     FAILED=1
 else
     HAS_REWRITE_ENGINE=$(grep -i -E "^\s*RewriteEngine\s+on" "$ROOT_HTACCESS" || true)
@@ -67,8 +69,7 @@ fi
 # -------------------------------------------------------------
 # 2. Check public/.htaccess (Tier 2: Charset & Front Controller)
 # -------------------------------------------------------------
-echo -n "[2/4] Checking public/.htaccess basic directives... "
-PUBLIC_HTACCESS="public/.htaccess"
+echo -n "[2/6] Checking public/.htaccess basic directives... "
 
 if [ ! -f "$PUBLIC_HTACCESS" ]; then
     echo "FAILED"
@@ -89,9 +90,85 @@ else
 fi
 
 # -------------------------------------------------------------
-# 3. Check Source Code Lockdown (FilesMatch rule)
+# 3. Allowlist for theme/, files/ and thumbs/
 # -------------------------------------------------------------
-echo -n "[3/4] Checking source file access restrictions in public/.htaccess... "
+echo "[3/6] Checking the allowlist for theme/, files/ and thumbs/..."
+
+# check_samples REGEX EXPECT SAMPLES... — EXPECT "allow" (must match) or "deny" (must not match).
+check_samples() {
+    local regex="$1" expect="$2" errors=0
+    shift 2
+    for sample in "$@"; do
+        if echo "$sample" | grep -qiE "$regex"; then
+            if [ "$expect" = "deny" ]; then
+                echo "    ✗ '$sample' would be SERVED (expected 403)"
+                errors=$((errors + 1))
+            fi
+        elif [ "$expect" = "allow" ]; then
+            echo "    ✗ '$sample' would be DENIED (expected to be served)"
+            errors=$((errors + 1))
+        fi
+    done
+    return $errors
+}
+
+if [ -f "$PUBLIC_HTACCESS" ]; then
+    THEME_COND=$(grep -E 'RewriteCond[[:space:]]+\$0[[:space:]]+!\^theme/' "$PUBLIC_HTACCESS" | head -n 1 || true)
+    UPLOAD_COND=$(grep -E 'RewriteCond[[:space:]]+\$0[[:space:]]+!\\\.' "$PUBLIC_HTACCESS" | head -n 1 || true)
+    HAS_THEME_RULE=$(grep -E 'RewriteRule[[:space:]]+\^theme/' "$PUBLIC_HTACCESS" || true)
+    HAS_UPLOAD_RULE=$(grep -E 'RewriteRule[[:space:]]+\^\(files\|thumbs\)/' "$PUBLIC_HTACCESS" || true)
+
+    if [ -n "$THEME_COND" ] && [ -n "$HAS_THEME_RULE" ]; then
+        THEME_REGEX=$(echo "$THEME_COND" | sed -E 's/.*RewriteCond[[:space:]]+\$0[[:space:]]+!//; s/[[:space:]]+\[[A-Z,]+\][[:space:]]*$//')
+        ERRORS=0
+        check_samples "$THEME_REGEX" allow \
+            "theme/acme/css/index.css" "theme/acme/js/app.js" "theme/acme/img/logo.svg" \
+            "theme/acme/img/hero.webp" "theme/acme/css/fonts/inter/inter-latin.woff2" "theme/acme/img/favicon.ico" || ERRORS=$?
+        check_samples "$THEME_REGEX" deny \
+            "theme/acme/theme.yaml" "theme/acme/index.twig" "theme/acme/partials/_master.twig" \
+            "theme/acme/package.json" "theme/acme/rollup.config.js" "theme/acme/js/src/index.ts" \
+            "theme/acme/css/tailwind/index.scss" "theme/acme/img/snippet.twig" "theme/acme/js/config.yaml" \
+            "theme/acme/favicon.ico" "theme/acme/README.md" || ERRORS=$((ERRORS + $?))
+        if [ $ERRORS -gt 0 ]; then
+            echo "  Error: the theme allowlist does not separate built assets from sources ($ERRORS sample(s))."
+            FAILED=1
+        else
+            echo "  ✓ theme/: only built assets in css/, js/, img/, images/, fonts/ are served"
+        fi
+    else
+        echo "  WARNING: no allowlist for theme/ — only the deny list protects theme sources, and any"
+        echo "           file type it does not name is served. Add Step 2 of SKILL.md (examples/public.htaccess)."
+        WARNINGS=$((WARNINGS + 1))
+    fi
+
+    if [ -n "$UPLOAD_COND" ] && [ -n "$HAS_UPLOAD_RULE" ]; then
+        UPLOAD_REGEX=$(echo "$UPLOAD_COND" | sed -E 's/.*RewriteCond[[:space:]]+\$0[[:space:]]+!//; s/[[:space:]]+\[[A-Z,]+\][[:space:]]*$//')
+        ERRORS=0
+        check_samples "$UPLOAD_REGEX" allow \
+            "files/2024/05/photo.jpg" "files/documents/price-list.PDF" "files/brochure.docx" \
+            "thumbs/320x240/photo.webp" "files/video/intro.mp4" || ERRORS=$?
+        check_samples "$UPLOAD_REGEX" deny \
+            "files/evil.html" "files/page.htm" "files/shell.php" "files/shell.phtml" \
+            "files/payload.js" "files/dump.sql" "thumbs/320x240/evil.html" || ERRORS=$((ERRORS + $?))
+        if [ $ERRORS -gt 0 ]; then
+            echo "  Error: the files/ / thumbs/ allowlist lets dangerous types through or blocks uploads ($ERRORS sample(s))."
+            FAILED=1
+        else
+            echo "  ✓ files/ and thumbs/: only accepted upload types are served (.html, .php, .js, .sql denied)"
+        fi
+    else
+        echo "  WARNING: no allowlist for files/ and thumbs/ — an .html, .svg or .php file that gets into"
+        echo "           public/files/ is served from the site's origin. Add Step 2 of SKILL.md."
+        WARNINGS=$((WARNINGS + 1))
+    fi
+else
+    echo "  SKIPPED (public/.htaccess missing)"
+fi
+
+# -------------------------------------------------------------
+# 4. Safety-net deny list (FilesMatch)
+# -------------------------------------------------------------
+echo -n "[4/6] Checking the deny list for the rest of public/... "
 if [ -f "$PUBLIC_HTACCESS" ]; then
     HAS_AUTHZ=$(grep -E "<IfModule mod_authz_core\.c>" "$PUBLIC_HTACCESS" || true)
     HAS_DENY=$(grep -E "Require all denied" "$PUBLIC_HTACCESS" || true)
@@ -101,7 +178,6 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
         echo "PASSED"
         echo "  Configured pattern: $FILESMATCH_LINE"
 
-        # Regex validation against sample sensitive files
         echo "  Validating pattern against protected source files:"
         SAMPLE_BLOCKED=(
             "theme.yaml"
@@ -118,8 +194,16 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
             ".DS_Store"
             "composer.lock"
         )
+        # Recommended by the current template; reported as warnings so older deny lists still pass.
+        SAMPLE_RECOMMENDED=(
+            "composer.json"
+            "dump.sql"
+            "bolt.sqlite"
+            "backup.bak"
+            ".user.ini"
+            "error.log"
+        )
 
-        # Extract regex from FilesMatch
         REGEX_PATTERN=$(echo "$FILESMATCH_LINE" | sed -E 's/.*<FilesMatch "([^"]+)".*/\1/')
 
         MATCH_ERRORS=0
@@ -131,8 +215,15 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
                 MATCH_ERRORS=$((MATCH_ERRORS + 1))
             fi
         done
+        MISSING_RECOMMENDED=()
+        for sample in "${SAMPLE_RECOMMENDED[@]}"; do
+            echo "$sample" | grep -q -E "$REGEX_PATTERN" || MISSING_RECOMMENDED+=("$sample")
+        done
+        if [ ${#MISSING_RECOMMENDED[@]} -gt 0 ]; then
+            echo "  WARNING: the deny list does not cover ${MISSING_RECOMMENDED[*]} — use the pattern of examples/public.htaccess (dumps, backups, logs)."
+            WARNINGS=$((WARNINGS + 1))
+        fi
 
-        # Safety check: ensure normal web assets are NOT blocked (no false positives)
         echo "  Checking for false positives on public web assets:"
         SAMPLE_ALLOWED=(
             "theme.css"
@@ -173,14 +264,9 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
         [ -z "$FILESMATCH_LINE" ] && echo "  - Missing <FilesMatch> directive"
         FAILED=1
     fi
-else
-    echo "SKIPPED (public/.htaccess missing)"
-    FAILED=1
-fi
 
-# Folders and env files: FilesMatch only sees file names, so node_modules/ and .git/ need a
-# RewriteRule; .env* files need their own FilesMatch.
-if [ -f "$PUBLIC_HTACCESS" ]; then
+    # Folders and env files: FilesMatch only sees file names, so node_modules/ and .git/ need a
+    # RewriteRule; .env* files need their own FilesMatch.
     if ! grep -qE "RewriteRule.*node_modules" "$PUBLIC_HTACCESS"; then
         echo "  WARNING: public/.htaccess does not deny node_modules/ (add: RewriteRule (^|/)(node_modules|\\.git)(/|\$) - [F,L])"
         WARNINGS=$((WARNINGS + 1))
@@ -189,17 +275,48 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
         echo "  WARNING: public/.htaccess does not deny .env* files (add: <FilesMatch \"^\\.env\"> Require all denied </FilesMatch>)"
         WARNINGS=$((WARNINGS + 1))
     fi
+else
+    echo "SKIPPED (public/.htaccess missing)"
+    FAILED=1
 fi
 
 # -------------------------------------------------------------
-# 4. Live HTTP Endpoint Test (Optional if server is running)
+# 5. Security headers for static files
+# -------------------------------------------------------------
+echo -n "[5/6] Checking security headers for static files... "
+if [ -f "$PUBLIC_HTACCESS" ]; then
+    MISSING_HEADERS=()
+    grep -qE "Header[[:space:]]+always[[:space:]]+set[[:space:]]+Strict-Transport-Security" "$PUBLIC_HTACCESS" || MISSING_HEADERS+=("Strict-Transport-Security")
+    grep -qE "Header[[:space:]]+(always[[:space:]]+)?unset[[:space:]]+X-Powered-By" "$PUBLIC_HTACCESS" || MISSING_HEADERS+=("unset X-Powered-By")
+    grep -qE "X-Content-Type-Options" "$PUBLIC_HTACCESS" || MISSING_HEADERS+=("X-Content-Type-Options nosniff")
+    grep -qE "Content-Security-Policy.*sandbox" "$PUBLIC_HTACCESS" || MISSING_HEADERS+=("sandbox policy for files/ and thumbs/")
+    if [ ${#MISSING_HEADERS[@]} -eq 0 ]; then
+        echo "PASSED (HSTS, X-Powered-By removed, nosniff, sandboxed uploads)"
+        if grep -qE "<If \"%\{REQUEST_URI\} =~ m#\^/\(files" "$PUBLIC_HTACCESS"; then
+            echo "  WARNING: the upload sandbox tests REQUEST_URI — after the root .htaccess rewrite it starts with /public/"
+            echo "           and never matches. Test %{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# (SKILL.md Step 4)."
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    else
+        echo "WARNING"
+        for missing in "${MISSING_HEADERS[@]}"; do
+            echo "  - Missing: $missing (SKILL.md Step 4)"
+        done
+        WARNINGS=$((WARNINGS + 1))
+    fi
+else
+    echo "SKIPPED (public/.htaccess missing)"
+fi
+
+# -------------------------------------------------------------
+# 6. Live HTTP Endpoint Test (Optional if server is running)
 # -------------------------------------------------------------
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
-echo -n "[4/4] Checking live HTTP responses against $BASE_URL... "
-if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
+BASE_URL="${BASE_URL%/}"
+echo -n "[6/6] Checking live HTTP responses against $BASE_URL... "
+if curl -s -k --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
     echo "SERVER ONLINE"
 
-    # Find active theme name if available
     THEME_NAME=$(grep -E "^\s*theme:" config/bolt/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
     [ -z "$THEME_NAME" ] && THEME_NAME="default"
 
@@ -207,10 +324,11 @@ if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
         "/theme/$THEME_NAME/theme.yaml"
         "/theme/$THEME_NAME/package.json"
         "/theme/$THEME_NAME/index.twig"
+        "/files/bolt-htaccess-probe.html"
     )
 
     for p in "${TEST_PATHS[@]}"; do
-        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL$p" || true)
+        STATUS=$(curl -s -k -o /dev/null -w "%{http_code}" "$BASE_URL$p" || true)
         if [ "$STATUS" = "403" ] || [ "$STATUS" = "404" ]; then
             echo "  $p -> HTTP $STATUS (SAFE / PROTECTED)"
         else
@@ -218,6 +336,22 @@ if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
             WARNINGS=$((WARNINGS + 1))
         fi
     done
+
+    # A built asset must still be served — with the static-file headers.
+    if [ -f "public/theme/$THEME_NAME/css/index.css" ]; then
+        HEADERS=$(curl -s -k -D - -o /dev/null "$BASE_URL/theme/$THEME_NAME/css/index.css" || true)
+        STATUS=$(echo "$HEADERS" | head -n 1 | awk '{print $2}')
+        if [ "$STATUS" = "200" ]; then
+            echo "  /theme/$THEME_NAME/css/index.css -> HTTP 200 (built asset served)"
+            echo "$HEADERS" | grep -qi "^x-content-type-options: *nosniff" || {
+                echo "  WARNING: static files are served without 'X-Content-Type-Options: nosniff' (Step 4; is mod_headers on?)"
+                WARNINGS=$((WARNINGS + 1))
+            }
+        else
+            echo "  WARNING: /theme/$THEME_NAME/css/index.css -> HTTP $STATUS — the allowlist blocks the built stylesheet."
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    fi
 else
     echo "SKIPPED (Local server not running on $BASE_URL)"
 fi

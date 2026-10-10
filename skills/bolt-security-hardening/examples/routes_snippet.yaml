@@ -1,0 +1,6 @@
+# config/routes.yaml — add at the top, above the Bolt route imports (bolt-security-hardening,
+# Step 6b). Content-Security-Policy violation reports, written to var/log/prod.log.
+csp_report:
+    path: /csp-report
+    methods: [ POST ]
+    defaults: { _controller: nelmio_security.csp_reporter_controller::indexAction }

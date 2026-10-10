@@ -1,4 +1,4 @@
-.PHONY: help install install_prod start stop server cache csclear cscheck csfix stancheck db-update db-reset db-migrate
+.PHONY: help install install_prod start stop server cache csclear cscheck csfix stancheck audit db-update db-reset db-migrate
 .DEFAULT_GOAL := help
 
 help:
@@ -41,6 +41,10 @@ csfix: ## to fix coding style
 
 stancheck: ## to run phpstan
 	composer phpstan
+
+audit: ## to check PHP and npm dependencies for known vulnerabilities (bolt-security-hardening)
+	composer audit --locked
+	cd public/theme/<theme_name> && npm audit --omit=dev
 
 # DEVELOPMENT ONLY: `--complete` drops tables Doctrine does not map (e.g. tables created by other
 # tools), and `migrations:version --add --all` marks every migration as executed WITHOUT running

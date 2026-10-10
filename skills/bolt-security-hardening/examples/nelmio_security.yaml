@@ -1,0 +1,79 @@
+# config/packages/nelmio_security.yaml (bolt-security-hardening)
+#
+# Security headers of every response Symfony renders (pages, the admin, error pages). Files Apache
+# serves directly get theirs from public/.htaccess (bolt-htaccess). NelmioSecurityBundle ships with
+# bolt/project; this file replaces the stock one.
+
+nelmio_security:
+  # Nobody may frame the site or the admin (clickjacking).
+  clickjacking:
+    paths:
+      '^/.*': DENY
+
+  content_type:
+    nosniff: true
+
+  referrer_policy:
+    enabled: true
+    policies:
+      - 'strict-origin-when-cross-origin'
+
+  # Browser features the site never uses. Embedded YouTube / map iframes keep working; a map's
+  # "show my location" button does not.
+  permissions_policy:
+    enabled: true
+    policies:
+      camera: []
+      microphone: []
+      geolocation: []
+      payment: []
+      usb: []
+
+  # The stock file's xss_protection is removed on purpose: the X-XSS-Protection header is
+  # deprecated (nelmio 3.4+) and browsers ignore it. Do not add forced_ssl either — behind a TLS
+  # proxy it redirects in a loop; HTTPS and HSTS are handled by .htaccess.
+
+  csp:
+    enabled: true
+    # Only the standard header (no X-Content-Security-Policy for Internet Explorer).
+    compat_headers: false
+    hosts: []
+    content_types: []
+
+    # Baseline, enforced everywhere. It does not restrict scripts, styles or images, so neither the
+    # theme nor the Bolt admin can break — but it blocks plugins, <base> hijacking, forms posting to
+    # foreign sites, framing, and loads mixed content over HTTPS.
+    # A form that posts to an external service (newsletter, payment) needs that host in form-action.
+    enforce:
+      level1_fallback: false
+      object-src: [ 'none' ]
+      base-uri: [ 'self' ]
+      form-action: [ 'self' ]
+      frame-ancestors: [ 'none' ]
+      upgrade-insecure-requests: true
+
+    # Optional strict policy (SKILL.md Step 6b). Uncomment to collect violations in
+    # var/log/prod.log first (Report-Only changes nothing for visitors); move it to `enforce` only
+    # when the log stays clean. Needs the csp_report route (examples/routes_snippet.yaml).
+    # report:
+    #   level1_fallback: false
+    #   report-uri: [ '/csp-report' ]
+    #   default-src: [ 'self' ]
+    #   script-src: [ 'self' ]
+    #   style-src: [ 'self', 'unsafe-inline' ]
+    #   img-src: [ 'self', 'data:' ]
+    #   font-src: [ 'self' ]
+    #   connect-src: [ 'self' ]
+    #   frame-src: [ 'self' ]
+    #   object-src: [ 'none' ]
+    #   base-uri: [ 'self' ]
+    #   form-action: [ 'self' ]
+    #   frame-ancestors: [ 'none' ]
+    #
+    # report_endpoint:
+    #   # fingers_crossed in Bolt's prod monolog config writes only from level error upwards.
+    #   log_level: error
+    #   filters:
+    #     # The domain filter drops reports about www.googletagmanager.com and other tracker
+    #     # hosts (browser extensions inject them) — exactly the hosts a site with GA4 must see.
+    #     domains: false

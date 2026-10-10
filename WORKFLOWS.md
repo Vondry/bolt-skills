@@ -1,6 +1,6 @@
 # Bolt CMS End-to-End Website Build Workflow
 
-This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 15 skills in this repository.
+This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 16 skills in this repository.
 
 The phases are ordered by real dependencies: every step only needs what earlier steps produced. Each phase ends with a **gate** (verifications that must pass, then a commit). Steps marked **[if …]** depend on the answers recorded in the Phase 0 site plan.
 
@@ -14,7 +14,7 @@ The phases are ordered by real dependencies: every step only needs what earlier 
   # SKILLS=/path/to/bolt-skills/skills             # when using a checkout of this repository instead
   ```
 - **Verify scripts.** Run a skill's verification with `bash $SKILLS/<skill>/scripts/verify.sh`. The scripts locate the project root from the current directory.
-- **Live HTTP checks.** `bolt-disable-api` and `bolt-htaccess` request URLs from a running site. They use `BOLT_BASE_URL` (default `http://127.0.0.1:8000`), so point it at **this** project before running them, otherwise they test whatever else is listening on that port. (`bolt-asset-caching` finds a Symfony CLI server for the project on its own.)
+- **Live HTTP checks.** `bolt-disable-api`, `bolt-htaccess` and `bolt-security-hardening` request URLs from a running site. They use `BOLT_BASE_URL` (default `http://127.0.0.1:8000`), so point it at **this** project before running them, otherwise they test whatever else is listening on that port. (`bolt-asset-caching` finds a Symfony CLI server for the project on its own.)
   ```bash
   export BOLT_BASE_URL=http://localhost:8080
   ```
@@ -50,12 +50,14 @@ flowchart TD
         S12["bolt-add-language — step 1:<br/>locale + app_locales"]
         S13["bolt-disable-api"]
         S14["bolt-code-quality — setup"]
+        S15["bolt-security-hardening — env, framework,<br/>login, Bolt config, permissions"]
     end
     P1 -.-> D1
 
     subgraph D2 ["Phase 2"]
-        S21["bolt-htaccess [Apache]"]
+        S21["bolt-htaccess [Apache] — allowlist & headers"]
         S22["bolt-asset-caching — server layers"]
+        S23["bolt-security-hardening — headers & CSP"]
     end
     P2 -.-> D2
 
@@ -95,6 +97,7 @@ flowchart TD
         S71["Seed singleton & initial records"]
         S72["Translations & SEO per locale"]
         S73["npm run prod + assets_version"]
+        S74["Deployment (bolt-security-hardening)"]
     end
     P7 -.-> D7
 
@@ -275,6 +278,9 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 - Locales: default cs; secondary en, de            (or: cs only)
 - Timezone: Europe/Prague
 - Hosting: Apache, document root = project root    (or: Apache vhost on public/ | Nginx in Docker)
+- Deployment: SFTP upload                          (or: git pull on the server | CI)
+- Production domains (SYMFONY_TRUSTED_HOSTS): ^(www\.)?example\.cz$ ; staging: …
+- Admin access: open                               (or: IP allowlist <ip> | HTTP basic auth)
 - Local URL (BOLT_BASE_URL): http://localhost:8080
 - Menu profile: landing | catalog | conditional
 - ContentTypes: name — singleton? routable? fields
@@ -303,6 +309,8 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 | **More than one business on the website?** | Ask `bolt-cookie-consent`'s two controller-model questions (joint / separate / hybrid) — never guess the model | Controller model `single` |
 | **Apache?** | `bolt-htaccess` (2.1); root `.htaccess` only when the domain's document root is the project root | Nginx: use the Nginx block of `bolt-asset-caching` (2.2); run `verify-all.sh --skip=bolt-htaccess` |
 | **Docker?** | `bolt-timezone` INI and compose layers (1.1); Nginx block (2.2) if the container uses Nginx | `bolt-timezone` config and Kernel layers only |
+| **Deployed by uploading files (SFTP / FTP)?** | Committed `.env` holds production-safe defaults, secrets only in the server's `.env.local`, excluded upload paths, `var/cache/prod/` deleted after each upload (`bolt-security-hardening` Steps 1, 7) | Same `.env` rules; the deploy script runs `cache:clear` |
+| **Editors other than the site's own staff?** | Keep SVG and iframes out (`bolt-security-hardening` Step 4) and consider the strict CSP (Step 6b) | Same defaults — they cost nothing |
 | **External consumers of the REST/GraphQL API?** | Lock down permissions instead of removing routes (1.3); run `verify-all.sh --skip=bolt-disable-api` and test the endpoints manually | Fully disable the API (default) |
 
 ### Checkpoint 0
@@ -313,7 +321,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 
 ## Phase 1: Environment & Security Baseline
 
-**Goal:** the project boots with correct time handling, known locales, no public API and code-quality tooling in place.
+**Goal:** the project boots with correct time handling, known locales, no public API, hardened security configuration and code-quality tooling in place.
 
 **Prerequisites:**
 - A Bolt 6.1 project that boots: `composer create-project bolt/project <dir>`, SQLite from Bolt's default `.env` (set `DATABASE_URL` in `.env.local` only for another database), `php bin/console bolt:setup --no-fixtures` (no sample content), local server reachable at the URL recorded as `BOLT_BASE_URL`.
@@ -343,8 +351,15 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 - `make cscheck` must pass on the stock project.
 - *Verify:* `bash $SKILLS/bolt-code-quality/scripts/verify.sh`
 
+### 1.5 Application Security Baseline (`bolt-security-hardening`, Steps 1–5)
+- **`.env`:** production-safe defaults (`APP_ENV=prod`, `APP_DEBUG=0`, empty `APP_SECRET`, `SYMFONY_TRUSTED_HOSTS` from the site plan); the local `.env.local` gets `APP_ENV=dev`, the `APP_SECRET` that `bolt:setup` wrote into `.env` (move it — never commit it) and an empty `SYMFONY_TRUSTED_HOSTS`.
+- Copy `config/packages/security_hardening.yaml` and `config/validator/user.yaml`; `login_throttling` (5 / 15 minutes) in `security.yaml`; `bolt.remember_lifetime: 604800`.
+- Merge the security keys into `config/bolt/config.yaml` (upload whitelist, HTML cleaner without `iframe`, `query_search` off, no version disclosure, `verify_peer: true`, reset-password notice off) and `config/bolt/permissions.yaml` (file editor for config / themes off, `ROLE_DEVELOPER` not assignable).
+- `php bin/console lint:yaml config --parse-tags && php bin/console cache:clear`
+- *Verify:* `bash $SKILLS/bolt-security-hardening/scripts/verify.sh` — the file sections pass now; the live section is repeated in Phase 8.
+
 ### Gate 1
-Verifications 1.1, 1.3 (configuration part) and 1.4 pass. Commit.
+Verifications 1.1, 1.3 (configuration part), 1.4 and 1.5 (file sections) pass. Commit.
 
 ---
 
@@ -353,21 +368,27 @@ Verifications 1.1, 1.3 (configuration part) and 1.4 pass. Commit.
 **Goal:** the web server serves only what it should and caches static files and thumbnails correctly.
 
 ### 2.1 Apache `.htaccess` Shielding (`bolt-htaccess`) **[if Apache]**
-- `public/.htaccess`: `AddDefaultCharset UTF-8`, the source-file `FilesMatch` deny block (extended per the skill's Step 3 for the project's stack), the Symfony front-controller rules.
+- `public/.htaccess` from the skill's template: `AddDefaultCharset UTF-8`, the allowlist for `theme/`, `files/` and `thumbs/` (only built assets and accepted upload types are served), the safety-net `FilesMatch` deny list, the security headers for static files (HSTS, nosniff, sandboxed uploads), the Symfony front-controller rules.
 - Root `/.htaccess` with the HTTPS redirect and the rewrite into `public/` **only** when the domain's document root is the project root.
 - The templates redirect plain HTTP both with and without a TLS proxy (`%{HTTPS} off` + `X-Forwarded-Proto !https`) and deny `node_modules/`, `.git/` and `.env*` in addition to the source-file patterns.
 - *Verify:* `bash $SKILLS/bolt-htaccess/scripts/verify.sh` (the live part is repeated in Phase 8, once the theme exists).
 
 ### 2.2 Asset & Thumbnail Caching (`bolt-asset-caching`, Steps 1–4)
 - Add `thumbs` to the `dev` firewall pattern in `config/packages/security.yaml`.
-- Set `thumbnails.save_files: true` in `config/bolt/config.yaml`. Keep `accept_file_types` restrictive (no `html`, `js`, `twig`, `yaml`, `css`, `scss`; `svg` only for trusted editors).
+- Set `thumbnails.save_files: true` in `config/bolt/config.yaml` (the upload whitelist was set in 1.5).
 - **[if Apache]** add the `mod_expires` rules to the **same** `<IfModule mod_expires.c>` block created in 2.1 — one block, not two.
 - **[if Nginx]** add the `/thumbs` location and the static-asset `expires` block to `docker/nginx/conf.d/default.conf`.
 - Step 5 (cache-busting `?v=`) is implemented by the master layout from 4.1 (`?v={{ theme.assets_version }}`).
 - *Verify:* `bash $SKILLS/bolt-asset-caching/scripts/verify.sh`
 
+### 2.3 Security Headers and CSP (`bolt-security-hardening`, Step 6)
+- Replace `config/packages/nelmio_security.yaml` with the skill's example: clickjacking `DENY`, nosniff, one referrer policy, `Permissions-Policy`, the enforced baseline CSP, no deprecated `xss_protection`, no `forced_ssl`.
+- **[if a form posts to an external service]** add its host to `form-action`.
+- The strict CSP (Step 6b) is optional: start it as Report-Only after the trackers are wired (6.5), enforce later.
+- **[if Docker / Nginx]** `examples/docker/nginx_security.conf` and `php_security.ini` (Step 9).
+
 ### Gate 2
-Verifications 2.1 and 2.2 pass. Commit.
+Verifications 2.1 and 2.2 pass; `bolt-security-hardening` reports the baseline CSP (2.3). Commit.
 
 ---
 
@@ -446,7 +467,7 @@ Verifications 3.1 (partial) and 3.2 pass, `make cscheck` passes. Commit.
 - Model `config/bolt/contenttypes.yaml` from the site plan:
   - reusable `__nodes` (`common_fields`, `seo_field`, `image_field`) merged with `<<: [ *common_fields, *seo_field ]`;
   - singletons with `order: -id`; viewless settings singletons and `blocks` with `default_status: published` and `searchable: false`;
-  - `redactor` for rich text, `article` for long-form content, `collection` + `set` for repeating structures — no `html`, no `repeater`;
+  - `redactor` for rich text, `article` for long-form content, `collection` + `set` for repeating structures — no `html`, no `repeater`; every `redactor` / `article` field with `sanitise: true`, no `allow_twig` (rule 7);
   - `locales:` equal to `app_locales` on every localized ContentType; every `required` content field also `localize: true`;
   - `record_template` / `listing_template` pointing at `pages/<name>/…` per the contract;
   - number fields use `type: number` (Bolt has no `integer` type).
@@ -553,6 +574,13 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - Bump `assets_version` in `theme.yaml`.
 - `php bin/console cache:clear && APP_ENV=prod php bin/console cache:clear`
 
+### 7.5 Production Deployment (`bolt-security-hardening`, Step 7)
+- **[SFTP]** Exclude `.env.local`, `var/`, `public/files/`, `public/thumbs/`, `.git/`, `node_modules/` (also inside the theme), `.idea/`, `tests/` in the SFTP client; create the server's `.env.local` once (`APP_SECRET`, other secrets) — never upload the local one.
+- Point the domain at `public/` if the host allows it; otherwise the root `.htaccess` (2.1) forwards.
+- Upload `vendor/` built with `make install_prod` (`composer install --no-dev --optimize-autoloader`), restore dev tools locally with `composer install`.
+- After every upload delete `var/cache/prod/` on the server; run `make db-migrate` where SSH exists.
+- `make audit` (`composer audit`, `npm audit --omit=dev`) before the upload.
+
 ### Gate 7
 Commit.
 
@@ -569,6 +597,7 @@ php bin/console lint:twig public/theme/<theme>
 php bin/console lint:yaml config --parse-tags
 php bin/console lint:xliff translations
 php bin/console lint:container
+make audit                                           # composer audit + npm audit --omit=dev (bolt-security-hardening)
 ```
 
 ### 8.2 Master Verification
@@ -594,6 +623,11 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `/api/docs.html`, `/api/contents`, `POST /api/graphql` | 401, 403 or 404 |
 | `/thumbs/320x240/<image from public/files>` | `Cache-Control: public`, never `private, max-age=0` |
 | `http://<domain>/` on staging | 301 to `https://` |
+| `/` with header `Host: evil.invalid` | 400 |
+| `/_profiler`, `/_fragment` | 404 |
+| `/.env`, `/composer.json`, `/var/data/bolt.sqlite`, `/files/anything.html` | 403 or 404 |
+| `curl -sI /` | `X-Frame-Options: DENY`, `Content-Security-Policy`, `Strict-Transport-Security` (https), no `X-Powered-By` |
+| `curl -sI /files/<image>` | `Content-Security-Policy: … sandbox`, `X-Content-Type-Options: nosniff` |
 
 ### 8.4 Manual Checks
 - Mobile drawer: opens, closes on Escape, backdrop and link click; focus stays inside while open. Dropdowns open with click and ArrowDown, close with Escape.
@@ -606,6 +640,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 
 ### 8.5 Definition of Done
 - `verify-all.sh`: zero FAIL; warnings fixed or justified in the site plan.
+- `bolt-security-hardening/scripts/verify.sh` with `BOLT_BASE_URL` pointing at **production** after the first deployment: zero FAIL (the live section is the only check of the server's `.env.local`).
 - `make cscheck` and all linters from 8.1 pass.
 - Every row of the smoke-check table matches.
 - `bolt-theme-templates/scripts/verify.sh` reports no undefined classes (check [7/8]).
@@ -628,6 +663,10 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `/zasady-ochrany-osobnich-udaju` returns 404 | Route missing or below the `frontend:` import in `config/routes.yaml` (6.5 / 5.3) |
 | Publish dates shift after saving in the admin | Kernel timezone override missing or different from `config.yaml` (1.1) |
 | Thumbnails sent with `private, max-age=0` | `thumbs` missing from the `dev` firewall pattern (2.2) |
+| Production answers 500, `A non-empty secret is required` in `var/log/prod.log` | The server's `.env.local` has no `APP_SECRET` — intended fail-safe of 1.5 / 7.5 |
+| Production answers 400 for the real domain | The domain is missing from `SYMFONY_TRUSTED_HOSTS` (1.5) |
+| A theme image, font or favicon answers 403 | It lives outside `css/`, `js/`, `img/`, `images/`, `fonts/` or has a type the `bolt-htaccess` allowlist does not list — move it (2.1) |
+| Everyone is locked out after a few failed logins | A proxy in front of the site is not in `SYMFONY_TRUSTED_PROXIES`; all visitors share its IP (1.5) |
 | `bolt-add-language` fails in `verify-all.sh` | A secondary locale is missing from ContentTypes, menu labels or catalogs; run `bash $SKILLS/bolt-add-language/scripts/verify.sh <code>` for details |
 | A verification fails in an early phase about files a later phase creates | Expected; see Appendix A for when it should pass |
 | Any skill failed in `verify-all.sh` | Run `verify-all.sh --verbose`, or the individual `$SKILLS/<skill>/scripts/verify.sh`, for the exact checks and remediation |
@@ -644,6 +683,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `bolt-code-quality` | 1.4 (setup) | 1.4, 3.2, 8.1, 8.2 | every site |
 | `bolt-htaccess` | 2.1 | 2.1, 8.2 | Apache |
 | `bolt-asset-caching` | 2.2 (Steps 1–4), 4.1 (Step 5 through the master layout, `assets_version` in 4.2 / 7.4) | 2.2, 8.2 | every site |
+| `bolt-security-hardening` | 1.5 (Steps 1–5), 2.3 (Step 6), 7.5 (Step 7), 8.1 (`make audit`) | 1.5 (file sections), 8.2 and against production (live section) | every site |
 | `bolt-extension-setup` | 3.1 (Part A), 5.2, 6.2 (Part B) | 6.2, 8.2 | every site |
 | `bolt-runtime-extensions` | 3.2 | 3.2, 8.2 | `LocaleLinkExtension` everywhere; the others per features |
 | `bolt-theme-init` | 4.1, 4.2, 4.5 | Gate 4, 8.2 | every site |
@@ -661,7 +701,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 The skills implement the Integration Contract; these points still need judgement or manual checks:
 
 1. **Raw HTML in page orchestrators** is not checked automatically — review `pages/` against the "zero / minimal raw HTML" rule (6.1).
-2. **Live HTTP checks need the real web server.** `bolt-htaccess` rules are not applied by PHP's built-in server or `symfony serve`; run its live check (8.3) against Apache (staging), with `BOLT_BASE_URL` pointing there.
+2. **Live HTTP checks need the real web server.** `bolt-htaccess` rules are not applied by PHP's built-in server or `symfony serve`; run its live check (8.3) against Apache (staging), with `BOLT_BASE_URL` pointing there. The server's `.env.local` cannot be read from the repository — only `bolt-security-hardening`'s live section against production confirms `APP_ENV=prod`, the secret and the trusted hosts there.
 3. **`bolt-disable-api` verification accepts only the full disable.** With the lock-down variant (API consumers), skip it in `verify-all.sh` and test the endpoints manually (8.3).
 4. **`bolt-add-language` checks are text searches** (codes in `services.yaml`, `contenttypes.yaml`, `menu.yaml`, the switcher). Also confirm in the browser that every `/<code>/…` page renders translated text.
 5. **Helper pages are single-locale** until bolt/core#3726 is available: error pages render in the default locale.

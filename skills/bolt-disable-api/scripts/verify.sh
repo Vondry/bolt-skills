@@ -66,6 +66,11 @@ else
     FAILED=1
 fi
 
+# CORS headers belong to the API only; Bolt's stock nelmio_cors applies them to every path.
+if [ -f config/packages/nelmio_cors.yaml ] && grep -qE "^[[:space:]]+'\^/':" config/packages/nelmio_cors.yaml; then
+    echo "  WARNING: config/packages/nelmio_cors.yaml applies CORS to every path ('^/') — limit it to '^/api/' (Step 5)."
+fi
+
 # 4. Check HTTP Endpoints if server is reachable
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
 echo -n "[4/4] Checking HTTP endpoints against $BASE_URL... "

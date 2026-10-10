@@ -18,7 +18,7 @@ Bolt CMS bundles API Platform (`api-platform/core` v4) and Webonyx GraphQL (`web
 - The GraphQL endpoint is active at `/api/graphql`.
 - Core entities (`Content`, `Field`, `Relation`) grant read permissions (`api:get`) to `PUBLIC_ACCESS`.
 
-To completely shut down the API and documentation without breaking Bolt's backend admin panel, changes must be applied across four layers.
+To completely shut down the API and documentation without breaking Bolt's backend admin panel, changes must be applied across four layers; Step 5 also limits CORS to the API.
 
 ---
 
@@ -128,7 +128,30 @@ security:
 
 ---
 
-### 5. Validate YAML & Clear Caches
+### 5. Limit CORS to the API
+File: `config/packages/nelmio_cors.yaml`
+
+Bolt's stock configuration applies the CORS defaults to every path (`'^/': ~`). Nothing but the API needs cross-origin access, so limit it — with the API removed, the rule simply never matches:
+
+```yaml
+# config/packages/nelmio_cors.yaml
+nelmio_cors:
+  defaults:
+    origin_regex: true
+    allow_origin: [ '%env(CORS_ALLOW_ORIGIN)%' ]
+    allow_methods: [ 'GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE' ]
+    allow_headers: [ 'Content-Type', 'Authorization' ]
+    expose_headers: [ 'Link' ]
+    max_age: 3600
+  paths:
+    '^/api/': ~
+```
+
+Keep `CORS_ALLOW_ORIGIN` at its localhost default unless a real consumer on another origin exists (the lock-down variant); never `*`.
+
+---
+
+### 6. Validate YAML & Clear Caches
 
 Always validate YAML configs and clear Symfony caches:
 

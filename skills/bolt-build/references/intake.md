@@ -26,10 +26,12 @@ phase and skill consume it.
 | E4 | How the site runs locally and its URL (`BOLT_BASE_URL`) | `symfony serve` → `https://127.0.0.1:8000` · Docker · Valet / other | all live checks |
 | E5 | Production web server and document root | Apache, vhost on `public/` · Apache, document root = project root · Nginx | 2.1 `bolt-htaccess`, 2.2 `bolt-asset-caching` |
 | E6 | Docker in production or development? | no · yes (PHP INI, compose, Nginx container) | 1.1 `bolt-timezone`, 2.2 |
-| E7 | Production domain and staging URL (if any) | — | 8.3 smoke checks, SEO, `llms.txt` |
+| E7 | Production domain and staging URL (if any) | — | 1.5 `SYMFONY_TRUSTED_HOSTS`, 8.3 smoke checks, SEO, `llms.txt` |
 | E8 | Theme folder name | slug of the site name | 4.1 `bolt-theme-init` |
 | E9 | CI platform | GitLab (skill default) · GitHub Actions (adapt the job) · none | 1.4 `bolt-code-quality` |
 | E10 | Git: commit after every gate? Remote to push to? | commit locally after each gate, no push | all gates |
+| E11 | How is the site deployed? | upload over SFTP · git pull on the server · CI | 1.5, 7.5 `bolt-security-hardening` (fail-safe `.env`, excluded paths, cache) |
+| E12 | Restrict the admin (`/bolt`)? | open (login throttling + password policy) · IP allowlist (give the IPs) · HTTP basic auth | `bolt-security-hardening` Step 9 |
 
 ## Round 2 — Structure and content (confirm the design proposal)
 

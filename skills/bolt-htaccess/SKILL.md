@@ -4,9 +4,11 @@ description: >-
   Use this skill whenever creating, configuring, or hardening Apache .htaccess
   files in a Bolt CMS repository. Implements the production two-tier .htaccess
   architecture: root-level HTTPS redirection and ./public directory forwarding
-  for web hosts, plus public/.htaccess source code shielding (blocking .twig,
-  .yaml, .neon, .lock, .ts, .md, .psd, .DS_Store, package.json, tsconfig.json,
-  and build configs) to prevent public data and source code leakage.
+  for web hosts, plus public/.htaccess protection — an allowlist for theme/,
+  files/ and thumbs/ (only built assets and accepted upload types are served,
+  everything else is 403), a safety-net deny list for sources, configs, dumps
+  and .env files elsewhere in public/, and security headers for static files
+  (HSTS, nosniff, sandboxed uploads).
 ---
 
 # Bolt CMS Apache `.htaccess` Configuration & Source Code Hardening
@@ -15,7 +17,9 @@ In Bolt CMS deployments running on Apache (such as shared hosting, VPS setups, o
 
 This skill documents the production-tested two-tier `.htaccess` architecture established across active Bolt CMS installations:
 1. **Root `/.htaccess`**: Enforces HTTPS and transparently routes all requests into the `./public/` document root.
-2. **Public `/public/.htaccess`**: Hardens Symfony's front controller rewrite rules, enforces UTF-8 character encoding, and blocks public HTTP access to theme templates, configuration files, TypeScript sources, build tooling, design assets, `node_modules/`, `.git/` and `.env*` files.
+2. **Public `/public/.htaccess`**: Hardens Symfony's front controller rewrite rules, enforces UTF-8 character encoding, serves only known static files from the theme, upload and thumbnail folders (allowlist), denies sources, configuration, dumps and `.env*` files everywhere else, and sends security headers with the files Apache serves itself.
+
+Pages rendered by Symfony get their security headers from `nelmio_security`; that configuration, secrets and the rest of the application hardening are in [`bolt-security-hardening`](../bolt-security-hardening/SKILL.md).
 
 ---
 
@@ -26,17 +30,21 @@ Project Root (/)
 ├── .htaccess                       # Tier 1: HTTPS redirect & rewrite traffic into public/
 ├── .env, composer.json, src/, ...  # Protected behind project root (never exposed)
 └── public/                         # Web Document Root
-    ├── .htaccess                   # Tier 2: Front controller + source code lockdown
+    ├── .htaccess                   # Tier 2: front controller, allowlist, deny list, headers
     ├── index.php                   # Front controller entrypoint
-    ├── assets/                     # Compiled public assets (CSS, JS, fonts)
-    ├── files/                      # Uploaded media (images, PDFs)
-    └── theme/<theme_name>/         # Theme directory (contains templates & source files!)
-        ├── theme.yaml              # 🛑 MUST NOT BE ACCESSIBLE OVER HTTP
-        ├── index.twig              # 🛑 MUST NOT BE ACCESSIBLE OVER HTTP
-        ├── package.json            # 🛑 MUST NOT BE ACCESSIBLE OVER HTTP
-        ├── tsconfig.json           # 🛑 MUST NOT BE ACCESSIBLE OVER HTTP
-        ├── rollup.config.js        # 🛑 MUST NOT BE ACCESSIBLE OVER HTTP
-        └── src/app.ts              # 🛑 MUST NOT BE ACCESSIBLE OVER HTTP
+    ├── assets/                     # Bolt admin assets (deny list applies)
+    ├── files/                      # Uploads — allowlist: accepted upload types only, sandboxed
+    ├── thumbs/                     # Thumbnails — allowlist: same types; missing ones go to Bolt
+    └── theme/<theme_name>/         # Theme — allowlist: only css/, js/, img/, images/, fonts/
+        ├── css/index.css           # ✅ served
+        ├── js/app.js               # ✅ served
+        ├── img/logo.svg            # ✅ served
+        ├── js/src/app.ts           # 🛑 403 (not a static file type)
+        ├── theme.yaml              # 🛑 403 (outside the public folders)
+        ├── index.twig              # 🛑 403
+        ├── package.json            # 🛑 403
+        ├── rollup.config.js        # 🛑 403
+        └── node_modules/           # 🛑 403
 ```
 
 ---
@@ -44,29 +52,24 @@ Project Root (/)
 ## The Core Problems Solved
 
 ### Problem 1: Unpointed DocumentRoot (Root Directory Exposure)
-Many shared hosting providers (e.g. Wedos, Český hosting, Active24, cPanel) default the domain's document root to the project root directory rather than `./public/`. 
+Many shared hosting providers (e.g. Wedos, Český hosting, Active24, cPanel) default the domain's document root to the project root directory rather than `./public/`.
 
 Without a root `/.htaccess`:
 - Visitors must type `example.com/public/` to reach the website.
 - Sensitive root files (`.env`, `composer.json`, `composer.lock`, `src/`, `config/bolt/`, `var/`) could be browsed and downloaded over plain HTTP if Apache directory indexing or direct file access is allowed.
 
 ### Problem 2: Bolt Theme Source Code Leakage (`public/theme/`)
-In Bolt CMS, theme assets and templates reside under `public/theme/<themename>/`. Modern frontend workflows bundle development files alongside the theme:
-- Twig templates (`.twig`)
-- Theme configurations (`theme.yaml`, `.neon`)
-- Build dependencies and manifests (`package.json`, `package-lock.json`, `tsconfig.json`)
-- Source code (`.ts`, `.scss`) and bundler configs (`rollup.config.js`, `postcss.config.mjs`, `vite.config.*`)
-- Documentation (`README.md`, `.md`) and design files (`.psd`)
-- macOS filesystem metadata (`.DS_Store`)
+In Bolt CMS, theme assets and templates reside under `public/theme/<themename>/`. Modern frontend workflows bundle development files alongside the theme: Twig templates, `theme.yaml`, `package.json`, `tsconfig.json`, TypeScript and SCSS sources, bundler configs, `node_modules/`, docs, design files and `.DS_Store`.
 
-By default, Symfony's `public/.htaccess` rule (`RewriteCond %{REQUEST_FILENAME} !-f`) tells Apache: **if a requested file exists on disk, serve it directly**.
+By default, Symfony's `public/.htaccess` rule (`RewriteCond %{REQUEST_FILENAME} !-f`) tells Apache: **if a requested file exists on disk, serve it directly** — `https://example.com/theme/<themename>/theme.yaml` and `…/package.json` download for anyone.
 
-Without an explicit deny rule, any browser or web crawler can request:
-`https://example.com/theme/<themename>/theme.yaml`
-`https://example.com/theme/<themename>/index.twig`
-`https://example.com/theme/<themename>/package.json`
+### Problem 3: Scripts in Uploads (`public/files/`)
+Uploads are served from the site's own origin. An `.html` or `.svg` file uploaded by an editor (or placed there over SFTP) runs its scripts as the site when opened directly — next to a logged-in administrator's session (stored XSS).
 
-This exposes private template logic, database structure clues, internal paths, and third-party dependency lists.
+### Why an allowlist, not only a deny list
+A deny list leaks every file type nobody thought of (`.scss`, `.vue`, `.bak`, a new bundler's config). In the folders that mix public files with sources or uploads, the allowlist serves only what browsers need and answers 403 for everything else, so a forgotten type stays private.
+
+**Performance:** neither approach costs anything measurable. Apache compiles each pattern once and tests it against a short path in microseconds; re-reading the `.htaccess` files on every request costs more, and a PHP page takes tens of milliseconds. A missing theme asset even gets cheaper: Apache answers 403 itself instead of booting Bolt for a 404 page.
 
 ---
 
@@ -74,7 +77,7 @@ This exposes private template logic, database structure clues, internal paths, a
 
 ### Step 1: Create or Update Root `.htaccess`
 
-Create `/.htaccess` at the root of the project (alongside `composer.json` and `config/`):
+Create `/.htaccess` at the root of the project (alongside `composer.json` and `config/`) — only when the domain's document root is the project root. If the host lets you point the domain at `public/`, do that instead and skip this file:
 
 ```apache
 # /.htaccess
@@ -91,7 +94,7 @@ RewriteRule (.*) public/$1 [QSA,L]
 ```
 
 #### Directive Breakdown:
-- `RewriteEngine on`: Initializes the Apache rewrite engine.
+- `RewriteEngine on`: Initializes the Apache rewrite engine. Without `mod_rewrite` the file causes an error 500 for every request — the site fails closed instead of exposing the project root.
 - `RewriteCond %{HTTPS} off`: Apache itself did not receive the request over TLS (plain HTTP on a direct connection — or any request behind a proxy that terminates TLS).
 - `RewriteCond %{HTTP:X-Forwarded-Proto} !https`: No reverse proxy, load balancer or Cloudflare reported that the visitor used HTTPS. A missing header also matches, so direct HTTP requests are redirected.
 - The two conditions are combined with AND: redirect only when neither Apache nor a proxy saw HTTPS. Do **not** use `^http$` for the header condition — without a proxy the header is absent, the condition never matches, and plain HTTP is never redirected.
@@ -100,24 +103,44 @@ RewriteRule (.*) public/$1 [QSA,L]
 
 ---
 
-### Step 2: Update `public/.htaccess` with Source Protection
+### Step 2: Allowlist for `theme/`, `files/` and `thumbs/`
 
-Open `public/.htaccess`. Directly below `AddDefaultCharset UTF-8` (and above `mod_rewrite.c`), add the access restriction block:
+In `public/.htaccess`, inside `<IfModule mod_rewrite.c>` directly after `RewriteEngine On` and the `node_modules` / `.git` rule — before Symfony's front-controller rules:
 
 ```apache
-# public/.htaccess
+    # Theme build folders: node_modules/ and .git/ are never served.
+    RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
 
-# Static text files served directly by Apache (e.g. robots.txt) are UTF-8.
-# Responses from Symfony, such as /llms.txt, set their own charset.
-AddDefaultCharset UTF-8
+    # theme/<theme>/: the built assets in css/, js/, img/, images/ and fonts/. Templates, theme.yaml,
+    # package.json, build configs, TypeScript sources and anything at the theme root are denied.
+    RewriteCond $0 !^theme/[^/]+/(css|js|img|images|fonts)/([^/]+/)*[^/]+\.(css|js|avif|gif|ico|jpe?g|png|svg|webp|woff2?|ttf|otf|webmanifest|xml|pdf|mp4|webm)$ [NC]
+    RewriteRule ^theme/.* - [F,L]
 
-# Theme sources sit in the public folder but are never needed by browsers: Twig templates and
-# theme.yaml are read by PHP from disk, and the build tooling (package.json, tsconfig.json, rollup /
-# postcss configs, TypeScript sources, docs) only produces the built CSS/JS. The same goes for
-# Photoshop sources (.psd) and macOS folder metadata (.DS_Store, which lists file names). Never
-# serve them.
+    # files/ (uploads) and thumbs/ (thumbnails): only the file types an upload may have.
+    RewriteCond $0 !\.(avif|gif|ico|jpe?g|png|svg|tiff?|webp|pdf|txt|docx?|xlsx?|pptx?|epub|zip|tgz|mp3|ogg|wav|m4a|mp4|m4v|ogv|webm|wmv|avi)$ [NC]
+    RewriteRule ^(files|thumbs)/.* - [F,L]
+```
+
+| Folder | Served | Everything else |
+| :--- | :--- | :--- |
+| `theme/<theme>/` | files in `css/`, `js/`, `img/`, `images/`, `fonts/` (any depth) with a static type: styles, scripts, images, fonts, `webmanifest`, `xml` (browserconfig), `pdf`, `mp4`, `webm` | 403 — templates, `theme.yaml`, `package.json`, `*.config.js`, `js/src/*.ts`, the theme root, `node_modules/` |
+| `files/` | the upload types of `accept_file_types` / `accept_media_types` (`bolt-security-hardening`) plus `svg` for SVGs uploaded earlier | 403 — `.html`, `.php`, `.js`, `.sql`, … even if they get there over SFTP |
+| `thumbs/` | the same types; a thumbnail that does not exist yet passes on to Bolt, which generates it | 403 |
+
+* **How it works:** `$0` is the path relative to `public/` (`theme/acme/css/index.css`). The `RewriteCond` lets allowlisted paths through to the normal rules; every other path under the folder is answered with `[F]` (403).
+* **Theme folders:** the convention of `bolt-theme-init` puts browser files in `css/`, `js/` and `img/`. A theme that keeps public files elsewhere (a favicon at the theme root, `dist/`) — move them, or add the folder to the list.
+* **Upload types:** keep the `files/` list in line with `accept_file_types` in `config/bolt/config.yaml`. A type the site accepts but this list lacks uploads fine and then answers 403.
+* `css/tailwind/index.css` (the Tailwind source) stays reachable: it is CSS, contains nothing private, and the allowlist works by folder and type, not by file.
+
+---
+
+### Step 3: Safety Net for the Rest of `public/`
+
+The public root, `assets/` and `bundles/` are not covered by the allowlist. Directly below `AddDefaultCharset UTF-8` add the deny list — it also protects the theme a second time:
+
+```apache
 <IfModule mod_authz_core.c>
-    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd)|^\.DS_Store|^(package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
+    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd|ini|sql|sqlite3?|bak|old|orig|swp|log|sh|dist)|^\.DS_Store|^(composer|package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
         Require all denied
     </FilesMatch>
     # Environment files (.env, .env.local, …) must never be served, wherever they end up.
@@ -125,83 +148,66 @@ AddDefaultCharset UTF-8
         Require all denied
     </FilesMatch>
 </IfModule>
-<IfModule !mod_authz_core.c>
-    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd)|^\.DS_Store|^(package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
-        Order allow,deny
-        Deny from all
-    </FilesMatch>
-    <FilesMatch "^\.env">
-        Order allow,deny
-        Deny from all
-    </FilesMatch>
-</IfModule>
-
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # Theme build folders: node_modules/ (created by npm inside public/theme/<theme>/) exposes
-    # every dependency's sources and versions; .git/ exposes the repository. Deny both.
-    RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
-
-    # … Symfony front-controller rules follow (see the full template) …
-</IfModule>
 ```
 
-#### What is blocked and why:
-| Pattern | Matched Files | Why It Must Be Denied |
-| :--- | :--- | :--- |
-| `\.twig` | `index.twig`, `record.twig`, `_header.twig` | Twig templates are read by PHP from disk. Exposing them reveals markup structure and data contracts. |
-| `\.ya?ml` | `theme.yaml`, `config.yaml` | Theme configuration files reveal content bindings and internal settings. |
-| `\.neon` | `phpstan.neon`, Nette configs | Linter/static analysis configurations. |
-| `\.lock` | `composer.lock`, `package-lock.json` | Lockfiles list exact library versions and hashes, enabling vulnerability profiling. |
-| `\.ts` | `app.ts`, `menu.ts`, `gallery.ts` | TypeScript sources. Browsers only need the compiled JavaScript in `assets/`. |
-| `\.md` | `README.md`, `CHANGELOG.md` | Repository documentation, author notes, and internal instructions. |
-| `\.psd` | `banner.psd`, `logo.psd` | Proprietary Photoshop design files mistakenly left in media or theme folders. |
-| `^\.DS_Store` | `.DS_Store` | macOS directory metadata files. Downloadable `.DS_Store` files expose directory listings. |
-| `^(package\|package-lock\|tsconfig)\.json` | `package.json`, `tsconfig.json` | Node package manifests and TypeScript configuration files. |
-| `\.config\.[cm]?js` | `rollup.config.js`, `postcss.config.mjs`, `vite.config.cjs`, `tailwind.config.js` | Frontend build tooling configurations. |
-| `^\.env` (separate `FilesMatch`) | `.env`, `.env.local`, `.env.prod.local` | Secrets (database credentials, `APP_SECRET`, API keys) if an env file is ever copied into `public/`. |
-| `RewriteRule (^\|/)(node_modules\|\.git)(/\|$) - [F]` | `theme/<theme>/node_modules/…`, `.git/config` | `npm install` creates `node_modules/` inside the public theme folder; it exposes every dependency's sources and versions. `.git/` exposes the whole repository history. `FilesMatch` matches file names only, so folders need a rewrite rule. |
+(The full template repeats both blocks with `Order allow,deny` / `Deny from all` for Apache 2.2.)
 
-> [!NOTE]
-> `<IfModule mod_authz_core.c>` is the modern Apache 2.4+ authorization standard (`Require all denied`). The `<IfModule !mod_authz_core.c>` fallback (`Deny from all`) ensures full protection on legacy Apache 2.2 hosts.
+| Pattern | Matched files |
+| :--- | :--- |
+| `twig`, `ya?ml`, `neon`, `md` | Templates, configuration, docs copied into `public/` |
+| `lock`, `^(composer\|package\|package-lock\|tsconfig)\.json`, `\.config\.[cm]?js`, `ts` | Dependency manifests and build tooling |
+| `sql`, `sqlite3?`, `bak`, `old`, `orig`, `swp`, `log`, `sh`, `dist` | Database dumps, backups, editor leftovers, logs, scripts |
+| `ini` | `.user.ini` (per-directory PHP settings on PHP-FPM hosts) |
+| `psd`, `^\.DS_Store` | Design sources, macOS folder metadata (lists file names) |
+| `^\.env` | `.env`, `.env.local`, `.env.prod.local` |
 
 ---
 
-### Step 3: Project-Specific Customization Guidelines
+### Step 4: Security Headers for Static Files
 
-The baseline regex is designed to be easily tailored to each project's frontend stack and directory layout. Review the project's `public/theme/` and `public/` directories to add any relevant extensions:
+Pages rendered by Symfony get `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` and CSP from `nelmio_security` (`bolt-security-hardening`, Step 6). Files Apache serves itself get none of them — add this block after the deny list:
 
-#### A. SCSS / Sass / Less Sources
-If the theme writes styles in preprocessor formats rather than compiling to CSS externally:
 ```apache
-<FilesMatch "(\.(twig|ya?ml|neon|lock|ts|scss|sass|less|md|psd)|^\.DS_Store|^(package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
+<IfModule mod_headers.c>
+    # HTTPS only from now on. Browsers ignore the header on plain HTTP, so sending it always is safe.
+    # Add "; includeSubDomains" only when every subdomain has a certificate.
+    Header always set Strict-Transport-Security "max-age=31536000"
+
+    # Do not advertise the PHP version.
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+
+    # Files Apache serves itself get the basics nelmio_security sends with every page.
+    <If "%{REQUEST_FILENAME} !~ m#\.php$#">
+        Header always set X-Content-Type-Options "nosniff"
+        Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    </If>
+
+    # Uploads and thumbnails never run scripts — not even an HTML or SVG file opened directly.
+    # PDFs are left out: Chrome refuses to show a PDF under a sandbox policy.
+    <If "%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# && %{REQUEST_FILENAME} !~ m#\.pdf$#i">
+        Header always set Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
+    </If>
+</IfModule>
 ```
 
-#### B. Component Frameworks (Vue / Svelte / JSX)
-If using Vue, Svelte, or React/JSX components in theme development:
-```apache
-<FilesMatch "(\.(twig|ya?ml|neon|lock|ts|tsx|jsx|vue|svelte|md|psd)|^\.DS_Store|^(package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
-```
-
-#### C. Vite or Modern Bundlers
-If the project uses Vite (`vite.config.ts`), Biome (`biome.json`), or ESLint (`eslint.config.js`):
-- `\.config\.[cm]?js` already matches `vite.config.js` and `vite.config.mjs`.
-- `\.ts` already matches `vite.config.ts`.
-- To block `biome.json` or `.eslintrc.*`:
-```apache
-<FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd)|^\.DS_Store|^(package|package-lock|tsconfig|biome)\.json|\.config\.[cm]?js|^\.eslint.*)$">
-```
-
-#### D. Accidental Dumps, Scripts & Backups
-To protect against accidental database dumps, shell scripts, or editor backup files placed in `public/` or `public/files/`:
-```apache
-<FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd|sql|sh|bash|bak|swp|old)|^\.DS_Store|^(package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
-```
+* **HSTS** comes from Apache, not from nelmio's `forced_ssl` (which loops behind TLS proxies). Start with `max-age=31536000`; add `includeSubDomains` / `preload` only when every subdomain serves HTTPS.
+* **Sandboxed uploads:** with `sandbox`, an SVG or HTML file opened directly has no origin and cannot run scripts — it cannot touch the admin session even if a malicious file got into `files/`. Images embedded with `<img>` are unaffected.
+* **Why the conditions test `REQUEST_FILENAME`:** after the root `.htaccess` rewrite, Apache's `REQUEST_URI` is `/public/files/…`, so `^/files/` would never match; the file path on disk works with both document-root layouts. PHP responses (`index.php`) are skipped so their nelmio headers are not sent twice.
+* Needs `mod_headers` (enabled on practically every host); without it the block is skipped.
 
 ---
 
-### Step 4: Asset Caching & Expiration (`mod_expires.c`)
+### Step 5: Project-Specific Customization Guidelines
+
+- **More theme folders:** add the folder name to `(css|js|img|images|fonts)` in Step 2 (e.g. `dist`).
+- **More file types in the theme** (e.g. `json` for a web app manifest named `manifest.json`): add the extension to the theme allowlist — never `twig`, `yaml`, `ts` or `json` in general.
+- **More upload types:** add them to `accept_file_types` (`bolt-security-hardening`) and to the `files/` allowlist together. Never `html`, `htm`, `js`, `css`, `php`, `phtml`, `svgz`, `xml`.
+- **Another front-end stack** (SCSS, Vue, Svelte sources inside the theme): nothing to do — they are not in an allowlisted folder or not a static type.
+
+---
+
+### Step 6: Asset Caching & Expiration (`mod_expires.c`)
 
 In high-performance production projects, static media assets in `public/` are served with aggressive 2-month caching. This is the **only** `mod_expires` block of the file: `bolt-asset-caching` documents the same block (CSS/JS are safe to cache long because `partials/_master.twig` appends `?v={{ theme.assets_version }}`), so never add a second one:
 
@@ -236,18 +242,20 @@ In high-performance production projects, static media assets in `public/` are se
 
 ---
 
-### Step 5: Full Reference Template for `public/.htaccess`
+### Step 7: Full Reference Template for `public/.htaccess`
 
-The complete, production-verified `public/.htaccess` file combining UTF-8 charset, source protection, cache headers, and Symfony front controller rewrite rules is available at:
-[`examples/public.htaccess`](examples/public.htaccess).
+The complete, production-verified `public/.htaccess` file is available at
+[`examples/public.htaccess`](examples/public.htaccess). Tested with Apache 2.4 + PHP-FPM, with the
+document root on the project root (root `.htaccess`) and on `public/`.
 
 Key structural sections:
 1. `AddDefaultCharset UTF-8`
-2. `<FilesMatch ...>` Source shielding block
-3. `<IfModule mod_expires.c>` Asset caching headers
-4. `<IfModule mod_rewrite.c>` Symfony Front Controller routing:
-   - Base URI detection
-   - Authorization header propagation
+2. `<FilesMatch …>` safety-net deny list and `.env*` block (Step 3)
+3. `<IfModule mod_headers.c>` security headers (Step 4)
+4. `<IfModule mod_expires.c>` asset caching headers (Step 6)
+5. `<IfModule mod_rewrite.c>`:
+   - `node_modules/` and `.git/` denied, allowlist for `theme/`, `files/`, `thumbs/` (Step 2)
+   - Base URI detection, Authorization header propagation
    - Redirection of direct `/index.php` queries (prevents duplicate content)
    - Fallback rewrite of all missing files (`RewriteCond %{REQUEST_FILENAME} !-f`) to `%{ENV:BASE}/index.php [END]`
 
@@ -259,46 +267,36 @@ Key structural sections:
 Run the built-in verification script to test both `/.htaccess` and `public/.htaccess`:
 
 ```bash
-skills/bolt-htaccess/scripts/verify.sh
+BOLT_BASE_URL=https://staging.example.cz skills/bolt-htaccess/scripts/verify.sh
 ```
 
 The script performs:
 - **Root `.htaccess` Check:** Confirms `RewriteEngine on`, HTTPS redirect rules, and rewrite to `./public`.
-- **Public `.htaccess` Check:** Confirms `AddDefaultCharset UTF-8`, presence of the `<FilesMatch>` deny block, and front controller rules.
-- **HTTPS Redirect Check:** Warns when the root redirect uses the `X-Forwarded-Proto ^http$` condition (never redirects without a proxy).
-- **Folder & Env Shielding:** Warns when `node_modules`, `.git` or `.env` are not denied.
-- **Regex Rule Validation:** Tests standard blocked filenames (`theme.yaml`, `index.twig`, `package.json`, `app.ts`, `rollup.config.mjs`, `design.psd`, `.DS_Store`) against the configured pattern to verify they match.
-- **Allowlist Safety Validation:** Confirms that normal public assets (`theme.css`, `bundle.js`, `logo.svg`, `photo.webp`, `font.woff2`) are **NOT** blocked.
-- **Live HTTP Check (if server is running):** Executes curl requests against sample protected endpoints to assert `HTTP 403 Forbidden`.
+- **Public `.htaccess` Check:** Confirms `AddDefaultCharset UTF-8` and the front controller rules.
+- **Allowlist Check:** Tests sample paths against the theme and upload allowlists — built assets and accepted uploads pass, templates, configs, sources, the theme root and `.html` / `.php` uploads are denied.
+- **Safety-net Check:** Tests the `FilesMatch` deny list against sensitive file names, confirms no public asset type is blocked, and that `node_modules`, `.git` and `.env*` are denied.
+- **Security Headers Check:** HSTS, `X-Powered-By` removal, nosniff for static files, sandboxed uploads.
+- **Live HTTP Check (if `BOLT_BASE_URL` answers):** theme sources and a fake upload path answer 403 / 404, a built asset answers 200, the headers of a static file. Run it against Apache — PHP's built-in server and `symfony serve` ignore `.htaccess`.
 
 ### 2. Manual HTTP Testing
-If the site is running locally or on staging:
+If the site is running on staging (Apache):
 
 ```bash
-# Test 1: Theme config must return 403 Forbidden
+# Theme sources: 403
 curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/theme.yaml
-# Expected: 403
-
-# Test 2: Twig template must return 403 Forbidden
-curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/index.twig
-# Expected: 403
-
-# Test 3: package.json must return 403 Forbidden
 curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/package.json
-# Expected: 403
-
-# Test 4: Compiled assets must return 200 OK
-curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/css/theme.css
-# Expected: 200
-
-# Test 5: Plain HTTP request must return 301 Redirect to HTTPS
+curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/js/src/index.ts
+# Built assets: 200
+curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/css/index.css
+# Uploads of a forbidden type: 403, whether the file exists or not
+curl -s -o /dev/null -w "%{http_code}\n" https://example.com/files/anything.html
+# Headers of an upload: Content-Security-Policy … sandbox, X-Content-Type-Options: nosniff
+curl -sI https://example.com/files/<an uploaded image> | grep -iE "content-security|nosniff|strict-transport"
+# Plain HTTP: 301 to https://
 curl -s -o /dev/null -w "%{http_code}\n" http://example.com/
-# Expected: 301
-
-# Test 6: Dependency folders and env files must return 403
-curl -s -o /dev/null -w "%{http_code}\n" https://example.com/theme/mytheme/node_modules/photoswipe/package.json
+# Secrets and the project root: 403 / 404
 curl -s -o /dev/null -w "%{http_code}\n" https://example.com/.env
-# Expected: 403 (or 404 when the file does not exist)
+curl -s -o /dev/null -w "%{http_code}\n" https://example.com/var/data/bolt.sqlite
 ```
 
 ---
@@ -330,4 +328,16 @@ curl -s -o /dev/null -w "%{http_code}\n" https://example.com/.env
 ### Pitfall 4: `node_modules/` Inside the Public Theme
 - **Symptom:** `https://example.com/theme/<theme>/node_modules/photoswipe/package.json` is blocked, but every `.js` file of every dependency downloads.
 - **Cause:** `FilesMatch` matches file names, not folders; the theme's `npm install` writes `node_modules/` into `public/`.
-- **Fix:** The `RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]` rule above, and do not deploy `node_modules/` to production (build in CI or locally, upload the built `css/index.css` and `js/app.js`).
+- **Fix:** The `RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]` rule and the theme allowlist, and do not deploy `node_modules/` to production (build locally, upload the built `css/index.css` and `js/app.js`).
+
+### Pitfall 5: A Theme Image or Font Suddenly Answers 403
+- **Cause:** It lives outside `css/`, `js/`, `img/`, `images/`, `fonts/` (e.g. `theme/<theme>/favicon.ico`) or has a type the allowlist does not list.
+- **Fix:** Move the file into an allowlisted folder, or extend the folder / type list (Step 5). Never allow the whole theme.
+
+### Pitfall 6: Header Conditions on `REQUEST_URI` Never Match
+- **Cause:** After the root `.htaccess` forwards a request into `public/`, Apache processes it as `/public/files/…`; after the front-controller rewrite, as `/public/index.php`.
+- **Fix:** Test the file on disk — `%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/#` — as the template does.
+
+### Pitfall 7: Headers Sent Twice
+- **Cause:** `Header setifempty` does not see headers set by PHP-FPM, so nosniff and Referrer-Policy were added to pages that already had them from nelmio.
+- **Fix:** Limit those headers to non-PHP files (`<If "%{REQUEST_FILENAME} !~ m#\.php$#">`), as the template does.

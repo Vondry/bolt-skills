@@ -2,7 +2,7 @@
 name: bolt-audit
 description: >-
   Read-only audit of an existing Bolt CMS 6 project against every bolt-skills skill. Profiles the
-  project, runs all 15 verification scripts in workflow order, compares the project's files with
+  project, runs all 16 verification scripts in workflow order, compares the project's files with
   the skills' examples, then reviews each skill one by one (logs, SKILL.md rules, references) and
   writes a prioritized AUDIT.md report — defects vs. convention deviations, severity, evidence and
   the skill step that fixes each finding. Use when asked to audit, review, check or assess an
@@ -40,6 +40,7 @@ The skills are applied in [`WORKFLOWS.md`](../../WORKFLOWS.md) phase order; the 
 - Ask the user (one message):
   - the URL of a running instance of **this** project for live checks (local, staging; none is fine);
   - whether anything consumes the REST/GraphQL API;
+  - how the site is deployed (SFTP upload, git pull, CI) — it decides how `bolt-security-hardening` reads the committed `.env`;
   - which skills do not apply on purpose (for example a site that deliberately has no theme build).
 - Note the git state: the audit reports the commit it saw (`profile.md`).
 

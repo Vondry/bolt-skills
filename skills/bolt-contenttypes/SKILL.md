@@ -3,7 +3,8 @@ name: bolt-contenttypes
 description: >-
   Use this skill whenever you need to create, modify, or validate ContentTypes
   and fields in Bolt CMS (config/bolt/contenttypes.yaml). Enforces strict best practices:
-  no raw html fields (use redactor or article), mandatory order: -id on singletons,
+  no raw html fields (use redactor or article), sanitise: true on every rich-text
+  field and never allow_twig, mandatory order: -id on singletons,
   viewless resource blocks, collection/set structuring, and multilingual consistency.
 ---
 
@@ -38,12 +39,14 @@ content:
 # ✅ CORRECT for standard body/intro copy
 introduction:
   type: redactor
+  sanitise: true
   label: "Úvodní text"
   localize: true
 
 # ✅ CORRECT for structured long-form articles
 body:
   type: article
+  sanitise: true
   label: "Obsah článku"
   required: true
   localize: true
@@ -135,6 +138,7 @@ blocks:
       uses: [ title ]
     content:
       type: redactor
+      sanitise: true
       localize: true
 ```
 
@@ -221,6 +225,31 @@ __nodes:
 
 ---
 
+### 7. Rich Text Is Sanitised: `sanitise: true`, Never `allow_twig`
+> [!IMPORTANT]
+> Every `redactor` and `article` field **MUST** declare `sanitise: true`. No field may set `allow_twig: true`, and no field may switch cleaning off with `sanitise: false`.
+
+* **Why `sanitise`:** Bolt cleans HTML through its HTML cleaner (`htmlcleaner` in `config/bolt/config.yaml`, HTMLPurifier) only for fields with `sanitise: true`. Bolt turns it on by default for `text`, `textarea`, `html` and `markdown` — but **not** for `redactor` and `article`, which render their stored HTML unescaped. Without it, any editor (or a stolen editor account) can store `<script>` or `onerror=` in content and run it in every visitor's browser, including an administrator's (stored XSS). Cleaning happens on output, so existing content is covered as soon as the option is set.
+* **What changes on the page:** nothing editors use. On a real project the only differences were `×` in thumbnail URLs being percent-encoded (still valid), Redactor's internal `data-image` attribute being removed, and images without alternative text getting the file name as `alt`. Embedded iframes are removed when `iframe` is not in `htmlcleaner.allowed_tags` (`bolt-security-hardening` removes it — embeds go through `_consent-embed.twig`).
+* **Why never `allow_twig`:** it renders field content as a Twig template on the server. Whoever can edit the field can then run template code — read configuration, call functions — so an editor account becomes control of the site.
+
+```yaml
+# ✅ CORRECT
+body:
+  type: redactor
+  sanitise: true
+  localize: true
+
+# ❌ INCORRECT — rendered unescaped, and as a server-side template
+body:
+  type: redactor
+  allow_twig: true
+```
+
+With YAML anchors, put `sanitise: true` into the shared field node so every ContentType inherits it.
+
+---
+
 ## Verification & Automated Linting
 
 To inspect your ContentTypes configuration against all aforementioned standards, run the verification script:
@@ -237,6 +266,7 @@ vendor/tomvondracek/bolt-skills/skills/bolt-contenttypes/scripts/verify.sh
 5. **Multilingual Required Fields:** Flags fields with `required: true` lacking `localize: true` in localized ContentTypes.
 6. **Valid Slugs:** Verifies all `type: slug` fields define the `uses` mapping.
 7. **Permitted Locales:** Verifies ContentType `locales` are declared in `app_locales`.
+8. **Sanitised Rich Text:** Flags `redactor` and `article` fields without `sanitise: true`, any `allow_twig: true`, and `sanitise: false` on any field.
 
 ---
 
@@ -283,6 +313,7 @@ homepage:
       required: true
     hero_intro:
       type: redactor
+      sanitise: true
       localize: true
 
 # 2. Viewless Settings Singleton
@@ -313,6 +344,7 @@ blocks:
     <<: [ *common_fields ]
     content:
       type: redactor
+      sanitise: true
       localize: true
 
 # 4. Standard Routable Articles with Redactor & Article
@@ -327,10 +359,12 @@ articles:
     <<: [ *common_fields, *seo_field ]
     teaser:
       type: redactor
+      sanitise: true
       label: "Perex článku"
       localize: true
     body:
       type: article
+      sanitise: true
       label: "Obsah článku"
       localize: true
       required: true

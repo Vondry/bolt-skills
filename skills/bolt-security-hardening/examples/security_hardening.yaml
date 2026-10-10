@@ -1,0 +1,49 @@
+# config/packages/security_hardening.yaml (bolt-security-hardening)
+#
+# Framework settings that harden a Bolt CMS 6 site. Kept in one file so the stock framework.yaml
+# stays as Bolt ships it. Files in config/packages/ load alphabetically, so these values override
+# framework.yaml.
+#
+# Trusted hosts are NOT set here: trusted_hosts is a list, and lists from several files are
+# merged — framework.yaml's '%env(default::SYMFONY_TRUSTED_HOSTS)%' entry would stay and, when the
+# variable is empty, trust every host. Set SYMFONY_TRUSTED_HOSTS in .env instead (Step 1).
+
+framework:
+  # Proxies whose X-Forwarded-* headers are believed. Empty (the default) trusts none, so the
+  # client IP is the connecting address. Behind a TLS-terminating proxy or load balancer set
+  # SYMFONY_TRUSTED_PROXIES to its address range. Never 'REMOTE_ADDR' without a proxy: every
+  # visitor could then fake their IP (and dodge the login throttling).
+  trusted_proxies: '%env(default::SYMFONY_TRUSTED_PROXIES)%'
+  # X-Forwarded-Host is left out on purpose: it would let a proxy request set the host used in
+  # absolute URLs (password-reset links).
+  trusted_headers: [ 'x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-port' ]
+
+  # Bolt does not use ESI or fragment rendering. Disabled, the /_fragment endpoint does not
+  # exist — with it enabled, anyone who knows APP_SECRET can call arbitrary controllers through it.
+  esi: { enabled: false }
+  fragments: { enabled: false }
+
+  # Extra validation rules for Bolt's own entities (config/validator/user.yaml: password policy).
+  validation:
+    mapping:
+      paths: [ '%kernel.project_dir%/config/validator' ]
+
+when@prod:
+  framework:
+    session:
+      # Sessions in the project's own var/ folder instead of the host's shared session directory,
+      # with garbage collection that runs (some hosts set gc_probability to 0 and clean only their
+      # own folder by cron). Never upload var/ from a local machine.
+      handler_id: session.handler.native_file
+      save_path: '%kernel.project_dir%/var/sessions/%kernel.environment%'
+      gc_probability: 1
+      gc_divisor: 100
+      gc_maxlifetime: 28800
+      # The session cookie travels only over HTTPS and is invisible to JavaScript. 'auto' would
+      # send it without the secure flag behind a TLS proxy whose address is not trusted.
+      cookie_secure: true
+      cookie_httponly: true
+      cookie_samesite: lax
+      # 8 hours instead of Bolt's 14 days; remember-me (7 days, config/services.yaml) keeps
+      # editors logged in across days.
+      cookie_lifetime: 28800

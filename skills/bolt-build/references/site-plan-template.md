@@ -12,7 +12,8 @@ refer to `intake.md`.
 - Project: new from bolt/project | existing; Bolt <version>; database SQLite (Bolt default .env), set up without fixtures   (E1)
 - Local URL (BOLT_BASE_URL): https://127.0.0.1:8000, started with `symfony serve -d`         (E4)
 - Hosting: Apache, document root = public/ | project root | Nginx; Docker: no | yes            (E5, E6)
-- Domain: example.cz; staging: —                                                              (E7)
+- Domain: example.cz; staging: —  → SYMFONY_TRUSTED_HOSTS='^(www\.)?example\.cz$'           (E7)
+- Deployment: SFTP upload | git pull | CI; admin access: open | IP allowlist | basic auth   (E11, E12)
 - Theme folder: <theme>                                                                       (E8)
 - CI: GitLab | GitHub Actions | none; commits after every gate, push: no                      (E9, E10)
 

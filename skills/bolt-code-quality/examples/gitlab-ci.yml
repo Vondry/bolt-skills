@@ -72,3 +72,19 @@ yaml:
     PHP_VERSION: "8.3"
   script:
     - php bin/console lint:yaml config --parse-tags
+
+# Known vulnerabilities in the locked PHP packages (bolt-security-hardening, Step 8). Also add a
+# weekly pipeline schedule (Build → Pipeline schedules) so new advisories show up without a commit.
+composer-audit:
+  extends: .lint
+  variables:
+    PHP_VERSION: "8.3"
+  script:
+    - composer audit --locked
+
+# Known vulnerabilities in the theme's runtime npm packages (dev tooling is not shipped).
+npm-audit:
+  stage: lint
+  image: node:22-alpine
+  script:
+    - cd public/theme/<theme_name> && npm audit --omit=dev --audit-level=high

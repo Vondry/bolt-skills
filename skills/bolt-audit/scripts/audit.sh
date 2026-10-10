@@ -167,9 +167,9 @@ EOF
 
 # ---------------------------------------------------------------- run the skills
 SKILLS=(bolt-timezone bolt-disable-api bolt-code-quality bolt-htaccess bolt-asset-caching
-        bolt-extension-setup bolt-runtime-extensions bolt-theme-init bolt-tailwind-theme
-        bolt-contenttypes bolt-menu bolt-theme-templates bolt-helper-pages bolt-cookie-consent
-        bolt-add-language)
+        bolt-security-hardening bolt-extension-setup bolt-runtime-extensions bolt-theme-init
+        bolt-tailwind-theme bolt-contenttypes bolt-menu bolt-theme-templates bolt-helper-pages
+        bolt-cookie-consent bolt-add-language)
 
 printf "skill\tstatus\tfailures\twarnings\tnote\n" > "$OUT/summary.tsv"
 
