@@ -1,0 +1,22 @@
+{#
+  Fragment cache (bolt-performance Step 4). Renders `template` with `with` and keeps the HTML in
+  Bolt's tag-aware cache pool until a record of one of `tags` is saved, or `ttl` seconds pass.
+
+    key       string    Required. Unique name of the fragment, e.g. 'home.projects;v1'. No {}()/\@: characters.
+    tags      string[]  Required. ContentType slugs — `slug:` in contenttypes.yaml, or the slugified `name`
+                        when there is none (the URL segment of its listing) — plus record.cacheKey for
+                        fragments of one record.
+    template  string    Required. The container / component to render.
+    with      object    Variables for the template (the current context is passed as well).
+    vary      string    Anything else the output depends on (page number, filter), appended to the key.
+    ttl       int       Safety net in seconds (default 3600) — timed (de)publishing fires no save event.
+
+  Only GET requests are cached: Bolt's preview (POST /preview/{id}) and form submissions render live.
+#}
+{% if app.request.method == 'GET' %}
+    {% cache key ~ ';' ~ app.request.locale ~ ';' ~ (vary|default('')) ttl(ttl|default(3600)) tags(tags) %}
+        {{ include(template, with|default({})) }}
+    {% endcache %}
+{% else %}
+    {{ include(template, with|default({})) }}
+{% endif %}

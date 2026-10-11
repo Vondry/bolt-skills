@@ -3,7 +3,7 @@ name: bolt-build
 description: >-
   Build a complete Bolt CMS 6 website from a supplied design — Figma (Figma MCP), Pencil / pen.dev
   (.pen via Pencil MCP), exported images or PDF, an existing website, or a brief — by running the
-  whole WORKFLOWS.md (Phases 0–8, all 16 skills) autonomously. Reads the design first, asks every
+  whole WORKFLOWS.md (Phases 0–8, all 17 skills) autonomously. Reads the design first, asks every
   question the workflow needs in one upfront intake, writes the site plan, then builds, verifies,
   commits gate by gate and keeps a resumable progress log. Use when asked to create, build or
   implement a website (or "make this design into a Bolt site").
@@ -24,7 +24,7 @@ to end with as little interruption as possible*:
 
 | File | Use |
 | :--- | :--- |
-| [`references/intake.md`](references/intake.md) | Every question the 16 skills need, in five rounds, with defaults and the phase that uses each answer |
+| [`references/intake.md`](references/intake.md) | Every question the 17 skills need, in five rounds, with defaults and the phase that uses each answer |
 | [`references/design-sources.md`](references/design-sources.md) | What to extract from Figma MCP, Pencil MCP, images/PDF, an existing site or a brief; token mapping; visual QA loop |
 | [`references/site-plan-template.md`](references/site-plan-template.md) | Site plan, build progress, decisions log, open issues and handover — written into the project's `AGENTS.md` |
 | `scripts/preflight.sh` | Tools, PHP extensions, Bolt version, console, database, git, local URL — before Phase 1 |
@@ -100,7 +100,7 @@ Where the design and the intake answers flow in:
 | 3 | S6 | keep / remove `ImageDimensionsExtension` (gallery), `FileSizeExtension` (downloads); note removals as expected warnings |
 | 4 | E8, D1–D5, O1, O9, token table | `bolt-theme-init` scaffold `<theme>`; `theme.yaml` contact, socials, logo, `analytics:`; `bolt-menu --profile=<S4> --templates --force`; tokens and self-hosted fonts from `design-notes.md` into `css/tailwind/index.css`; JS imports per features |
 | 5 | S3–S5, S1, content model proposal | `contenttypes.yaml`, static routes, `menu.yaml` with labels per locale, catalogs |
-| 6 | frames, components, O2–O8, S7, S11 | one orchestrator per page from its frame, containers for queries, page-scoped components; **visual QA loop** (`design-sources.md`) per page; `--products=auto`; locale switcher; helper pages with the metaphor; `bolt-cookie-consent` scaffold with `--model --trackers --embeds --purposes` from O2–O7; `_privacy-form-note` beside every form; embeds through `_consent-embed` |
+| 6 | frames, components, O2–O8, S7, S11 | one orchestrator per page from its frame, containers for queries, page-scoped components; **visual QA loop** (`design-sources.md`) per page; `--products=auto`; locale switcher; helper pages with the metaphor; `bolt-cookie-consent` scaffold with `--model --trackers --embeds --purposes` from O2–O7; `_privacy-form-note` beside every form; embeds through `_consent-embed`; optionally `bolt-performance` fragment caches for pages with a high query count |
 | 7 | S2, S8–S10, O11, O12, E11, copy | records from the design copy or supplied content (through the admin in a browser if S10 allows), media-library uploads, translations, SEO per locale, `llms.txt`, `npm run prod`, `assets_version`, deployment checklist (7.5) for the hosting of E11 |
 | 8 | E4, E7 | linters, `verify-all.sh` with `BOLT_BASE_URL`, smoke checks, manual checks with a browser tool, Lighthouse, then the independent audit (Step 6) |
 

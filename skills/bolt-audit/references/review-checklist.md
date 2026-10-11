@@ -49,17 +49,22 @@ never "keep, record as deviation".
 - **Review:** ask how the site is deployed (SFTP, git, CI) and whether the server's `.env.local` sets `APP_ENV=prod` and its own `APP_SECRET` — the files only show the committed defaults; with `--base-url` the live part settles it. Check `git log -p -- .env` for secrets committed earlier (rotate them even if `.env` is clean now). Read `composer audit` for the affected packages — advisories in `twig/twig`, `symfony/*` or `enshrined/svg-sanitize` matter, abandoned dev tools less. Who has admin accounts (`/bolt/users`), and are there `ROLE_DEVELOPER` accounts nobody uses.
 - **Severity hints:** foreign Host header accepted, profiler / debug mode or a secret file reachable live → Critical; real `APP_SECRET` in git, `APP_ENV=dev` committed on an SFTP-deployed site, dangerous upload types, no login throttling, `verify_peer: false` → High; file editor for themes / config, sessions of 14 days, no CSP, no password policy, `composer audit` advisories → Medium; version disclosure, query search, `X-XSS-Protection` → Low.
 
-## 7. bolt-extension-setup
+## 7. bolt-performance *(optional — only when the theme uses `{% cache %}`)*
+- **Script:** when `{% cache %}` is used: `twig/cache-extra` installed, `twig.runtime.cache` on `cache.app.taggable`, no forms / CSRF / `app.user` / `app.session` / `app.flashes` inside cached blocks, `tags()` present, GET-only rendering (`partials/_cached.twig`), literal tags are ContentType slugs.
+- **Review:** save a record of each tagged ContentType in the admin and confirm the cached page changes; check that paged listings vary the key by page. A site without fragment caching is not a finding.
+- **Severity hints:** fragments never invalidated (no override, wrong tags) or containing forms / user data → High; preview showing cached content → Medium; missing `tags()` → Low.
+
+## 8. bolt-extension-setup
 - **Script:** packages in `composer.json`, extension config files, recipes, SEO field in ContentTypes, SEO tags in templates, theme `extensions/` folder (sitemap override, `llms.txt.twig`).
 - **Review:** `appolo-boltseo.yaml` fallback fields match real field names; every routable ContentType has the `seo` field; the sitemap override is still needed (bolt/sitemap-extension PR #5, Appendix B.6); `/llms.txt` content is real, not the blueprint.
 - **Severity hints:** no SEO tags / sitemap → Medium; blueprint text left in `llms.txt` → Low.
 
-## 8. bolt-runtime-extensions
+## 9. bolt-runtime-extensions
 - **Script:** the three `src/*Extension.php` files, service registration and bindings, container compilation and Twig registration.
 - **Review:** drift of the PHP files against the examples (`examples.md`, kind `logic`) — security-relevant parts of `LocaleLinkExtension` (query / hash preservation, no open redirect) and the cached disk probe of `ImageDimensionsExtension`; unused extensions are fine (warning expected).
 - **Severity hints:** `locale_link` dropping query strings or building external URLs → High; missing optional extension → Info.
 
-## 9. bolt-theme-init
+## 10. bolt-theme-init
 - **Script:** active theme, directory, Component/Container/Page structure and `partials/_master.twig`, no `setcontent` in components, ContentType template bindings, build tooling, compiled assets.
 - **Review:** if the theme predates the convention (no `components/`, `containers/`, `pages/`), report **one finding** — *Theme not in the Component/Container/Page structure* — with this migration as the fix:
   1. snapshot the rendered HTML of every URL (sitemap in every locale, search, 404) before touching anything;
@@ -70,32 +75,32 @@ never "keep, record as deviation".
   Inside the structure, also check the master layout's blocks and includes (SEO, consent, skip link), `assets_version` cache-busting, and a build that runs (`npm run prod` exists and the committed bundle is fresh).
 - **Severity hints:** structure missing → Medium (one finding, effort L); no skip link / no `lang` → Medium (accessibility); stale or missing build → High.
 
-## 10. bolt-tailwind-theme
+## 11. bolt-tailwind-theme
 - **Script:** entrypoint, `@source` scanning safeguards, `@theme` tokens, `scroll-margin-top`, repeating utilities, compilation.
 - **Review:** Tailwind v4 CSS-first config (not a v3 `tailwind.config.js`); tokens named by role, not by colour; WCAG AA contrast of text tokens on their backgrounds; fonts self-hosted with `latin-ext` (no Google Fonts request — also a GDPR finding); `@source not` for `node_modules`, `vendor`, helper pages.
 - **Severity hints:** Google Fonts loaded from Google → High (GDPR, also bolt-cookie-consent); contrast below 4.5:1 → Medium; naming / token structure → Low.
 
-## 11. bolt-contenttypes
+## 12. bolt-contenttypes
 - **Script:** YAML syntax; rules: no `type: html`, singletons with `order: -id`, slug `uses`, no `repeater`, required-but-not-localized fields, `default_status` of viewless singletons; `sanitise: true` on every `redactor` / `article` field, no `allow_twig`, no `sanitise: false`.
 - **Review:** each script error (they are real configuration bugs); required non-localized fields only matter on multilingual sites — confirm with how editors translate; YAML anchors for repeated field groups.
 - **Severity hints:** Redactor / Article without `sanitise: true` or any `allow_twig` → High (stored XSS / code execution by editors); singleton without `order: -id` → High (wrong record shown); `type: html` → Medium; missing `uses` → Medium; multilingual required-field warnings → Medium on multilingual sites.
 
-## 12. bolt-menu
+## 13. bolt-menu
 - **Script:** `menu.yaml` existence, YAML, structure (root-slash anchors `/#…`, label parity per locale, no locale prefixes in links, CTA flags), navigation templates, `locale_link` wrapping.
 - **Review:** the header and footer render from `menu.yaml` (not hard-coded links); mobile navigation is keyboard-operable (Escape closes, focus trapped while open); footer links the privacy policy and cookie settings.
 - **Severity hints:** hard-coded navigation → Low; anchors without root slash → Medium (broken on subpages); inaccessible mobile menu → Medium.
 
-## 13. bolt-theme-templates
+## 14. bolt-theme-templates
 - **Script:** directories and master, zero `setcontent` in components, page orchestrators, `locale_link` usage, `__()|default()` misuse, classes missing from the compiled CSS, `lint:twig`.
 - **Review:** raw HTML volume in `pages/` (Appendix B.1); Bolt 6 pager (`pager(records, …)`, not the Bolt 3 API); images through a picture component with `alt`, dimensions and thumbnails (no full-size originals); heading order; translated strings instead of literals on multilingual sites.
 - **Severity hints:** a page answering 500 (see `http.md`) → High; classes not in the CSS → High (unstyled UI); originals served instead of thumbnails → Medium (performance); literal strings on a multilingual site → Medium.
 
-## 14. bolt-helper-pages
+## 15. bolt-helper-pages
 - **Script:** error page mappings in `config/bolt/config.yaml`, helper templates, SEO / robustness (noindex, no DB on 500), Tailwind bundle isolation, `lint:twig`.
 - **Review:** the 500 and 503 templates query nothing (no `setcontent`, no menu) — they must render with the database down; 404 offers a way back (home, search); texts in the site's tone (Appendix B.5: default locale only).
 - **Severity hints:** 500 page querying the database → High; default Bolt error pages in production → Medium.
 
-## 15. bolt-cookie-consent
+## 16. bolt-cookie-consent
 - **Script:** the `theme.yaml` `privacy:` data model, banner wiring and compliance, wording, hard-coded trackers, footer, privacy page and route, translations, live HTML.
 - **Review:** projects built before this skill usually have no `privacy:` block, so most script failures are a **deviation** (another banner implementation). Judge the existing banner and policy against `skills/bolt-cookie-consent/references/guidelines.cs.md` directly — that is where the **defects** are:
   - CB-01: tracker (GA, Sklik, Meta, Hotjar, embeds, Google Fonts) loaded before a choice — read the master layout and the profile's "Tracking found" line; with `--base-url`, fetch the homepage HTML.
@@ -105,7 +110,7 @@ never "keep, record as deviation".
   - CB-02: YouTube / map iframes without a placeholder.
 - **Severity hints:** tracking before consent, Reject missing from layer 1, no privacy page, cookies not described → Critical (ÚOOÚ fines exactly these); unequal buttons, missing footer link, English-only descriptions → High; not using the skill's data model → Medium (one deviation; migration = scaffold with the intake).
 
-## 16. bolt-add-language *(multilingual only — once per secondary locale)*
+## 17. bolt-add-language *(multilingual only — once per secondary locale)*
 - **Script:** locale in `services.yaml`, ContentType `locales`, catalog existence and unit parity, XLIFF lint, `menu.yaml` labels, locale switcher.
 - **Review:** in the browser (with `--base-url`), a few `/<code>/…` pages show translated text, not keys or Czech fallbacks (Appendix B.4); `hreflang` alternates in the SEO tags; the switcher keeps the current page instead of jumping home.
 - **Severity hints:** untranslated keys visible → High; missing `hreflang` → Medium; parity gaps in rarely used units → Low.

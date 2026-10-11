@@ -2,7 +2,7 @@
 name: bolt-audit
 description: >-
   Read-only audit of an existing Bolt CMS 6 project against every bolt-skills skill. Profiles the
-  project, runs all 16 verification scripts in workflow order, compares the project's files with
+  project, runs all 17 verification scripts in workflow order, compares the project's files with
   the skills' examples, then reviews each skill one by one (logs, SKILL.md rules, references) and
   writes a prioritized AUDIT.md report — defects vs. convention deviations, severity, evidence and
   the skill step that fixes each finding. Use when asked to audit, review, check or assess an

@@ -1,0 +1,10 @@
+# config/services.yaml — add under `services:` (bolt-performance Step 4a).
+# Requires: composer require twig/cache-extra
+services:
+  # {% cache %} must use the pool Bolt invalidates on content save (cache.app.taggable).
+  # twig/extra-bundle's default `twig.cache` is a separate pool that Bolt never clears, so
+  # cached fragments would only ever expire by their TTL.
+  twig.runtime.cache:
+    class: Twig\Extra\Cache\CacheRuntime
+    arguments: ['@cache.app.taggable']
+    tags: ['twig.runtime']

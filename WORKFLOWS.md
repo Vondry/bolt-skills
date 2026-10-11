@@ -1,6 +1,6 @@
 # Bolt CMS End-to-End Website Build Workflow
 
-This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 16 skills in this repository.
+This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 17 skills in this repository.
 
 The phases are ordered by real dependencies: every step only needs what earlier steps produced. Each phase ends with a **gate** (verifications that must pass, then a commit). Steps marked **[if …]** depend on the answers recorded in the Phase 0 site plan.
 
@@ -90,6 +90,7 @@ flowchart TD
         S63["bolt-add-language — step 6:<br/>locale switcher"]
         S64["bolt-helper-pages"]
         S65["bolt-cookie-consent"]
+        S66["bolt-performance — fragment cache [optional]"]
     end
     P6 -.-> D6
 
@@ -545,6 +546,13 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - Hand the operator the list of `[DOPLNIT]` questions; measure every `[OVĚŘIT]` item in a clean browser profile.
 - *Verify:* `bash $SKILLS/bolt-cookie-consent/scripts/verify.sh --draft` while placeholders remain; without `--draft` for sign-off (Phase 8).
 
+### 6.6 Fragment Cache for Heavy Pages (`bolt-performance`) **[optional]**
+- Only for pages with a high query count (Symfony profiler, Doctrine panel — roughly above 100 queries): homepages that aggregate several ContentTypes, record pages with relations. Small sites skip this step.
+- `composer require twig/cache-extra`, add `examples/services_twig_cache.yaml` to `config/services.yaml`, copy `examples/_cached.twig` to `partials/_cached.twig`.
+- Render the heavy containers through `partials/_cached.twig` with `tags` = the slugs of the ContentTypes they read (plus `record.cacheKey` on record pages); never around forms, menus or user-dependent output.
+- Test once: save a record of each tagged ContentType in the admin and reload — the change is there.
+- *Verify:* `bash $SKILLS/bolt-performance/scripts/verify.sh` (passes when no `{% cache %}` is used).
+
 ### Gate 6
 - `cd public/theme/<theme> && npm run prod && cd -`
 - `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` passes, including the undefined-class check [7/8] against the fresh build.
@@ -657,6 +665,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | :--- | :--- |
 | `Unable to find template "partials/_master.twig"` | `bolt-theme-init` not run (4.1), or the theme was started from another layout — the contract layout is `partials/_master.twig` with `{% block main %}` |
 | Header, footer or buttons unstyled | A class uses a name that is not a token, or CSS was not rebuilt (`npm run prod`); `bolt-theme-templates/scripts/verify.sh` [7/8] lists the undefined classes |
+| Content edited in the admin does not appear on a page | A fragment cache without the `twig.runtime.cache` override, or a ContentType missing from its `tags` (`bolt-performance` Steps 2, 4) |
 | Mobile menu or dropdowns do nothing | `js/app.js` not rebuilt or `menu` not imported in `js/src/index.ts`; the markup needs the hooks from [JavaScript Hooks](#javascript-hooks) (`bolt-menu` templates have them) |
 | Page returns 500 "Tried to get content from ContentType '…'" | A template queries a ContentType the site does not define; guard with `{% if config.get('contenttypes/<slug>') %}` or remove the include |
 | A page shows `products.title` instead of text | Translation key missing from that locale's catalog (5.5, 7.2) |
@@ -684,6 +693,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `bolt-htaccess` | 2.1 | 2.1, 8.2 | Apache |
 | `bolt-asset-caching` | 2.2 (Steps 1–4), 4.1 (Step 5 through the master layout, `assets_version` in 4.2 / 7.4) | 2.2, 8.2 | every site |
 | `bolt-security-hardening` | 1.5 (Steps 1–5), 2.3 (Step 6), 7.5 (Step 7), 8.1 (`make audit`) | 1.5 (file sections), 8.2 and against production (live section) | every site |
+| `bolt-performance` | 6.6 | 6.6, 8.2 | optional — pages with a high query count |
 | `bolt-extension-setup` | 3.1 (Part A), 5.2, 6.2 (Part B) | 6.2, 8.2 | every site |
 | `bolt-runtime-extensions` | 3.2 | 3.2, 8.2 | `LocaleLinkExtension` everywhere; the others per features |
 | `bolt-theme-init` | 4.1, 4.2, 4.5 | Gate 4, 8.2 | every site |

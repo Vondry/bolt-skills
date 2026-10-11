@@ -81,6 +81,7 @@ SKILLS=(
     "bolt-htaccess"            # Phase 2 [Apache]
     "bolt-asset-caching"       # Phase 2
     "bolt-security-hardening"  # Phases 1-2 (configuration), 7 (deployment), 8 (live checks)
+    "bolt-performance"         # Phase 6 [optional fragment cache; passes when unused]
     "bolt-extension-setup"     # Phases 3 + 6
     "bolt-runtime-extensions"  # Phase 3
     "bolt-theme-init"          # Phase 4

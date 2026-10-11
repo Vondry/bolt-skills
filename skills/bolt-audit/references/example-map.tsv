@@ -63,6 +63,8 @@ bolt-security-hardening	env	.env	snippet
 bolt-security-hardening	routes_snippet.yaml	config/routes.yaml	snippet
 bolt-security-hardening	docker/nginx_security.conf	docker/nginx/conf.d/default.conf	snippet
 bolt-security-hardening	docker/php_security.ini	docker/php/conf.d/bolt.prod.ini	snippet
+bolt-performance	services_twig_cache.yaml	config/services.yaml	snippet
+bolt-performance	_cached.twig	{theme}/partials/_cached.twig	logic
 bolt-tailwind-theme	index.css	{theme}/css/tailwind/index.css	design
 bolt-tailwind-theme	fonts_snippet.css	{theme}/css/tailwind/index.css	snippet
 bolt-theme-init	_master.twig	{theme}/partials/_master.twig	design

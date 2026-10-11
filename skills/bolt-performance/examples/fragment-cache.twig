@@ -1,0 +1,47 @@
+{#
+  Fragment-cache patterns for bolt-performance Step 4. Every example goes through
+  partials/_cached.twig (examples/_cached.twig), which caches on GET only, adds the locale to the
+  key and passes the current context to the rendered template.
+
+  Requires: composer require twig/cache-extra + examples/services_twig_cache.yaml.
+#}
+
+{# 1. Homepage container that aggregates several ContentTypes
+      (portfolio: projects, companies, their positions and experiences — 234 → 21 queries).
+      Tag every ContentType the container reads by its slug (`slug:` in contenttypes.yaml). #}
+{{ include('partials/_cached.twig', {
+    key: 'home.experience;v1',
+    tags: ['companies', 'positions', 'experiences'],
+    template: 'pages/homepage/components/experience.twig',
+    with: { limit: 10 }
+}) }}
+
+{# 2. Paged listing: the page number is part of the output, so it goes into `vary`. #}
+{{ include('partials/_cached.twig', {
+    key: 'articles.listing;v1',
+    tags: ['articles'],
+    vary: 'p' ~ app.request.query.getInt('page', 1),
+    template: 'pages/articles/components/article-grid.twig',
+    with: { records: records }
+}) }}
+
+{# 3. Record detail with relations: the record's own cacheKey (record-00042) is cleared when the
+      record is saved; the related ContentType's slug when one of the related records is. #}
+{{ include('partials/_cached.twig', {
+    key: 'band.detail;v1;' ~ record.id,
+    tags: [record.cacheKey, 'kapely', 'rocniky'],
+    template: 'pages/band/components/band-related.twig',
+    with: { record: record }
+}) }}
+
+{# 4. Content that changes by date (events, timed publishing): a short ttl, because neither the
+      passing of time nor Bolt's timed (de)publishing fires a save event. #}
+{{ include('partials/_cached.twig', {
+    key: 'events.upcoming;v1;' ~ 'now'|date('Y-m-d'),
+    tags: ['events'],
+    ttl: 600,
+    template: 'containers/events/_upcoming-events.twig'
+}) }}
+
+{# Never wrap: forms and anything with csrf_token(), app.user, app.session, app.flashes, the
+   header / menus (their active state depends on the current URL), the seo block. #}
