@@ -40,9 +40,9 @@ never "keep, record as deviation".
 - **Severity hints:** templates / config / `.env` / dumps downloadable → Critical; no allowlist for `files/` (HTML / SVG uploads run as the site) → High; missing HTTPS redirect or HSTS → High; theme allowlist missing while the deny list exists → Medium.
 
 ## 5. bolt-asset-caching
-- **Script:** `/thumbs` firewall bypass in `security.yaml`, `save_files: true`, `mod_expires` in `public/.htaccess`, Nginx static rules.
-- **Review:** with `--base-url`, response headers of a `/thumbs/…` URL (`Cache-Control: public`, no `Set-Cookie`) and of `css/index.css` (long max-age); `?v=` cache-busting in the master layout bumped on releases (`assets_version`).
-- **Severity hints:** thumbnails `private, max-age=0` or regenerated per request → High (performance); missing expires on static assets → Medium.
+- **Script:** `/thumbs` firewall bypass in `security.yaml`, `save_files: true`, `mod_expires` in `public/.htaccess` (fails without it), Nginx static rules, bolt/core saving thumbnails where their URL points (warns on 6.0.1 – 6.1.x).
+- **Review:** run the delivery check — `scripts/serve-apache.sh start` + `scripts/check-delivery.php` for an Apache site, or `check-delivery.php --base-url=<production>` — and read where thumbnails and uploads come from on the second request (disk vs. PHP) and whether they get `ETag`, `Last-Modified`, a `max-age` and 304s; response headers of `css/index.css` (long max-age); `?v=` cache-busting in the master layout bumped on releases (`assets_version`).
+- **Severity hints:** thumbnails `private, max-age=0` or served by PHP on every request → High (performance; on bolt/core 6.0.1 – 6.1.x note it as an upstream bug fixed by bolt/core #3828, not a project defect); uploads / thumbnails without `max-age` (missing `mod_expires`) → Medium; theme images without expiry → Low.
 
 ## 6. bolt-security-hardening
 - **Script:** committed `.env` (APP_ENV, APP_DEBUG, APP_SECRET, SYMFONY_TRUSTED_HOSTS), `.env.local` in git, framework config merged for prod (trusted hosts / proxies, fragments, session), login throttling, remember-me, password policy, Bolt `config.yaml` (upload types, `verify_peer`, HTML cleaner, query search, version disclosure), `permissions.yaml` (file editor), nelmio headers and CSP, `composer audit`, Bolt version; with `--base-url`: foreign `Host` header, profiler / debug token, stack traces, secret files, page / upload headers, session cookie flags, `/_fragment`.

@@ -33,7 +33,7 @@ WARNINGS=0
 # -------------------------------------------------------------
 # 1. Check config/packages/security.yaml for /thumbs bypass
 # -------------------------------------------------------------
-echo -n "[1/4] Checking security.yaml for /thumbs firewall bypass... "
+echo -n "[1/5] Checking security.yaml for /thumbs firewall bypass... "
 SEC_FILE="config/packages/security.yaml"
 
 if [ ! -f "$SEC_FILE" ]; then
@@ -59,7 +59,7 @@ fi
 # -------------------------------------------------------------
 # 2. Check config/bolt/config.yaml for save_files: true
 # -------------------------------------------------------------
-echo -n "[2/4] Checking config/bolt/config.yaml for thumbnail disk caching... "
+echo -n "[2/5] Checking config/bolt/config.yaml for thumbnail disk caching... "
 BOLT_CONFIG="config/bolt/config.yaml"
 
 if [ ! -f "$BOLT_CONFIG" ]; then
@@ -82,7 +82,7 @@ fi
 # -------------------------------------------------------------
 # 3. Check public/.htaccess for mod_expires caching
 # -------------------------------------------------------------
-echo -n "[3/4] Checking public/.htaccess for mod_expires static caching... "
+echo -n "[3/5] Checking public/.htaccess for mod_expires static caching... "
 HTACCESS="public/.htaccess"
 
 if [ ! -f "$HTACCESS" ]; then
@@ -106,18 +106,20 @@ else
             WARNINGS=$((WARNINGS + 1))
         fi
     else
-        echo "WARNING / NOTICE"
+        echo "FAILED"
         [ -z "$HAS_EXPIRES_MODULE" ] && echo "  - Missing <IfModule mod_expires.c>"
         [ -z "$HAS_EXPIRES_ACTIVE" ] && echo "  - Missing 'ExpiresActive On'"
         [ -z "$HAS_IMAGE_EXPIRES" ] && echo "  - Missing image expiration directives (ExpiresByType image/...)"
-        WARNINGS=$((WARNINGS + 1))
+        echo "  Impact: uploads and saved thumbnails are sent without max-age / Expires, so browsers revalidate them on every page view."
+        echo "  Fix: add the block from examples/htaccess_mod_expires.conf (Nginx-only sites: run with --skip and use examples/nginx_static.conf)."
+        FAILED=1
     fi
 fi
 
 # -------------------------------------------------------------
 # 4. Check Nginx configuration (if present)
 # -------------------------------------------------------------
-echo -n "[4/4] Checking Nginx configuration for /thumbs and assets... "
+echo -n "[4/5] Checking Nginx configuration for /thumbs and assets... "
 NGINX_CONF="docker/nginx/conf.d/default.conf"
 
 if [ -f "$NGINX_CONF" ]; then
@@ -135,6 +137,25 @@ if [ -f "$NGINX_CONF" ]; then
     fi
 else
     echo "SKIPPED (docker/nginx/conf.d/default.conf not present in this project)"
+fi
+
+# -------------------------------------------------------------
+# 5. Check that bolt/core saves thumbnails where their URL points
+# -------------------------------------------------------------
+echo -n "[5/5] Checking that bolt/core saves thumbnails at the path of their URL... "
+CORE_CONTROLLER="vendor/bolt/core/src/Controller/ImageController.php"
+
+if [ ! -f "$CORE_CONTROLLER" ]; then
+    echo "SKIPPED ($CORE_CONTROLLER not found — run composer install)"
+elif grep -q "parameterPath()" "$CORE_CONTROLLER"; then
+    CORE_VERSION=$(php -r '$l = json_decode((string) @file_get_contents("composer.lock"), true); foreach ($l["packages"] ?? [] as $p) { if ($p["name"] === "bolt/core") { echo $p["version"]; } }' 2>/dev/null || true)
+    echo "WARNING"
+    echo "  bolt/core ${CORE_VERSION:-<unknown version>} saves thumbnails to public/thumbs/<w>_<h>_<q>_<fit>_<location>/,"
+    echo "  a path no thumbnail URL points to: every /thumbs/ request still runs PHP despite save_files: true."
+    echo "  Fixed by bolt/core PR #3828 — upgrade once released, then delete the unused public/thumbs/*_files/ folders."
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo "PASSED"
 fi
 
 # -------------------------------------------------------------
@@ -174,6 +195,32 @@ if [ $IS_RUNNING -eq 1 ] && [ -n "$SERVER_URL" ]; then
     fi
 else
     echo "SKIPPED (Local server not running for project $BASE_DIR)"
+fi
+
+# -------------------------------------------------------------
+# End-to-end delivery check: against BOLT_DELIVERY_URL, or the site of scripts/serve-apache.sh.
+# Not against BOLT_BASE_URL: that is usually `symfony serve`, which ignores .htaccess.
+# -------------------------------------------------------------
+echo -n "Checking image delivery end to end... "
+SERVE_APACHE_URL=""
+if [ -f "var/serve-apache/httpd.pid" ] && [ -f "var/serve-apache/httpd.conf" ]; then
+    SERVE_APACHE_URL="http://$(awk '/^Listen /{print $2; exit}' var/serve-apache/httpd.conf)"
+fi
+DELIVERY_URL="${BOLT_DELIVERY_URL:-$SERVE_APACHE_URL}"
+if [ -n "$DELIVERY_URL" ]; then
+    echo "against $DELIVERY_URL"
+    DELIVERY_ARGS=(--base-url="$DELIVERY_URL")
+    [ "${DELIVERY_URL%/}" = "$SERVE_APACHE_URL" ] \
+        && DELIVERY_ARGS+=(--fpm-log="var/serve-apache/logs/php-fpm-access.log")
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if DELIVERY_OUTPUT=$(php "$SCRIPT_DIR/check-delivery.php" "${DELIVERY_ARGS[@]}" 2>&1); then
+        echo "$DELIVERY_OUTPUT" | sed 's/^/  /'
+    else
+        echo "$DELIVERY_OUTPUT" | sed 's/^/  /'
+        FAILED=1
+    fi
+else
+    echo "SKIPPED (start scripts/serve-apache.sh, or set BOLT_DELIVERY_URL to a staging / production URL; see SKILL.md section 4)"
 fi
 
 echo ""

@@ -14,7 +14,7 @@ The phases are ordered by real dependencies: every step only needs what earlier 
   # SKILLS=/path/to/bolt-skills/skills             # when using a checkout of this repository instead
   ```
 - **Verify scripts.** Run a skill's verification with `bash $SKILLS/<skill>/scripts/verify.sh`. The scripts locate the project root from the current directory.
-- **Live HTTP checks.** `bolt-disable-api`, `bolt-htaccess` and `bolt-security-hardening` request URLs from a running site. They use `BOLT_BASE_URL` (default `http://127.0.0.1:8000`), so point it at **this** project before running them, otherwise they test whatever else is listening on that port. (`bolt-asset-caching` finds a Symfony CLI server for the project on its own.)
+- **Live HTTP checks.** `bolt-disable-api`, `bolt-htaccess` and `bolt-security-hardening` request URLs from a running site. They use `BOLT_BASE_URL` (default `http://127.0.0.1:8000`), so point it at **this** project before running them, otherwise they test whatever else is listening on that port. (`bolt-asset-caching` finds a Symfony CLI server for the project on its own; its end-to-end delivery check runs against Apache started with its `scripts/serve-apache.sh`, or `BOLT_DELIVERY_URL`.)
   ```bash
   export BOLT_BASE_URL=http://localhost:8080
   ```
@@ -629,7 +629,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `/this-page-does-not-exist` | 404 with the branded helper page |
 | `/theme/<theme>/theme.yaml`, `/theme/<theme>/package.json`, `/theme/<theme>/index.twig` **[Apache]** | 403 |
 | `/api/docs.html`, `/api/contents`, `POST /api/graphql` | 401, 403 or 404 |
-| `/thumbs/320x240/<image from public/files>` | `Cache-Control: public`, never `private, max-age=0` |
+| `/thumbs/320x240/<image from public/files>` | `Cache-Control: public`, never `private, max-age=0`; on Apache / Nginx the second request comes from disk with `ETag` and `Last-Modified` (`bolt-asset-caching` delivery check) |
 | `http://<domain>/`, `http://www.<domain>/`, `https://www.<domain>/` | 301 straight to `https://<domain>/` (one canonical host, valid certificate on both) |
 | `/` with header `Host: evil.invalid` | 400 |
 | `/_profiler`, `/_fragment` | 404 |
@@ -718,4 +718,4 @@ The skills implement the Integration Contract; these points still need judgement
 6. **Sitemap override** (`extensions/sitemap.xml.twig`) is needed until bolt/sitemap-extension PR #5 is merged; remove it afterwards.
 7. **Consent Mode choice is legal, not technical.** Basic mode (default) loads trackers only after consent; advanced mode sends cookieless pings before consent — only on the operator's explicit decision, recorded in the site plan; the privacy page describes the active mode automatically.
 8. **`make db-update` / `db-reset` are development tools**; production uses `make db-migrate` (`doctrine:migrations:migrate`).
-9. **Thumbnails are not served from disk on bolt/core 6.0.1 – 6.1.x.** `save_files: true` writes them to `public/thumbs/<w>_<h>_<q>_<fit>_<location>/`, a path no thumbnail URL points to, so every `/thumbs/…` request still runs PHP (the HTTP caching of `bolt-asset-caching` still works). Fixed by bolt/core PR #3828 once released; thumbnail URLs stay the same, so afterwards only delete the unused `public/thumbs/*_files/` folders (locally and on the server).
+9. **Thumbnails are not served from disk on bolt/core 6.0.1 – 6.1.x.** `save_files: true` writes them to `public/thumbs/<w>_<h>_<q>_<fit>_<location>/`, a path no thumbnail URL points to, so every `/thumbs/…` request still runs PHP (the HTTP caching of `bolt-asset-caching` still works). Fixed by bolt/core PR #3828 once released; thumbnail URLs stay the same, so afterwards only delete the unused `public/thumbs/*_files/` folders (locally and on the server). `bolt-asset-caching/scripts/verify.sh` warns on the affected versions; its delivery check (`serve-apache.sh` + `check-delivery.php`) confirms the fix.

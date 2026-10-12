@@ -5,8 +5,10 @@ description: >-
   for Bolt CMS images, thumbnails, CSS, JS, and PDFs. Resolves the critical Symfony
   SessionListener bug where stateful firewalls rewrite League Glide's public 1-year
   thumbnail cache to private/no-cache, configures Bolt's save_files thumbnail disk dump,
-  sets up Apache mod_expires and Nginx static expires rules, and establishes frontend
-  asset cache-busting (?v=X.X).
+  sets up Apache mod_expires and Nginx static expires rules, establishes frontend
+  asset cache-busting (?v=X.X), and checks end to end — Apache with the project's .htaccess
+  plus PHP-FPM, or production — that every thumbnail and upload is served from disk with ETag,
+  Last-Modified, max-age and 304s instead of by PHP.
 ---
 
 # Bolt CMS Full-Stack Asset & Thumbnail Caching
@@ -21,11 +23,12 @@ This skill documents the complete multi-layer asset caching architecture establi
 
 ### Why Thumbnails Were Not Being Cached:
 1. **Glide's Intended Behavior:**
-   Bolt CMS dynamically generates manipulated thumbnails on demand via `Bolt\Controller\ImageController` using **League Glide**. Under the hood, Glide sets optimal public HTTP cache headers:
+   Bolt CMS dynamically generates manipulated thumbnails on demand via `Bolt\Controller\ImageController` using **League Glide**. Under the hood, Glide sets a public one-year cache header:
    ```http
-   Cache-Control: public, max-age=31536000
-   ETag: "..."
+   Cache-Control: max-age=31536000, public
+   Expires: ...
    ```
+   It sends **no `ETag` and no `Last-Modified`**, so a browser can't revalidate a thumbnail that PHP served (no `304 Not Modified`); once the year is over, or after a hard reload, it downloads the whole image again. Only a thumbnail saved to disk and served by Apache / Nginx (Step 2) gets `ETag`, `Last-Modified` and 304s.
 2. **The Default Symfony Firewall:**
    In standard Symfony and Bolt starter configurations (`config/packages/security.yaml`), the stateless `dev` firewall (which disables security tokens and session handling) only matched:
    ```yaml
@@ -114,6 +117,8 @@ thumbnails:
   1. **First request:** The file does not exist on disk in `public/thumbs/`. The request hits PHP, generates the thumbnail, streams it back to the user, and dumps the binary to `public/thumbs/{parameters}/{filename}`.
   2. **Subsequent requests:** Apache and Nginx find the file directly on disk via standard static file rules and serve it directly with 0 ms PHP overhead!
 
+* **bolt/core 6.0.1 – 6.1.x:** these versions save thumbnails to `public/thumbs/<w>_<h>_<q>_<fit>_<location>/` (e.g. `400_300_80_crop_files/`), a path no thumbnail URL points to. The web server never finds them, so **every `/thumbs/…` request still runs PHP** (with Glide's headers from section 1). Fixed by bolt/core PR #3828; thumbnail URLs stay the same, so after upgrading only delete the unused `public/thumbs/*_files/` folders (locally and on the server). `scripts/verify.sh` detects the affected versions in `vendor/`, and the delivery check (section 4) shows where each thumbnail actually comes from.
+
 ---
 
 ### Step 3: Configure Apache Static Expiration (`public/.htaccess`)
@@ -150,6 +155,7 @@ Add the `mod_expires` configuration block. `bolt-htaccess` owns `public/.htacces
 </IfModule>
 ```
 
+* **Without this block** Apache sends uploads and saved thumbnails with `ETag` and `Last-Modified` but without `max-age` / `Expires`, so browsers revalidate every image on every page view. `scripts/verify.sh` fails when the block is missing.
 * **TTL Rationale:** A 2-month window (`access plus 2 months`) provides maximum cache hit rates while dropping `must-revalidate`, allowing browsers to serve assets instantly from disk cache.
 * **JavaScript MIME types:** current Apache `mime.types` serve `.js` as `text/javascript`; older ones as `application/javascript`. List both, otherwise scripts get no expiry header on newer servers.
 
@@ -218,21 +224,60 @@ skills/bolt-asset-caching/scripts/verify.sh
 The script verifies:
 1. `config/packages/security.yaml` dev firewall contains `thumbs` (`^/(_(profiler|wdt)|css|images|js|thumbs)/`).
 2. `config/bolt/config.yaml` has `thumbnails.save_files: true`.
-3. `public/.htaccess` has `mod_expires.c` with image expiration rules; warns when JavaScript is listed only as `application/javascript` (without `text/javascript`) or when more than one `mod_expires` block exists.
+3. `public/.htaccess` has `mod_expires.c` with image expiration rules (fails without them); warns when JavaScript is listed only as `application/javascript` (without `text/javascript`) or when more than one `mod_expires` block exists.
 4. `docker/nginx/conf.d/default.conf` (if present) has `expires` and `try_files` for `/thumbs`.
-5. Performs live HTTP curl inspection on `/thumbs/...` and static assets to assert `Cache-Control: public` and absence of `private, max-age=0`.
+5. `vendor/bolt/core` saves thumbnails at the path of their URL; warns on bolt/core 6.0.1 – 6.1.x (Step 2).
+6. If a Symfony CLI server runs for the project: the `Cache-Control` of a generated thumbnail is `public`, not `private, max-age=0`.
+7. The end-to-end delivery check below, when `scripts/serve-apache.sh` is running for the project or `BOLT_DELIVERY_URL` points at a staging / production site (fails on any thumbnail or upload not served from disk with full cache headers). It does not use `BOLT_BASE_URL`, which is usually `symfony serve`.
 
-### 2. Manual HTTP Header Inspection
+The configuration checks can all pass while every thumbnail still runs PHP (bolt/core 6.0.1 – 6.1.x, a read-only `public/thumbs/`, a web server rule that never looks on disk). Only the delivery check shows what the web server actually does.
+
+### 2. End-to-End Delivery Check (`scripts/check-delivery.php`)
+Crawls the running site (`/sitemap.xml` and links), collects every image the pages reference — `/thumbs/…`, `/files/…`, theme images, `srcset`, CSS `url()`, icons, `og:image` — and requests each one three times:
+
+1. **first request** — may go to PHP, which generates and saves the thumbnail;
+2. **second request** — must come from disk, with `ETag`, `Last-Modified` and a `max-age`;
+3. **conditional request** with the `ETag` / `Last-Modified` of the second — must answer `304`.
+
+It fails when a thumbnail or upload doesn't; theme images only warn, and image URLs that answer 404 are listed as broken references.
+
+Run it against the web server the site runs on in production. `symfony serve` and PHP's built-in server ignore `.htaccess` and send uploads without `ETag` and `Cache-Control`; the check warns when the responses look like that. For an Apache site, `scripts/serve-apache.sh` serves the project locally like the production host — Apache with the project's own root and `public/` `.htaccess` files, PHP-FPM in `prod` — and sets up a PHP-FPM access log that records which requests reached PHP:
+
+```bash
+bash $SKILLS/bolt-asset-caching/scripts/serve-apache.sh start --port=8090      # prints the commands below
+php $SKILLS/bolt-asset-caching/scripts/check-delivery.php \
+    --base-url=http://127.0.0.1:8090 --fpm-log=var/serve-apache/logs/php-fpm-access.log
+bash $SKILLS/bolt-asset-caching/scripts/serve-apache.sh stop
+```
+
+`serve-apache.sh` needs Apache (`httpd` / `apache2` with `mod_rewrite`, `mod_expires`, `mod_headers`, `mod_proxy_fcgi`) and `php-fpm`; it writes only to `var/serve-apache/` (kept out of `git status`), and Symfony builds `var/cache/prod` on the first request. Run `bin/console cache:clear --env=prod` first if that cache is stale. The check sends `X-Forwarded-Proto: https` to local URLs, so the root `.htaccess` HTTPS redirect stays quiet.
+
+While `serve-apache.sh` runs, `scripts/verify.sh` (and `verify-all.sh`) include the delivery check automatically. The same script works against staging or production (`--base-url=https://example.com`, or `BOLT_DELIVERY_URL=https://example.com` for `verify.sh`; read-only GET requests). Without `--fpm-log` it counts a response without `ETag` and without `Accept-Ranges` as PHP — Bolt's thumbnail responses send neither, Apache and Nginx send both for static files. Add `--alias=www.example.com` when the pages link to the site under another host name, `--details` to list every URL, `--json=report.json` for the raw results.
+
+A passing site looks like this (a thumbnail goes through PHP once, when it is generated):
+
+```text
+category  URLs  1st PHP  2nd disk  2nd PHP    broken  ETag  LastMod  max-age   304
+thumbs      69       69        69        0         0    69       69       69    69
+files       53        0        53        0         0    53       53       53    53
+```
+
+On bolt/core 6.0.1 – 6.1.x the same site shows `2nd PHP 69`, no `ETag` / `Last-Modified` and no 304s for thumbnails. A freshly saved thumbnail can carry a weak ETag (`W/"…"`): Apache marks files changed within the last second as weak; 304s work the same.
+
+### 3. Manual HTTP Header Inspection
 Test live response headers using `curl -I`:
 
 ```bash
-# 1. Test thumbnail headers (must NOT contain "private, max-age=0")
+# 1. Test thumbnail headers (request it twice — the first request may generate it)
 curl -I https://example.com/thumbs/320x240/foto/hero.webp
 
-# Expected Headers:
+# Expected Headers (served from disk):
 # HTTP/2 200
-# cache-control: public, max-age=...
-# pragma: public
+# cache-control: max-age=5184000
+# etag: "..."
+# last-modified: ...
+# A response without etag / last-modified and with max-age=31536000, public came from PHP (Glide).
+# It must never contain "private, max-age=0".
 
 # 2. Test static media headers
 curl -I https://example.com/files/foto/hero.webp
@@ -254,7 +299,12 @@ curl -I https://example.com/theme/mytheme/css/index.css?v=1.1
 - **Cause:** A custom EventSubscriber or Twig extension injected `RequestStack::getSession()` without checking `hasSession()`.
 - **Fix:** Never start sessions for asset routes or ensure session calls are guarded by `if ($request->hasSession())`.
 
-### Pitfall 2: `public/thumbs/` Directory Permissions
+### Pitfall 2: Thumbnails Still Served by PHP Despite `save_files: true`
+- **Symptom:** the delivery check reports thumbnails as `2nd PHP`; their responses have `Cache-Control: max-age=31536000, public` but no `ETag` / `Last-Modified`, and `public/thumbs/` fills with folders like `400_300_80_crop_files/`.
+- **Cause:** bolt/core 6.0.1 – 6.1.x save thumbnails to a path no thumbnail URL points to (Step 2).
+- **Fix:** upgrade bolt/core to a release with PR #3828, then delete the unused `public/thumbs/*_files/` folders. Until then thumbnails keep working, just through PHP.
+
+### Pitfall 3: `public/thumbs/` Directory Permissions
 - **Symptom:** Bolt logs `Cannot dump file public/thumbs/... Permission denied`.
 - **Cause:** Web server user (`www-data` or PHP-FPM user) lacks write permissions to `public/thumbs/`.
 - **Fix:** Ensure directory permissions match `config/bolt/config.yaml`:
