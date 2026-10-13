@@ -312,7 +312,7 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 | **Docker?** | `bolt-timezone` INI and compose layers (1.1); Nginx block (2.2) if the container uses Nginx | `bolt-timezone` config and Kernel layers only |
 | **Deployed by uploading files (SFTP / FTP)?** | Committed `.env` holds production-safe defaults, secrets only in the server's `.env.local`, excluded upload paths, `var/cache/prod/` deleted after each upload (`bolt-security-hardening` Steps 1, 7) | Same `.env` rules; the deploy script runs `cache:clear` |
 | **Editors other than the site's own staff?** | Keep SVG and iframes out (`bolt-security-hardening` Step 4) and consider the strict CSP (Step 6b) | Same defaults — they cost nothing |
-| **External consumers of the REST/GraphQL API?** | Lock down permissions instead of removing routes (1.3); run `verify-all.sh --skip=bolt-disable-api` and test the endpoints manually | Fully disable the API (default) |
+| **External consumers of the REST/GraphQL API?** | Lock down permissions instead of the deny-all firewall rule (1.3); run `verify-all.sh --skip=bolt-disable-api` and test the endpoints manually | Fully disable the API (default) |
 
 ### Checkpoint 0
 
@@ -341,8 +341,8 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 - The remaining `bolt-add-language` steps are spread over the phases that own those files: Step 2 in 5.1, Step 3 in 5.5, Step 4 in 5.4, Step 6 in 6.3, Step 5 and Step 7 in Phase 7. Its verification runs in Phase 8, once per secondary locale.
 
 ### 1.3 API Lockdown (`bolt-disable-api`)
-- Comment out the `api_platform` route loader (keep `api_entrypoint`), set the documentation and GraphiQL flags in `config/packages/api_platform.yaml`, revoke `api:*` permissions in `config/bolt/permissions.yaml`, add the `^/api(/|$)` firewall rule (keep Bolt core's entity path in `mapping.paths`).
-- **[if the site plan lists API consumers]** keep the routes and use only the permission and firewall lock-down.
+- Keep the `api_platform` route loader and `api_entrypoint` registered (the admin listings generate IRIs from those routes; removing them breaks the dashboard with "Unable to generate an IRI"), set the documentation and GraphiQL flags in `config/packages/api_platform.yaml`, revoke `api:*` permissions in `config/bolt/permissions.yaml`, add the `^/api(/|$)` → `ROLE_NO_ACCESS` firewall rule as the first `access_control` entry (keep Bolt core's entity path in `mapping.paths`).
+- **[if the site plan lists API consumers]** replace the deny-all firewall rule with the permission lock-down only.
 - `php bin/console lint:yaml config --parse-tags && php bin/console cache:clear`
 - *Verify:* `bash $SKILLS/bolt-disable-api/scripts/verify.sh` (the HTTP part needs the running site and `BOLT_BASE_URL`; otherwise it reports SKIPPED and is repeated in Phase 8).
 

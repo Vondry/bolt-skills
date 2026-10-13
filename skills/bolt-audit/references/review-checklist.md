@@ -25,9 +25,9 @@ never "keep, record as deviation".
 - **Severity hints:** a layer missing → High (dates shift on every save).
 
 ## 2. bolt-disable-api
-- **Script:** API Platform / GraphQL routes in the router, YAML validity, `api_platform` flags, live endpoints (with `--base-url`).
+- **Script:** API Platform routes still registered (the admin needs them for IRIs), YAML validity, `api_platform` flags, the `^/api(/|$)` deny-all firewall rule, live endpoints (with `--base-url`).
 - **Review:** ask whether anything consumes the API (mobile app, headless frontend, integrations). If yes, the skill's lock-down variant applies and the full-disable check is expected to fail — check permissions and firewall instead (WORKFLOWS Appendix B.3).
-- **Severity hints:** API reachable without a consumer → Critical; documentation (`/api/docs`, GraphiQL) public → High.
+- **Severity hints:** API reachable without a consumer → Critical; documentation (`/api/docs`, GraphiQL) public → High; `api_platform` route loader commented out → High (admin dashboard and listings fail with "Unable to generate an IRI" once the cache is cleared) — fix by restoring the loader, never by reopening the API.
 
 ## 3. bolt-code-quality
 - **Script:** composer dev dependencies and scripts, `ecs.php`, `phpstan.dist.neon`, Makefile targets, CI file, live ECS / PHPStan runs.

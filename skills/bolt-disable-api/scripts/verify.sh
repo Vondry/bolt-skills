@@ -30,21 +30,24 @@ echo "=========================================================="
 
 FAILED=0
 
-# 1. Check Routes in Symfony Router
-echo -n "[1/4] Checking Symfony router for exposed API routes... "
-EXPOSED_ROUTES=$(php bin/console debug:router 2>/dev/null | grep -E "(api_doc|api_graphql|_api_/contents)" || true)
+# 1. API Platform routes must stay registered: Bolt's admin listings generate IRIs from them
+#    ("Unable to generate an IRI for the item of type Bolt\Entity\Content" otherwise).
+#    The API is blocked by the firewall rule (check 4), not by removing routes.
+echo -n "[1/5] Checking that API Platform routes stay registered (needed by the admin)... "
+API_ROUTE_COUNT=$(php bin/console debug:router 2>/dev/null | grep -c " _api_" || true)
 
-if [ -n "$EXPOSED_ROUTES" ]; then
-    echo "FAILED"
-    echo "  Found exposed routes in router:"
-    echo "$EXPOSED_ROUTES"
-    FAILED=1
+if [ "${API_ROUTE_COUNT:-0}" -gt 0 ]; then
+    echo "PASSED ($API_ROUTE_COUNT _api_* routes registered)"
 else
-    echo "PASSED (No exposed API/GraphQL routes registered)"
+    echo "FAILED"
+    echo "  No _api_* routes found. The api_platform route loader in config/routes/api_platform.yaml"
+    echo "  is probably commented out, which breaks the Bolt admin listings (\"Unable to generate an IRI\")."
+    echo "  Restore the loader (Step 1); the firewall rule keeps the API closed."
+    FAILED=1
 fi
 
 # 2. Check YAML Linting
-echo -n "[2/4] Validating YAML configuration files... "
+echo -n "[2/5] Validating YAML configuration files... "
 if php bin/console lint:yaml config --parse-tags > /dev/null 2>&1; then
     echo "PASSED"
 else
@@ -53,7 +56,7 @@ else
 fi
 
 # 3. Check Configuration Flags
-echo -n "[3/4] Checking api_platform configuration flags... "
+echo -n "[3/5] Checking api_platform configuration flags... "
 DOCS_FLAG=$(php bin/console debug:config api_platform 2>/dev/null | grep -E "^\s*enable_docs:" | awk '{print $2}' || true)
 GRAPHIQL_FLAG=$(php bin/console debug:config api_platform graphql 2>/dev/null | grep -A 1 "graphiql:" | grep "enabled:" | awk '{print $2}' || true)
 
@@ -71,9 +74,26 @@ if [ -f config/packages/nelmio_cors.yaml ] && grep -qE "^[[:space:]]+'\^/':" con
     echo "  WARNING: config/packages/nelmio_cors.yaml applies CORS to every path ('^/') — limit it to '^/api/' (Step 5)."
 fi
 
-# 4. Check HTTP Endpoints if server is reachable
+# 4. Firewall: the first access_control rule matching /api must deny everyone. It is the only
+#    thing that blocks API requests, since the routes stay registered.
+echo -n "[4/5] Checking the ^/api(/|\$) firewall rule... "
+FIRST_API_RULE=$(php bin/console debug:config security access_control 2>/dev/null | awk '
+    /^[[:space:]]*path:/ { path = $2; inrule = (path ~ /^\^\/api/); next }
+    inrule && /^[[:space:]]*- / { sub(/^[[:space:]]*- /, ""); print path " " $0; exit }
+' || true)
+
+if [ "$FIRST_API_RULE" = "^/api(/|\$) ROLE_NO_ACCESS" ]; then
+    echo "PASSED (first /api rule denies all: $FIRST_API_RULE)"
+else
+    echo "FAILED"
+    echo "  Expected the first access_control rule matching /api to be"
+    echo "  { path: '^/api(/|\$)', roles: ROLE_NO_ACCESS } (Step 4); found: '${FIRST_API_RULE:-none}'"
+    FAILED=1
+fi
+
+# 5. Check HTTP Endpoints if server is reachable
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
-echo -n "[4/4] Checking HTTP endpoints against $BASE_URL... "
+echo -n "[5/5] Checking HTTP endpoints against $BASE_URL... "
 if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
     echo ""
     ENDPOINTS=(
@@ -81,6 +101,10 @@ if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
         "/api/docs.jsonopenapi"
         "/api/graphql/graphiql"
         "/api/contents"
+        "/api/contents/1"
+        "/api/fields"
+        "/api/relations"
+        "/index.php/api/contents"
     )
 
     for ep in "${ENDPOINTS[@]}"; do
