@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Twig\Extension\AbstractExtension;
@@ -32,6 +33,7 @@ class ImageDimensionsExtension extends AbstractExtension
     private array $dimensions = [];
 
     public function __construct(
+        #[Autowire('%kernel.project_dir%')]
         private readonly string $projectDir,
         private readonly CacheInterface $cache,
     ) {

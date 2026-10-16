@@ -304,7 +304,7 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 | **One-page site with anchor sections?** | Menu profile `landing`; links `/#section`; matching `id` attributes on the homepage sections | Profile `catalog` (hierarchical pages with submenus) or `conditional` (event-style site whose sections appear only when content exists) |
 | **Product / catalog listing?** | `products` ContentType (5.1); `bolt-theme-templates` adds `pages/product/`, the featured-products container and the root `product.twig` / `product.record.twig` entrypoints (6.1) | Nothing to do: `bolt-theme-templates`' scaffold skips the product pages when `contenttypes.yaml` has no `products` (`--products=auto`) |
 | **Photo galleries / lightbox?** | `ImageDimensionsExtension` (3.2); `photoswipe.ts` imported (4.5); `components/ui/picture.twig` with `pswp: true` inside `.photoswipe-gallery` | Remove the `photoswipe` import, the `photoswipe` npm dependency and its CSS `@import` |
-| **Downloadable files?** | `FileSizeExtension` (3.2); `field.path|file_size|format_bytes` | `FileSizeExtension` optional |
+| **Downloadable files?** | `FileSizeExtension` (3.2); `field.path|file_size|format_file_size` | `FileSizeExtension` optional |
 | **Carousel?** | Load `css/splide_4.1.2.min.css` and `js/splide_4.1.2.min.js` (from `bolt-theme-init`) in the `head` block of the pages that use it | Delete the Splide files |
 | **Analytics, marketing tracking or third-party embeds?** | Two-layer cookie banner, Consent Mode v2, Sklik and embeds behind consent (6.5). Decide basic (trackers load only after consent, default) vs. advanced Consent Mode (`analytics.consent_mode` in `theme.yaml`) — advanced only on the operator's explicit decision | No banner (`bolt-cookie-consent/scripts/scaffold.sh --no-banner`). The privacy page is still required (server logs, contact data); `verify.sh` then checks the page only |
 | **More than one business on the website?** | Ask `bolt-cookie-consent`'s two controller-model questions (joint / separate / hybrid) — never guess the model | Controller model `single` |
@@ -410,7 +410,7 @@ Verifications 2.1 and 2.2 pass; `bolt-security-hardening` reports the baseline C
 - `bash $SKILLS/bolt-runtime-extensions/scripts/scaffold.sh` installs into `src/` and registers `LocaleLinkExtension` in `config/services.yaml` (with `$appLocales` / `$defaultLocale` bound to `%app_locales%` / `%locale%`):
   - `LocaleLinkExtension` — `locale_link(path)`: prefixes internal links with the current locale (default locale stays unprefixed), keeps query strings and hashes, leaves external URLs and pure `#fragments` untouched.
   - `ImageDimensionsExtension` — `image_dimensions(url)`: cached disk probe (Symfony cache, invalidated by file `mtime`) that gives PhotoSwipe 5 the intrinsic width and height of images without a media-library entry.
-  - `FileSizeExtension` — `|file_size` and `|format_bytes`: human-readable sizes for catalogs and download links.
+  - `FileSizeExtension` — `|file_size` and `|format_file_size`: human-readable sizes for catalogs and download links.
 - Existing `src/*Extension.php` files are kept unless `--force` is given.
 - Keep `LocaleLinkExtension` on every site. Keep `ImageDimensionsExtension` **[if gallery/lightbox]** and `FileSizeExtension` **[if downloads]**; removing an unused one makes the verification report a warning, which is listed as expected in the site plan.
 - The scaffold adds `app_locales: cs|en` only when the parameter is missing; 1.2 already set it.
@@ -512,7 +512,7 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - Merge `$SKILLS/bolt-theme-templates/examples/translations.<locale>.xlf`.
 - Build one page orchestrator per routable ContentType and singleton (`pages/<name>/<name>.twig`, `pages/<name>/<name>.record.twig`), extending `partials/_master.twig` and filling `{% block main %}`. Keep one-off pieces in `pages/<name>/components/` and queries in `containers/` — a container that queries an optional ContentType guards it with `config.get('contenttypes/<slug>')` (`setcontent` throws for unknown ContentTypes).
 - Rules for every template: classes only from the contract tokens; links through `locale_link()`; visible strings through translation keys present in every catalog.
-- **[if gallery]** `picture.twig` with `pswp: true` inside `<div class="photoswipe-gallery">` — dimensions from the media library first, `image_dimensions()` as fallback; **[if downloads]** `field.path|file_size|format_bytes`.
+- **[if gallery]** `picture.twig` with `pswp: true` inside `<div class="photoswipe-gallery">` — dimensions from the media library first, `image_dimensions()` as fallback; **[if downloads]** `field.path|file_size|format_file_size`.
 - *Verify:* `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` (layout contract, component purity, pages extend a layout, `locale_link`, the `__()|default()` trap, undefined classes, Twig lint). Raw HTML in page orchestrators is a judgement call — review it against the contract.
 
 ### 6.2 Extension Theme Integration (`bolt-extension-setup`, Part B)

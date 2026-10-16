@@ -79,17 +79,20 @@ fi
 echo -n "[3/5] Checking src/FileSizeExtension.php... "
 FILE_EXT="src/FileSizeExtension.php"
 if [ ! -f "$FILE_EXT" ]; then
-    echo "WARNING: $FILE_EXT not found. Downloadable file attachments cannot use |file_size|format_bytes filters."
+    echo "WARNING: $FILE_EXT not found. Downloadable file attachments cannot use |file_size|format_file_size filters."
     WARNINGS=$((WARNINGS + 1))
 else
     if ! php -l "$FILE_EXT" > /dev/null 2>&1; then
         echo "FAILED: PHP syntax error in $FILE_EXT."
         FAILED=1
-    elif ! grep -q "format_bytes" "$FILE_EXT"; then
-        echo "FAILED: $FILE_EXT is missing 'format_bytes' filter."
+    elif grep -q "TwigFilter('format_bytes'" "$FILE_EXT"; then
+        echo "FAILED: $FILE_EXT registers 'format_bytes', which Bolt core already defines — core's filter wins, so this one never runs. Copy examples/FileSizeExtension.php (filter format_file_size) and replace |format_bytes in the theme's download templates (SKILL.md section 6)."
+        FAILED=1
+    elif ! grep -q "format_file_size" "$FILE_EXT"; then
+        echo "FAILED: $FILE_EXT is missing 'format_file_size' filter."
         FAILED=1
     else
-        echo "PASSED (file_size & format_bytes filters verified)"
+        echo "PASSED (file_size & format_file_size filters verified)"
     fi
 fi
 
@@ -103,8 +106,11 @@ if [ ! -f "$SERVICES_FILE" ]; then
     FAILED=1
 else
     CONFIG_ERRORS=()
-    if ! grep -q "App\\\\LocaleLinkExtension:" "$SERVICES_FILE" && ! grep -q "appLocales" "$SERVICES_FILE"; then
-        CONFIG_ERRORS+=("Missing App\\LocaleLinkExtension service registration or \$appLocales binding")
+    # The arguments come from #[Autowire] attributes in the class, or (older projects) from an
+    # explicit service definition / binding in services.yaml.
+    if [ -f "$LOCALE_EXT" ] && ! grep -q "#\[Autowire('%app_locales%')\]" "$LOCALE_EXT" \
+        && ! grep -q "App\\\\LocaleLinkExtension:" "$SERVICES_FILE" && ! grep -q "appLocales" "$SERVICES_FILE"; then
+        CONFIG_ERRORS+=("LocaleLinkExtension gets no \$appLocales: use the #[Autowire] attributes of examples/LocaleLinkExtension.php")
     fi
     if ! grep -q "app_locales:" "$SERVICES_FILE" && ! grep -q "locales:" "$SERVICES_FILE"; then
         CONFIG_ERRORS+=("Missing app_locales parameter in services.yaml")
@@ -137,8 +143,8 @@ if [ -f "bin/console" ] && command -v php &>/dev/null; then
             if [ -f "$IMG_EXT" ] && ! echo "$TWIG_OUT" | grep -q "image_dimensions"; then
                 MISSING_TAGS+=("image_dimensions function not registered in Twig environment")
             fi
-            if [ -f "$FILE_EXT" ] && ! echo "$TWIG_OUT" | grep -q "format_bytes"; then
-                MISSING_TAGS+=("format_bytes filter not registered in Twig environment")
+            if [ -f "$FILE_EXT" ] && ! echo "$TWIG_OUT" | grep -q "format_file_size"; then
+                MISSING_TAGS+=("format_file_size filter not registered in Twig environment")
             fi
 
             if [ ${#MISSING_TAGS[@]} -gt 0 ]; then

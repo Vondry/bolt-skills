@@ -1,31 +1,17 @@
-# config/services.yaml snippet for bolt-runtime-extensions
-
-parameters:
-  locale: cs
-  app_locales: cs|en
-
-services:
-  _defaults:
-    autowire: true
-    autoconfigure: true
-    public: false
-    bind:
-      $locales: '%app_locales%'
-      $defaultLocale: '%locale%'
-      $projectDir: '%kernel.project_dir%'
-
-  # Auto-registers all App\ classes in src/
-  App\:
-    resource: '../src/*'
-    exclude:
-      - ../src/DependencyInjection/
-      - ../src/Entity/
-      - ../src/Exception/
-      - ../src/Kernel.php
-
-  # Explicit service configuration for LocaleLinkExtension
-  App\LocaleLinkExtension:
-    arguments:
-      $appLocales: '%app_locales%'
-      $defaultLocale: '%locale%'
-    tags: [ 'twig.extension' ]
+# config/services.yaml — nothing to add for bolt-runtime-extensions.
+#
+# Bolt's stock services.yaml already registers every class in src/ with autowiring and
+# autoconfiguration (`App\: resource: '../src/*'`), which tags the extensions as Twig
+# extensions. Their scalar arguments come from #[Autowire] attributes in the classes:
+#
+#   LocaleLinkExtension       %app_locales%, %locale%
+#   ImageDimensionsExtension  %kernel.project_dir% (+ the cache.app pool, autowired)
+#   FileSizeExtension         %kernel.project_dir%
+#
+# Older projects define the extension explicitly; that still works and can be removed:
+#
+#   App\LocaleLinkExtension:
+#     arguments:
+#       $appLocales: '%app_locales%'
+#       $defaultLocale: '%locale%'
+#     tags: [ 'twig.extension' ]
