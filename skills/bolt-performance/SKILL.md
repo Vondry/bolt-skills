@@ -70,7 +70,7 @@ this override fragments are refreshed only by their TTL.
 ## Step 3: The Reusable Partial
 
 Copy [`examples/_cached.twig`](examples/_cached.twig) to `public/theme/<theme>/partials/_cached.twig`.
-It renders a container through `{% cache %}` on GET requests and live on everything else — Bolt's
+It renders a container through `{% cache %}` on GET (and HEAD) requests and live on everything else — Bolt's
 preview is `POST /preview/{id}`, and forms post back:
 
 ```twig
@@ -101,7 +101,7 @@ content — are in [`examples/fragment-cache.twig`](examples/fragment-cache.twig
   `kestazeni`). For a fragment of one record add `record.cacheKey` (`record-00015`), which Bolt
   invalidates when that record is saved. A ContentType missing from `tags` shows its edits only
   after the TTL.
-* **`key`** — unique per fragment; the partial adds the locale. Add everything else the output
+* **`key`** — unique per fragment; the partial adds the locale. Fragments that print absolute URLs (`url()`, `absolute_url()`, `record|link(true)`) also depend on the host: cache them only on a site that answers on one host (the other one redirects, `bolt-htaccess`), or print relative paths inside the fragment. Add everything else the output
   depends on through `vary` (`'p' ~ app.request.query.getInt('page', 1)` for paged listings). No
   `{}()/\@:` characters — never a raw URL path.
 * **`ttl`** — the safety net (default 3600 s). Timed publishing and depublishing change records
@@ -130,7 +130,7 @@ Passes without further checks when the theme has no `{% cache %}`. Otherwise:
 | :--- | :--- |
 | `twig/cache-extra` installed | missing — templates with `{% cache %}` do not compile |
 | `twig.runtime.cache` overridden to `@cache.app.taggable` | missing — fragments ignore content saves |
-| contents of every `{% cache %}` block | a form, `csrf_token`, `app.user`, `app.session`, `app.flashes` or `is_granted` inside |
+| contents of every `{% cache %}` block, and the `template:` of every `partials/_cached.twig` call, following literal includes to any depth | a form, `csrf_token`, `app.user`, `app.session`, `app.flashes` or `is_granted` inside |
 | `tags()` present, GET-only rendering, literal tags are ContentType slugs | — (warnings) |
 
 ## Common Pitfalls
