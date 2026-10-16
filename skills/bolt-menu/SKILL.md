@@ -74,8 +74,8 @@ Use the `class` attribute in `menu.yaml` as semantic behavioral hooks:
 In header Twig templates, split the array using Twig filters:
 ```twig
 {% set nav_items  = menu_array('main') %}
-{% set cta_items  = nav_items|filter(i => i.class is defined and 'cta' in i.class) %}
-{% set link_items = nav_items|filter(i => i.class is not defined or 'cta' not in i.class) %}
+{% set cta_items  = nav_items|filter(i => i.class is defined and 'cta' in i.class|split(' ')) %}
+{% set link_items = nav_items|filter(i => i.class is not defined or 'cta' not in i.class|split(' ')) %}
 ```
 
 Classes written in `menu.yaml` are picked up by Tailwind because `css/tailwind/index.css` scans `config/bolt/menu.yaml` (`@source`).
@@ -238,7 +238,7 @@ Follow the standard theme architecture from `bolt-theme-init` (Integration Contr
 | `[data-sticky-header]` | `<header id="site-header">` | Height subtracted from anchor scroll targets (`auto-scroll.ts`) |
 | `[data-dropdown-toggle="<id>"]` → `#<id>.dropdown` | Submenu button and panel (`components/nav/dropdown.twig`) | Accordion: click / ArrowDown opens, Escape / outside click closes, `aria-expanded` and `inert` kept in sync, height animated via `.dropdown` |
 | `[data-menu-toggle]` | `#menu-toggle` button; `data-label-open` / `data-label-close` hold the translated `aria-label`s | Opens the drawer |
-| `[data-mobile-menu="drawer"]` | `<aside id="mobile-drawer">` (starts `inert`, `aria-hidden="true"`, `translate-x-full`) | Slide-in drawer with focus trap and body scroll lock |
+| `[data-mobile-menu="drawer"]` | `<aside id="mobile-drawer" role="dialog" aria-modal="true">` (starts `inert`, `aria-hidden="true"`, `translate-x-full`) — a modal dialog for screen readers, matching the focus trap | Slide-in drawer with focus trap and body scroll lock |
 | `[data-menu-backdrop]` | `#menu-backdrop` | Shown with the drawer; a click closes it |
 | `[data-menu-close]` | `#menu-close` and the drawer links | Close the drawer (links also close it automatically) |
 | `[data-cookie-settings]` | Footer "Nastavení cookies" button | Opens the consent settings, second layer of the banner (`bolt-cookie-consent`) |
@@ -282,8 +282,8 @@ The smart container retrieves data using `menu_array('main')`, applies business 
 {% set raw_items = menu_array('main')|default([]) %}
 
 {# 2. Separate CTAs from regular nav links #}
-{% set cta_items = raw_items|filter(i => i.class is defined and 'cta' in i.class) %}
-{% set nav_items = raw_items|filter(i => i.class is not defined or 'cta' not in i.class) %}
+{% set cta_items = raw_items|filter(i => i.class is defined and 'cta' in i.class|split(' ')) %}
+{% set nav_items = raw_items|filter(i => i.class is not defined or 'cta' not in i.class|split(' ')) %}
 
 {# 3. Optional guard: drop the homepage link ("Úvod", link: /) when already on the homepage #}
 {% set nav_items = nav_items|filter(i => not (on_homepage and i.link|default('') == '/')) %}
@@ -366,6 +366,8 @@ The smart container retrieves data using `menu_array('main')`, applies business 
 
 <aside id="mobile-drawer"
        data-mobile-menu="drawer"
+       role="dialog"
+       aria-modal="true"
        aria-label="{{ __('nav.mobile_label') }}"
        aria-hidden="true"
        inert
@@ -472,7 +474,8 @@ Accessible dropdown driven by the accordion in `menu.ts`:
     - submenu (array): List of items with { label, uri, link }
     - is_active (bool|optional): Whether the parent or any child item is active
 #}
-{% set dd_id = id|default('submenu-' ~ random()) %}
+{# Deterministic fallback id (the same on every render, so fragment caching and aria-controls work). #}
+{% set dd_id = id|default('submenu-' ~ (label ~ '')|slug) %}
 
 <li class="relative">
     <button type="button"

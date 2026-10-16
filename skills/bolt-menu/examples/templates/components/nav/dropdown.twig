@@ -11,7 +11,8 @@
     - submenu (array): List of items with { label, uri, link }
     - is_active (bool|optional): Whether the parent or any child item is active
 #}
-{% set dd_id = id|default('submenu-' ~ random()) %}
+{# Deterministic fallback id (the same on every render, so fragment caching and aria-controls work). #}
+{% set dd_id = id|default('submenu-' ~ (label ~ '')|slug) %}
 
 <li class="relative">
     <button type="button"
