@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        php: [ '8.2', '8.4' ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-lock
+
+      - name: PHP syntax (plugin, scripts, examples)
+        run: |
+          find src scripts skills -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Shell syntax (every script)
+        run: |
+          find scripts skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
+
+      - name: ShellCheck
+        if: matrix.php == '8.4'
+        run: |
+          find scripts skills -name '*.sh' -print0 | xargs -0 shellcheck --severity=warning
+
+      - name: YAML examples parse
+        if: matrix.php == '8.4'
+        run: |
+          composer require --no-interaction --no-progress --dev symfony/yaml:^7.0 > /dev/null
+          find skills -name '*.yaml' -path '*/examples/*' -print0 | xargs -0 -n1 php -r '
+            require "vendor/autoload.php";
+            try { Symfony\Component\Yaml\Yaml::parseFile($argv[1], Symfony\Component\Yaml\Yaml::PARSE_CUSTOM_TAGS); }
+            catch (Throwable $e) { fwrite(STDERR, $argv[1] . ": " . $e->getMessage() . "\n"); exit(1); }'
