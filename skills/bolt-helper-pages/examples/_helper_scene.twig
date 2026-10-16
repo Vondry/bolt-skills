@@ -1,6 +1,8 @@
 {#
   Error scene — shared markup for every helper page.
   Uses purely scoped semantic classes styled in _helper_scene_styles.twig.
+  Every text param is escaped. To pass markup (a translation with <a>), pass a Twig\Markup
+  value, e.g. built with {% set lead %}…{% endset %}; never disable escaping here.
   Does NOT use arbitrary Tailwind utility classes, preventing CSS bundle bloat.
 
   Params:
@@ -9,7 +11,8 @@
     heading   — main h1 text
     lead      — explanatory paragraph
     field_key — optional: label for requested path
-    field_val — optional: formatted requested URL
+    field_val — optional: requested URL (e.g. the origin)
+    field_val_strong — optional: part shown in bold after field_val (e.g. the path)
     progress  — optional boolean: show maintenance progress bar
     buttons   — optional array of { label, href, variant }
     note      — optional footnote / contact note
@@ -25,9 +28,9 @@
                     <span class="helper-eyebrow">{{ eyebrow }}</span>
                 {% endif %}
 
-                <h1 class="helper-heading">{{ heading|raw }}</h1>
+                <h1 class="helper-heading">{{ heading }}</h1>
 
-                <p class="helper-lead">{{ lead|raw }}</p>
+                <p class="helper-lead">{{ lead }}</p>
 
                 {% if progress is defined and progress %}
                     <div class="helper-progress" role="presentation"></div>
@@ -36,7 +39,7 @@
                 {% if field_val is defined and field_val is not empty %}
                     <div class="helper-field">
                         <span class="helper-field-key">{{ field_key|default('Požadovaná adresa') }}:</span>
-                        <span class="helper-field-val">{{ field_val|raw }}</span>
+                        <span class="helper-field-val">{{ field_val }}{% if field_val_strong is defined %}<strong>{{ field_val_strong }}</strong>{% endif %}</span>
                     </div>
                 {% endif %}
 
@@ -51,7 +54,7 @@
                 {% endif %}
 
                 {% if note is defined and note is not empty %}
-                    <p class="helper-note">{{ note|raw }}</p>
+                    <p class="helper-note">{{ note }}</p>
                 {% endif %}
             </div>
 

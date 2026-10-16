@@ -31,14 +31,16 @@ notfound: [ 'helper-pages/notfound.404.twig' ]
 maintenance_mode: false
 
 # The default for the "Maintenance mode" (503) page.
-maintenance: [ 'helper-pages/maintenance.503.twig' ]
+# A root entrypoint (no '/'): Bolt looks up items with '/' as records first (section 5).
+maintenance: [ 'maintenance.503.twig' ]
 
 # The default content for the "Forbidden" (403) page.
 forbidden: [ 'helper-pages/forbidden.403.twig' ]
 
 # The default content for the "Internal Server Error" (500) page.
 # Note: Active only in APP_ENV=prod. Must stay simple with zero database queries!
-internal_server_error: [ 'helper-pages/internal-server-error.500.twig' ]
+# A root entrypoint (no '/'), extending helper-pages/internal-server-error.500.twig (section 5).
+internal_server_error: [ 'internal-server-error.500.twig' ]
 ```
 
 ## 2. Single-Locale Limitation (Pending bolt/core#3726)
@@ -71,6 +73,10 @@ public/theme/<themename>/helper-pages/
 ├── forbidden.403.twig                   # 403 error page
 ├── internal-server-error.500.twig       # 500 error page
 └── maintenance.503.twig                 # 503 maintenance page
+
+public/theme/<themename>/
+├── internal-server-error.500.twig       # one line: extends helper-pages/internal-server-error.500.twig (section 5)
+└── maintenance.503.twig                 # one line: extends helper-pages/maintenance.503.twig
 ```
 
 ### A. Layout with Master (`_helper_template_with_master.twig`)
@@ -166,6 +172,8 @@ Configure Tailwind to explicitly ignore `helper-pages/`:
   ```
 
 #### 2. Why an Inline `<style>` Block in a Twig Partial vs. a Separate `.css` File?
+
+(Content-Security-Policy: inline `<style>` needs `style-src 'unsafe-inline'` or a nonce. The baseline CSP of `bolt-security-hardening` does not restrict styles, and its optional strict policy allows `'unsafe-inline'` for styles, so both work.)
 Instead of creating a separate compiled `css/helper-pages.css` file in your asset pipeline, styles are placed directly in `helper-pages/_helper_scene_styles.twig` inside an inline `<style>` tag and injected via `{% block head %}`:
 1. **Zero build pipeline overhead:** No need to configure an extra entry point or output build step in Vite, Webpack Encore, or Tailwind CLI.
 2. **Zero extra HTTP requests:** The helper styles arrive inline with the HTML document in a single HTTP response.
@@ -185,7 +193,38 @@ Instead of creating a separate compiled `css/helper-pages.css` file in your asse
 >
 > Keep `internal-server-error.500.twig` strictly static or using safe request parameters (`app.request.uri`), and let it extend `_helper_template_without_master.twig`: the rule covers every template the 500 page renders, including the header and footer containers a with-master layout would pull in.
 
----
+### Point the 500 and 503 config at a root entrypoint (no `/`)
+
+`ErrorController::attemptToRender()` splits each configured item on `/` and first tries it as a `contenttype/slug` record: `helper-pages/internal-server-error.500.twig` becomes a database query for a record with the slug `internal-server-error.500.twig`, run **before** the template is rendered. Only a missing record is caught, so with the database down that query throws and the branded page never appears. An item without `/` skips the lookup.
+
+So the 500 and 503 entries name a one-line file in the theme root that extends the real template:
+
+```twig
+{# public/theme/<themename>/internal-server-error.500.twig #}
+{% extends 'helper-pages/internal-server-error.500.twig' %}
+```
+
+```twig
+{# public/theme/<themename>/maintenance.503.twig #}
+{% extends 'helper-pages/maintenance.503.twig' %}
+```
+
+```yaml
+# config/bolt/config.yaml
+maintenance: [ 'maintenance.503.twig' ]
+internal_server_error: [ 'internal-server-error.500.twig' ]
+```
+
+The 404 and 403 pages keep `helper-pages/…`: they render while the database works, and the extra lookup costs one query.
+
+### Bolt core limits (bolt/core 6.1.9)
+
+Tested by pointing `DATABASE_URL` of a production-mode copy at a missing SQLite file: visitors get Symfony's generic "An Error Occurred: Internal Server Error" instead of the branded page, whatever the theme does. Two core listeners touch the database on the error sub-request:
+
+1. `TimedPublishSubscriber::onKernelRequest()` runs its publish/depublish `UPDATE` queries on every request, including the error page's sub-request. It catches the failure and logs it…
+2. …and `Bolt\Log\LogHandler` writes that log record into the same database, which throws again.
+
+With both patched, the root entrypoint above renders the branded 500 page with the database down; the `helper-pages/…` item still fails on the record lookup. These are upstream fixes (skip sub-requests in `TimedPublishSubscriber`, never throw from `LogHandler`, skip the record lookup for `*.twig` items in `ErrorController`) — do not patch `vendor/`. Until they are released, the zero-database rule and the root entrypoints still matter: they are what keeps the page working once core is fixed, and they already cover every 500 that is not a database outage.
 
 ## 6. Brand-Aligned Visual Metaphor Pattern
 
@@ -226,7 +265,8 @@ When building for a new client (e.g. dental clinic, fitness studio, e-shop):
         heading: 'Tuto stránku se nám nepodařilo najít',
         lead: 'Odkaz je nejspíš zastaralý nebo obsahuje překlep. Zkuste se vrátit na úvodní stránku — a pokud hledáte něco konkrétního, ozvěte se nám.',
         field_key: 'Požadovaná adresa',
-        field_val: origin ~ '<strong>' ~ path|e('html') ~ '</strong>',
+        field_val: origin,
+        field_val_strong: path,
         buttons: [
             { label: 'Zpět na úvod', href: '/', variant: 'primary' },
             { label: 'Kontakt', href: '/kontakt', variant: 'secondary' }
@@ -254,7 +294,8 @@ When building for a new client (e.g. dental clinic, fitness studio, e-shop):
         heading: 'Do této části webu nemáte přístup',
         lead: 'Tato sekce není veřejně přístupná. Pokud se domníváte, že byste k ní měli mít přístup, kontaktujte nás.',
         field_key: 'Požadovaná adresa',
-        field_val: origin ~ '<strong>' ~ path|e('html') ~ '</strong>',
+        field_val: origin,
+        field_val_strong: path,
         buttons: [
             { label: 'Zpět na úvod', href: '/', variant: 'primary' },
             { label: 'Kontakt', href: '/kontakt', variant: 'secondary' }
@@ -342,4 +383,5 @@ vendor/tomvondracek/bolt-skills/skills/bolt-helper-pages/scripts/verify.sh
 3. **Tailwind Bundle Isolation:** Scans helper templates to confirm they do NOT introduce rogue one-off Tailwind utilities, and checks whether Tailwind build config excludes `helper-pages/` (preventing bundle bloat).
 4. **SEO Protection:** Checks for `<meta name="robots" content="noindex, follow">`.
 5. **500 Safety Check:** Validates that `internal-server-error.500.twig` contains zero database lookups (`setcontent`) and extends `_helper_template_without_master.twig`.
+   It also fails when `internal_server_error` names a path with `/` (Bolt looks it up as a record first) or its root entrypoint is missing, and warns about the same for `maintenance`.
 6. **Twig Syntax:** Runs `php bin/console lint:twig public/theme/<themename>/helper-pages` to guarantee error-free Twig compilation.
