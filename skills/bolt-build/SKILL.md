@@ -68,16 +68,17 @@ Ask the rounds in `references/intake.md`:
 - Round 1 (environment) and Round 2 (structure — mostly the design proposal to confirm) first;
 - Round 3 only for gaps the design left; Round 4 operator facts; Round 5 autonomy.
 
-Use the question tool for multiple-choice items (recommended default first) and one message for
-free-text facts. Do not drip-feed questions across phases. What the user leaves unanswered gets
+Use the agent's structured-question tool, where it has one, for multiple-choice items (recommended
+default first), and one message for free-text facts. Do not drip-feed questions across phases. What the user leaves unanswered gets
 the default and a *Decisions log* entry; operator facts (legal identity, IDs, retention) stay
 `[DOPLNIT]` and go to the handover list — never invented.
 
 Secrets: never ask the user to paste passwords into the chat. Account creation is interactive, so the
-user runs it themselves with the `!` prefix (it runs in their session): on a new project
-`! php bin/console bolt:setup --no-fixtures` (migrations, `APP_SECRET`, first account — run it **once**:
+user runs it themselves in their own terminal (in Claude Code: type the command with the `!` prefix,
+which runs it in the user's session): on a new project
+`php bin/console bolt:setup --no-fixtures` (migrations, `APP_SECRET`, first account — run it **once**:
 it resets `APP_SECRET` and writes a new migration every time); on an existing database
-`! php bin/console bolt:add-user --admin`. `bolt:setup` writes `APP_SECRET` into the committed `.env`:
+`php bin/console bolt:add-user --admin`. `bolt:setup` writes `APP_SECRET` into the committed `.env`:
 move it to `.env.local` before the baseline commit (`bolt-security-hardening` Step 1).
 
 ## Step 4 — Site plan and Checkpoint 0
@@ -95,7 +96,7 @@ Where the design and the intake answers flow in:
 
 | Phase | Input from the intake / design | Concretely |
 | :--- | :--- | :--- |
-| 1 | E1, E3, E6, E7, E9, E11, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` (no database configuration); the user runs `! php bin/console bolt:setup --no-fixtures` (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit (with `/var/bolt-build/` in `.gitignore`), `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI, `bolt-security-hardening` configuration (`.env` defaults, trusted hosts from E7) |
+| 1 | E1, E3, E6, E7, E9, E11, E13, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` for the local build (no database configuration; the production database of E13 is set on the server in `.env.local`); the user runs `php bin/console bolt:setup --no-fixtures` in their terminal (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit (with `/var/bolt-build/` in `.gitignore`), `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI, `bolt-security-hardening` configuration (`.env` defaults, trusted hosts from E7) |
 | 2 | E5, E6, E12 | Apache vs. Nginx branch of `bolt-htaccess` / `bolt-asset-caching`; nelmio headers and baseline CSP; admin restriction if E12 asks for it |
 | 3 | S6 | keep / remove `ImageDimensionsExtension` (gallery), `FileSizeExtension` (downloads); note removals as expected warnings |
 | 4 | E8, D1–D5, O1, O9, token table | `bolt-theme-init` scaffold `<theme>`; `theme.yaml` contact, socials, logo, `analytics:`; `bolt-menu --profile=<S4> --templates --force`; tokens and self-hosted fonts from `design-notes.md` into `css/tailwind/index.css`; JS imports per features |
@@ -112,7 +113,7 @@ Where the design and the intake answers flow in:
 - **Verifications scheduled later** (WORKFLOWS Appendix A) are not failures — do not chase them early.
 - **Commits** after every gate, in the project's commit convention (default `chore(build): phase N — <summary>`); never push unless E10 says so; never rewrite history.
 - **Stay inside the project**: no global installs, no changes to other directories, no deployment.
-- **No fixtures, ever**: the database is SQLite from Bolt's default `.env`, initialised once with `bolt:setup --no-fixtures`. Never run `doctrine:fixtures:load` or `bolt:setup` without `--no-fixtures`; never run `make db-reset` on a database with content (it drops everything). Schema changes after Phase 5 go through `make db-update`.
+- **No fixtures, ever**: the database is SQLite from Bolt's default `.env`, initialised once with `bolt:setup --no-fixtures`. Never run `doctrine:fixtures:load` or `bolt:setup` without `--no-fixtures`; never run `make db-reset` on a database with content (it drops everything). Schema changes after Phase 5 go through `make db-update` — on the local database only: it drops tables Doctrine does not map and marks migrations as run without running them; servers run `doctrine:migrations:migrate` (`bolt-code-quality` Step 4).
 - **Operator facts are never invented** (`bolt-cookie-consent` AG-01): `[DOPLNIT]` and the handover list.
 - **Context discipline** on long runs: re-read the phase section and the skill's `SKILL.md` at the start of each phase rather than relying on memory; keep design details in `design-notes.md`, not in the conversation. A new session resumes from the progress table.
 - **Parallel agents** only if the user allowed them (A4) — e.g. independent page templates in 6.1. Each gets the site plan, the Integration Contract and its frames; the main agent integrates, builds and verifies.
