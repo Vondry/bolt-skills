@@ -16,25 +16,30 @@ stages:
   variables:
     COMPOSER_ALLOW_SUPERUSER: "1"
     COMPOSER_NO_INTERACTION: "1"
+    IPE_VERSION: "2.12.0"   # https://github.com/mlocati/docker-php-extension-installer/releases
   cache:
     key: "composer-${PHP_VERSION}"
     paths:
       - vendor/
       - .composer-cache/
   before_script:
-    # docker-php-extension-installer handles system libs + ext compilation.
-    - curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions
+    # docker-php-extension-installer handles system libs + ext compilation. Pinned to a release
+    # (not latest/), so a new upstream version cannot change the pipeline unnoticed.
+    - curl -sSLf -o /usr/local/bin/install-php-extensions "https://github.com/mlocati/docker-php-extension-installer/releases/download/${IPE_VERSION}/install-php-extensions"
     - chmod +x /usr/local/bin/install-php-extensions
     - install-php-extensions intl gd zip pdo_mysql opcache exif bcmath
-    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    # Composer's installer, checked against its published signature before it runs.
+    - curl -sSLf -o composer-setup.php https://getcomposer.org/installer
+    - test "$(curl -sSLf https://composer.github.io/installer.sig)" = "$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+    - php composer-setup.php --install-dir=/usr/local/bin --filename=composer && rm composer-setup.php
     - export COMPOSER_CACHE_DIR="$CI_PROJECT_DIR/.composer-cache"
     - composer install --prefer-dist --no-progress --no-scripts
 
+# Code style does not depend on the PHP version: one run is enough.
 ecs:
   extends: .lint
-  parallel:
-    matrix:
-      - PHP_VERSION: [ "8.2", "8.3", "8.4", "8.5" ]
+  variables:
+    PHP_VERSION: "8.3"
   script:
     - composer lint
 
