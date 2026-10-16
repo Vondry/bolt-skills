@@ -61,6 +61,13 @@ if [ -z "$PROJECT_ROOT" ] || [ ! -f "$PROJECT_ROOT/config/services.yaml" ]; then
     exit 1
 fi
 
+# The name becomes a folder, the `theme:` value in config.yaml and a sed replacement: keep it to
+# lower-case letters, digits and hyphens.
+if ! [[ "$THEME_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    echo "ERROR: theme name '$THEME_NAME' — use lower-case letters, digits and hyphens (e.g. acme-2026)."
+    exit 1
+fi
+
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EXAMPLES_DIR="$SKILL_DIR/examples"
 THEME_DIR="$PROJECT_ROOT/public/theme/$THEME_NAME"

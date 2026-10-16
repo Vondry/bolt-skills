@@ -118,7 +118,7 @@ products:
     title: { type: text, class: large, required: true }
     slug: { type: slug, uses: [ title ] }
     teaser: { type: textarea, height: 100px }
-    body: { type: redactor }
+    body: { type: redactor, sanitise: true }             # sanitise: bolt-contenttypes rule 7
     image: { type: image }
     price: { type: number, label: 'Cena v Kč' }          # Bolt has no `integer` field type
     stock: { type: number, default: 0, label: 'Skladová zásoba' }
