@@ -32,7 +32,7 @@ FAILED=0
 WARNINGS=0
 
 # Determine active theme from config/bolt/config.yaml
-THEME_NAME=$(grep -E "^\s*theme:" config/bolt/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
+THEME_NAME=$(grep -E "^theme:" config/bolt/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
 if [ -z "$THEME_NAME" ]; then
     THEME_NAME="default"
 fi
@@ -45,12 +45,18 @@ echo ""
 # -------------------------------------------------------------
 # 1. Check Composer Dependencies
 # -------------------------------------------------------------
-echo "[1/6] Checking composer.json dependencies..."
+echo "[1/6] Checking installed packages (vendor/composer/installed.json)..."
 for PKG in "appolodev/bolt-seo" "bolt/sitemap-extension" "tomvondracek/bolt-llms-txt"; do
     echo -n "  • $PKG: "
-    if grep -q "\"$PKG\"" composer.json; then
-        VERSION=$(grep "\"$PKG\"" composer.json | head -1 | awk -F: '{print $2}' | tr -d '", ')
+    # The installed version, not the constraint in composer.json: a required package that was
+    # never installed (or was removed from vendor/) must not pass.
+    VERSION=$(php -r '$i = json_decode((string) @file_get_contents("vendor/composer/installed.json"), true);
+        foreach ($i["packages"] ?? $i ?? [] as $p) { if (($p["name"] ?? "") === $argv[1]) { echo $p["pretty_version"] ?? $p["version"]; } }' "$PKG" 2>/dev/null || true)
+    if [ -n "$VERSION" ]; then
         echo "INSTALLED ($VERSION)"
+    elif grep -q "\"$PKG\"" composer.json; then
+        echo "MISSING from vendor/ (in composer.json, run: composer install)"
+        FAILED=1
     else
         echo "MISSING"
         echo "    Run: composer require $PKG"
@@ -86,12 +92,15 @@ fi
 echo -n "  • config/extensions/tomvondracek-llmstxt.yaml: "
 if [ -f "config/extensions/tomvondracek-llmstxt.yaml" ]; then
     echo "FOUND"
-    LLMS_LOCALE=$(grep -E "^\s*locale:" config/extensions/tomvondracek-llmstxt.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
+    LLMS_LOCALE=$(grep -E "^locale:" config/extensions/tomvondracek-llmstxt.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
+    APP_LOCALES=$(grep -E "^[[:space:]]*app_locales:" config/services.yaml | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
     if [ "$LLMS_LOCALE" = "en" ]; then
-        echo "    ✅ locale is set to 'en' (standard for AI models and crawlers)"
-    else
-        echo "    ⚠️  Advisory: locale is set to '$LLMS_LOCALE' (standard practice: 'en' for AI crawlers)"
+        echo "    ✅ locale is set to 'en' (AI crawlers read English best)"
+    elif [[ "|$APP_LOCALES|" == *"|en|"* ]]; then
+        echo "    ⚠️  Advisory: locale is '${LLMS_LOCALE:-default}' although the site has English — set locale: en"
         WARNINGS=$((WARNINGS+1))
+    else
+        echo "    ✅ locale '${LLMS_LOCALE:-default}' (the site has no English)"
     fi
 else
     echo "MISSING (Run: php bin/console extensions:configure --with-config)"
