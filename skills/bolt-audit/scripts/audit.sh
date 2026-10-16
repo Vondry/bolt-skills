@@ -109,7 +109,7 @@ SECONDARY="${SECONDARY# }"
 
 BOLT_VERSION="$(lock_version bolt/core)"
 WEB_SERVER="unknown"
-NGINX_CONF="$(find . -path ./vendor -prune -o -path ./node_modules -prune -o -path ./public/theme -prune -o -name '*.conf' -print 2>/dev/null | xargs grep -l "server_name\|fastcgi_pass" 2>/dev/null | head -n 1 || true)"
+NGINX_CONF="$(find . -path ./vendor -prune -o -path ./node_modules -prune -o -path ./public/theme -prune -o -name '*.conf' -print0 2>/dev/null | xargs -0 grep -l "server_name\|fastcgi_pass" 2>/dev/null | head -n 1 || true)"
 if [ -n "$NGINX_CONF" ] && [ -f public/.htaccess ]; then
     WEB_SERVER="Apache and Nginx configuration both present ($NGINX_CONF)"
 elif [ -n "$NGINX_CONF" ]; then
