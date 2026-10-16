@@ -279,6 +279,11 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
         echo "  WARNING: public/.htaccess does not deny node_modules/ (add: RewriteRule (^|/)(node_modules|\\.git)(/|\$) - [F,L])"
         WARNINGS=$((WARNINGS + 1))
     fi
+    # Only the front controller may run PHP: a leftover info.php or adminer.php would execute.
+    if ! grep -qE 'RewriteRule[[:space:]]+\^\(\?!index' "$PUBLIC_HTACCESS"; then
+        echo "  WARNING: public/.htaccess runs any *.php in public/ (add: RewriteRule ^(?!index\\.php\$).+\\.php\$ - [F,L])"
+        WARNINGS=$((WARNINGS + 1))
+    fi
     if ! grep -qE "FilesMatch[[:space:]]+\"\^\\\\\.env" "$PUBLIC_HTACCESS"; then
         echo "  WARNING: public/.htaccess does not deny .env* files (add: <FilesMatch \"^\\.env\"> Require all denied </FilesMatch>)"
         WARNINGS=$((WARNINGS + 1))
@@ -325,7 +330,7 @@ echo -n "[6/6] Checking live HTTP responses against $BASE_URL... "
 if curl -s -k --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
     echo "SERVER ONLINE"
 
-    THEME_NAME=$(grep -E "^\s*theme:" config/bolt/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
+    THEME_NAME=$(grep -E "^theme:" config/bolt/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
     [ -z "$THEME_NAME" ] && THEME_NAME="default"
 
     TEST_PATHS=(

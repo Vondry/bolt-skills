@@ -21,16 +21,6 @@ AddDefaultCharset UTF-8
         Require all denied
     </FilesMatch>
 </IfModule>
-<IfModule !mod_authz_core.c>
-    <FilesMatch "(\.(twig|ya?ml|neon|lock|ts|md|psd|ini|sql|sqlite3?|bak|old|orig|swp|log|sh|dist)|^\.DS_Store|^(composer|package|package-lock|tsconfig)\.json|\.config\.[cm]?js)$">
-        Order allow,deny
-        Deny from all
-    </FilesMatch>
-    <FilesMatch "^\.env">
-        Order allow,deny
-        Deny from all
-    </FilesMatch>
-</IfModule>
 
 # Security headers (bolt-htaccess + bolt-security-hardening). Pages rendered by Symfony get their
 # headers from nelmio_security (config/packages/nelmio_security.yaml); these lines cover the files
@@ -94,6 +84,9 @@ AddDefaultCharset UTF-8
 
 # Disabling MultiViews prevents unwanted negotiation, e.g. "/index" should not resolve
 # to the front controller "/index.php" but be rewritten to "/index.php/index".
+# Left commented on purpose: on hosts whose AllowOverride does not include Options (common on
+# shared hosting), an Options line in .htaccess makes every request answer 500. Enable it where
+# the host allows it — or ask the host to disable MultiViews for the site.
 #<IfModule mod_negotiation.c>
 #    Options -MultiViews
 #</IfModule>
@@ -104,6 +97,11 @@ AddDefaultCharset UTF-8
     # Theme build folders: node_modules/ (created by npm inside public/theme/<theme>/) exposes
     # every dependency's sources and versions; .git/ exposes the repository. Deny both.
     RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
+
+    # Only the front controller runs PHP. A forgotten info.php, adminer.php or backup script in
+    # public/ is refused instead of executed (the allowlist below already covers theme/, files/
+    # and thumbs/).
+    RewriteRule ^(?!index\.php$).+\.php$ - [F,L]
 
     # Allowlist: in the folders that mix public files with sources or uploads, only known static
     # files are served and everything else is 403 — a forgotten file type stays private.

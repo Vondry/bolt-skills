@@ -138,6 +138,9 @@ In `public/.htaccess`, inside `<IfModule mod_rewrite.c>` directly after `Rewrite
     # Theme build folders: node_modules/ and .git/ are never served.
     RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
 
+    # Only the front controller runs PHP: a forgotten info.php or adminer.php is refused.
+    RewriteRule ^(?!index\.php$).+\.php$ - [F,L]
+
     # theme/<theme>/: the built assets in css/, js/, img/, images/ and fonts/. Templates, theme.yaml,
     # package.json, build configs, TypeScript sources and anything at the theme root are denied.
     RewriteCond $0 !^theme/[^/]+/(css|js|img|images|fonts)/([^/]+/)*[^/]+\.(css|js|avif|gif|ico|jpe?g|png|svg|webp|woff2?|ttf|otf|webmanifest|xml|pdf|mp4|webm)$ [NC]
@@ -158,6 +161,8 @@ In `public/.htaccess`, inside `<IfModule mod_rewrite.c>` directly after `Rewrite
 * **Theme folders:** the convention of `bolt-theme-init` puts browser files in `css/`, `js/` and `img/`. A theme that keeps public files elsewhere (a favicon at the theme root, `dist/`) — move them, or add the folder to the list.
 * **Upload types:** keep the `files/` list in line with `accept_file_types` in `config/bolt/config.yaml`. A type the site accepts but this list lacks uploads fine and then answers 403.
 * `css/tailwind/index.css` (the Tailwind source) stays reachable: it is CSS, contains nothing private, and the allowlist works by folder and type, not by file.
+* **PHP:** only `index.php` runs. Any other `*.php` anywhere in `public/` — a phpinfo page, an Adminer copy, a backup script left after an SFTP session — answers 403 instead of executing. Tested on Apache 2.4 with PHP-FPM: `/info.php` → 403, while `/`, `/index.php`, Bolt routes and built assets are served as before.
+* **Nginx:** the same allowlist for Nginx is in `bolt-security-hardening/examples/docker/nginx_security.conf` (its PHP location passes only `index.php` to PHP-FPM).
 
 ---
 
