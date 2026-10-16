@@ -26,7 +26,7 @@
                 title_id: 'featured-products-title',
                 eyebrow: __('homepage.featured_eyebrow'),
                 layout: 'split',
-                link: { label: __('homepage.all_products'), href: '/produkty' }
+                link: { label: __('homepage.all_products'), href: path('listing', { contentTypeSlug: config.get('contenttypes/products/slug') }) }
             } %}
 
             <ul role="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

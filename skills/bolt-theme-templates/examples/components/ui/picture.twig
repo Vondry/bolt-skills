@@ -11,6 +11,8 @@
     - loading (string|optional): 'lazy' | 'eager' (default: 'lazy')
     - class (string|optional): CSS classes for the <img> element
     - aspect (string|optional): Aspect ratio class e.g. 'aspect-16/9', 'aspect-4/3', 'aspect-square'
+    - sizes (string|optional): the `sizes` attribute — how wide the image is shown. Default fits a
+        three-column grid; a full-width hero needs '100vw'
     - pswp (bool|optional): Render the picture as a PhotoSwipe 5 slide link. Wrap the
         pictures of one gallery in <div class="photoswipe-gallery"> (js/src/photoswipe.ts).
 
@@ -41,7 +43,7 @@
 {% set img_tag %}
     <img src="{{ image|thumbnail(1200, 800) }}"
          srcset="{{ image|thumbnail(600, 400) }} 600w, {{ image|thumbnail(1200, 800) }} 1200w"
-         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+         sizes="{{ sizes|default('(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw') }}"
          alt="{{ img_alt }}"
          loading="{{ loading|default('lazy') }}"
          decoding="async"

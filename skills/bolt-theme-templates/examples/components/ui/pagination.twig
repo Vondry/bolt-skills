@@ -9,7 +9,7 @@
   (including _locale) and the query string, and only change `page`.
 
   Styling: the `.pagination` rules from bolt-tailwind-theme (li a, li.active a,
-  a[aria-current], li[disabled]).
+  a[aria-current], li.disabled > span).
 
   Translation keys: a11y.pagination, pager.previous, pager.next
 #}
@@ -35,7 +35,7 @@
             {% if start > 1 %}
                 <li><a href="{{ path(route, routeParams|merge({ page: 1 })) }}">1</a></li>
                 {% if start > 2 %}
-                    <li disabled aria-hidden="true"><a>…</a></li>
+                    <li class="disabled" aria-hidden="true"><span>…</span></li>
                 {% endif %}
             {% endif %}
 
@@ -47,7 +47,7 @@
 
             {% if end < last %}
                 {% if end < last - 1 %}
-                    <li disabled aria-hidden="true"><a>…</a></li>
+                    <li class="disabled" aria-hidden="true"><span>…</span></li>
                 {% endif %}
                 <li><a href="{{ path(route, routeParams|merge({ page: last })) }}">{{ last }}</a></li>
             {% endif %}

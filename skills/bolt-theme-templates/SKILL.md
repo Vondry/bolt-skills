@@ -166,7 +166,7 @@ All examples use the token names of `bolt-tailwind-theme` (`canvas`, `surface`, 
     - variant (string|optional): 'primary' | 'secondary' | 'dark' | 'outline' | 'light-outline' | 'ghost' (default: 'primary')
         'light-outline' is the outline variant for dark backgrounds (hero, night bands).
     - size (string|optional): 'sm' | 'md' | 'lg' (default: 'md')
-    - icon (string|optional): Raw SVG or icon name
+    - icon (string|optional): Raw SVG from the theme. Printed unescaped — trusted theme markup only, never CMS or translation text
     - icon_position (string|optional): 'left' | 'right' (default: 'right')
     - type (string|optional): 'button' | 'submit' (default: 'button')
     - class (string|optional): Additional Tailwind classes
@@ -232,7 +232,8 @@ The stretched link (`absolute inset-0` on the title link) makes the whole card c
     - href (string): Link target (passed through locale_link)
     - image (Bolt image field|string|optional): Card image
     - badge (string|optional): Category or status text, rendered with components/ui/badge.twig
-    - badge_markup (Markup|optional): Pre-rendered badge, e.g. a page-scoped component:
+    - badge_markup (string|optional): Pre-rendered badge from a theme template (printed unescaped —
+        pass include() output only, never CMS or translation text), e.g. a page-scoped component:
         badge_markup: include('pages/product/components/stock-badge.twig', { stock: item.stock })
     - description (string|optional): Excerpt / summary (HTML is stripped)
     - price (string|optional): Pre-formatted price, e.g. macros.formatPrice(item.price)
@@ -329,6 +330,8 @@ Dimensions come from the media library first (`image|media`), then from `image_d
     - loading (string|optional): 'lazy' | 'eager' (default: 'lazy')
     - class (string|optional): CSS classes for the <img> element
     - aspect (string|optional): Aspect ratio class e.g. 'aspect-16/9', 'aspect-4/3', 'aspect-square'
+    - sizes (string|optional): the `sizes` attribute — how wide the image is shown. Default fits a
+        three-column grid; a full-width hero needs '100vw'
     - pswp (bool|optional): Render the picture as a PhotoSwipe 5 slide link. Wrap the
         pictures of one gallery in <div class="photoswipe-gallery"> (js/src/photoswipe.ts).
 
@@ -359,7 +362,7 @@ Dimensions come from the media library first (`image|media`), then from `image_d
 {% set img_tag %}
     <img src="{{ image|thumbnail(1200, 800) }}"
          srcset="{{ image|thumbnail(600, 400) }} 600w, {{ image|thumbnail(1200, 800) }} 1200w"
-         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+         sizes="{{ sizes|default('(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw') }}"
          alt="{{ img_alt }}"
          loading="{{ loading|default('lazy') }}"
          decoding="async"
@@ -399,7 +402,7 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
   (including _locale) and the query string, and only change `page`.
 
   Styling: the `.pagination` rules from bolt-tailwind-theme (li a, li.active a,
-  a[aria-current], li[disabled]).
+  a[aria-current], li.disabled > span).
 
   Translation keys: a11y.pagination, pager.previous, pager.next
 #}
@@ -425,7 +428,7 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
             {% if start > 1 %}
                 <li><a href="{{ path(route, routeParams|merge({ page: 1 })) }}">1</a></li>
                 {% if start > 2 %}
-                    <li disabled aria-hidden="true"><a>…</a></li>
+                    <li class="disabled" aria-hidden="true"><span>…</span></li>
                 {% endif %}
             {% endif %}
 
@@ -437,7 +440,7 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
 
             {% if end < last %}
                 {% if end < last - 1 %}
-                    <li disabled aria-hidden="true"><a>…</a></li>
+                    <li class="disabled" aria-hidden="true"><span>…</span></li>
                 {% endif %}
                 <li><a href="{{ path(route, routeParams|merge({ page: last })) }}">{{ last }}</a></li>
             {% endif %}
@@ -467,7 +470,8 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
     - title (string): Section heading
     - title_id (string|optional): HTML id of the heading, for aria-labelledby on the section
     - eyebrow (string|optional): Small kicker label above the heading
-    - lead (string|Markup|optional): Intro paragraph
+    - lead (string|optional): Intro paragraph; may contain HTML (a translation or CMS field) — it is
+        cleaned by Bolt's HTML cleaner (|sanitise) before output
     - layout (string|optional): 'stacked' (default) | 'split' | 'center'
     - link (object|optional): { label, href } — rendered as a secondary button ('split' layout)
     - heading_level (int|optional): 2 (default) or 1 for page titles
@@ -489,7 +493,7 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
         {{ macros.typo(title) }}
     </{{ tag }}>
     {% if lead is defined and lead is not empty %}
-        <p class="mt-3 text-lead text-ink-2">{{ lead|raw }}</p>
+        <p class="mt-3 text-lead text-ink-2">{{ lead|sanitise|raw }}</p>
     {% endif %}
 {% endset %}
 
@@ -611,7 +615,7 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
   Props:
     - message (string|optional): Description of the empty state (default: empty.message)
     - title (string|optional): Heading (default: empty.title)
-    - icon (string|optional): SVG or icon
+    - icon (string|optional): SVG from the theme. Printed unescaped — trusted theme markup only, never CMS or translation text
     - action_label (string|optional): Button text
     - action_href (string|optional): Button link
 
@@ -801,7 +805,7 @@ The homepage stays free of `setcontent`: the query lives in this container.
                 title_id: 'featured-products-title',
                 eyebrow: __('homepage.featured_eyebrow'),
                 layout: 'split',
-                link: { label: __('homepage.all_products'), href: '/produkty' }
+                link: { label: __('homepage.all_products'), href: path('listing', { contentTypeSlug: config.get('contenttypes/products/slug') }) }
             } %}
 
             <ul role="list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -1024,7 +1028,7 @@ The homepage stays free of `setcontent`: the query lives in this container.
     <div class="wrapper px-edge flex items-center justify-between gap-4">
         {% include 'components/ui/breadcrumbs.twig' with {
             items: [
-                { label: __('products.title'), href: '/produkty' },
+                { label: __('products.title'), href: path('listing', { contentTypeSlug: record.definition.slug }) },
                 { label: record|title }
             ]
         } %}

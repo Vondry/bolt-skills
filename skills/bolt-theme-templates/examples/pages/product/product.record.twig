@@ -14,7 +14,7 @@
     <div class="wrapper px-edge flex items-center justify-between gap-4">
         {% include 'components/ui/breadcrumbs.twig' with {
             items: [
-                { label: __('products.title'), href: '/produkty' },
+                { label: __('products.title'), href: path('listing', { contentTypeSlug: record.definition.slug }) },
                 { label: record|title }
             ]
         } %}
