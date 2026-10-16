@@ -71,7 +71,7 @@ api_platform:
     introspection: false
   mapping:
     # Keep Bolt core's entities: removing this path drops Bolt's API resources and differs
-    # from every stock Bolt project. Disabling happens through routes, flags and the firewall.
+    # from every stock Bolt project. Disabling happens through flags, permissions and the firewall.
     paths: [ '%kernel.project_dir%/vendor/bolt/core/src/Entity', '%kernel.project_dir%/src/Entity' ]
   formats:
     json: [ 'application/json' ]
@@ -91,6 +91,8 @@ when@prod:
     graphql:
       introspection: false
 ```
+
+The `when@prod` block repeats the root setting on purpose: it is Bolt's stock block, and keeping it unchanged makes the diff against `bolt/project` smaller.
 
 *(Note: Do not set `api_platform.graphql.enabled: false` because in API Platform 4.3, entity attributes declaring `graphQlOperations` without explicit class options trigger a TypeError during Doctrine parameter compilation. The firewall rule in Step 4 achieves full disabling cleanly without this bug).*
 
@@ -193,7 +195,8 @@ Execute the bundled test script (set `BOLT_BASE_URL` to this project's running s
 ```bash
 BOLT_BASE_URL=http://localhost:8080 vendor/tomvondracek/bolt-skills/skills/bolt-disable-api/scripts/verify.sh
 ```
-Or verify manually via `curl` (every endpoint must be refused; `404` is acceptable only where the feature is switched off, such as GraphiQL):
+Or verify manually via `curl` (every endpoint must be refused; `404` is acceptable only where the feature is switched off — the documentation and GraphiQL. A `404` on a data endpoint means the routes are gone, which breaks the admin):
+- `curl -i http://127.0.0.1:8000/api` -> Expect `404` (the entrypoint is off; routing answers before the firewall)
 - `curl -i http://127.0.0.1:8000/api/contents` -> Expect `401` or `403`
 - `curl -i http://127.0.0.1:8000/api/contents/1` -> Expect `401` or `403`
 - `curl -i http://127.0.0.1:8000/api/docs.html` -> Expect `401`, `403` or `404`
