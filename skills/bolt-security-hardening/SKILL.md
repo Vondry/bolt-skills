@@ -102,7 +102,7 @@ stock file stays as Bolt ships it:
 | `validation.mapping.paths` | Loads the password policy of Step 3. |
 | `when@prod` session: `handler_id: session.handler.native_file`, `save_path: var/sessions/prod`, `gc_*` | Sessions in the project's own folder instead of the host's shared one, with working garbage collection. |
 | `cookie_secure: true`, `cookie_httponly: true`, `cookie_samesite: lax` | The session cookie only travels over HTTPS and is invisible to scripts. `auto` would drop the secure flag behind an untrusted proxy. |
-| `cookie_lifetime: 28800` | 8 hours instead of 14 days. |
+| `cookie_lifetime: 28800` | 8 hours instead of 14 days. The cookie survives closing the browser for those 8 hours; `0` would end the session with the browser (remember-me still keeps editors who ask for it logged in). |
 
 > [!WARNING]
 > Do **not** put `trusted_hosts` into this file. Lists from several config files are merged, not
@@ -164,6 +164,7 @@ Merge [`examples/config_snippet.yaml`](examples/config_snippet.yaml):
 | `headers.powered_by`, `omit_meta_generator_tag` | `false`, `true` | No `X-Powered-By: Bolt`, no `<meta name="generator">`: scanners do not learn the CMS. |
 | `query_search.enable` | `false` | Otherwise any listing filters by any field (`/entries?title--like=a`) — fields the templates never show can be read one guess at a time. Keep it on only when a listing page filters through the query string. |
 | `htmlcleaner.allowed_tags` | without `iframe` | Its `src` is not filtered (also `javascript:`); embeds use `_consent-embed.twig` (`bolt-cookie-consent`). Remove `frameborder`, `allowfullscreen`, `scrolling` from `allowed_attributes` with it. |
+| `htmlcleaner.allowed_attributes` | as in the example | Trade-off to know: `style` lets an editor position content over the page (a fake login box inside trusted content); `id` and `name` can shadow global names that scripts read (DOM clobbering). Redactor uses `style` for alignment and image sizes, so the example keeps all three. Drop `style` when the theme styles alignment through classes; drop `id` / `name` when no anchors are set in content. |
 | `accept_file_types` | no `html`, `js`, `css`, `scss`, `twig`, `yaml`, `svg` | Uploads are served from the site's origin (stored XSS); the file editor (Step 5) can only save these extensions. |
 | `accept_media_types` | no `svg` | The Redactor / Article upload buttons accept these without cleaning SVGs. |
 | `curl_options.verify_peer` | `true` | Bolt's sample config sets `false` (oEmbed fetches without TLS checks). |
@@ -257,6 +258,21 @@ scripts, but every tracker and embed must be listed. Introduce it in two stages:
    ```
    The admin then has no CSP; `X-Frame-Options: DENY` still protects it. Change `bolt` in the
    pattern if `bolt.backend_url` differs.
+
+**Inline scripts under the strict policy.** `script-src 'self'` blocks every inline `<script>`. The
+skills ship none (`bolt-cookie-consent` prints its configuration as JSON and runs from `app.js`),
+so the policy works as is. When a project must add one — a vendor snippet that cannot be loaded
+as a file — give it nelmio's per-request nonce instead of allowing `'unsafe-inline'`:
+
+```twig
+<script nonce="{{ csp_nonce('script') }}">…</script>
+```
+
+nelmio adds the matching `'nonce-…'` to `script-src` for that response. A tracker held back as
+`<script type="text/plain" data-consent-category="…">` keeps the attribute, and
+`cookie-consent.ts` copies the nonce to the script it creates on consent. Styles: the strict
+policy allows `'unsafe-inline'` for `style-src`, which the inline `<style>` of the helper pages
+and Redactor's inline styles need.
 
 ---
 

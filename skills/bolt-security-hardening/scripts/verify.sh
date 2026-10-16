@@ -93,6 +93,8 @@ section "Live checks against the running site"
 
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
 BASE_URL="${BASE_URL%/}"
+# -k: the probes below test the application, not TLS; the certificate of each host is checked
+# separately (without -k) in the host checks.
 CURL=(curl -s -k --max-time 15)
 
 # Host part of a URL (no scheme, port or path).
@@ -110,7 +112,7 @@ is_public_host() {
 
 # Application checks against one host. $1 = base URL, $2 = label prefixed to every message.
 app_checks() {
-    local url="$1" label="$2" status path leaks cookie upload
+    local url="$1" label="$2" status path leaks cookie
     # Foreign Host header: Symfony must refuse it (400) — or the web server never routes it here.
     status=$("${CURL[@]}" -o /dev/null -w '%{http_code}' -H "Host: bolt-security-probe.invalid" "$url/" || true)
     case "$status" in
