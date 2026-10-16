@@ -469,7 +469,7 @@ Verifications 3.1 (partial) and 3.2 pass, `make cscheck` passes. Commit.
   - reusable `__nodes` (`common_fields`, `seo_field`, `image_field`) merged with `<<: [ *common_fields, *seo_field ]`;
   - singletons with `order: -id`; viewless settings singletons and `blocks` with `default_status: published` and `searchable: false`;
   - `redactor` for rich text, `article` for long-form content, `collection` + `set` for repeating structures — no `html`, no `repeater`; every `redactor` / `article` field with `sanitise: true`, no `allow_twig` (rule 7);
-  - `locales:` equal to `app_locales` on every localized ContentType; every `required` content field also `localize: true`;
+  - `locales:` equal to `app_locales` on every localized ContentType; every text field a visitor reads `localize: true` (shared values such as images, URLs and dates stay non-localized);
   - `record_template` / `listing_template` pointing at `pages/<name>/…` per the contract;
   - number fields use `type: number` (Bolt has no `integer` type).
   - **[if catalog]** `products` ContentType.

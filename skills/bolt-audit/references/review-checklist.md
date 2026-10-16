@@ -81,9 +81,9 @@ never "keep, record as deviation".
 - **Severity hints:** Google Fonts loaded from Google → High (GDPR, also bolt-cookie-consent); contrast below 4.5:1 → Medium; naming / token structure → Low.
 
 ## 12. bolt-contenttypes
-- **Script:** YAML syntax; rules: no `type: html`, singletons with `order: -id`, slug `uses`, no `repeater`, required-but-not-localized fields, `default_status` of viewless singletons; `sanitise: true` on every `redactor` / `article` field, no `allow_twig`, no `sanitise: false`.
-- **Review:** each script error (they are real configuration bugs); required non-localized fields only matter on multilingual sites — confirm with how editors translate; YAML anchors for repeated field groups.
-- **Severity hints:** Redactor / Article without `sanitise: true` or any `allow_twig` → High (stored XSS / code execution by editors); singleton without `order: -id` → High (wrong record shown); `type: html` → Medium; missing `uses` → Medium; multilingual required-field warnings → Medium on multilingual sites.
+- **Script:** YAML syntax; rules: no `type: html`, singletons with `order: -id`, slug `uses`, no `repeater`, text fields without `localize: true` on multilingual ContentTypes, `localize` without `locales`; `sanitise: true` on every `redactor` / `article` field, no `allow_twig`, no `sanitise: false`.
+- **Review:** each script error (they are real configuration bugs); non-localized text fields only matter on multilingual sites — a field the editors translate must be `localize: true` (otherwise the English tab overwrites the Czech value), a shared value (name, URL) may stay as it is; YAML anchors for repeated field groups.
+- **Severity hints:** Redactor / Article without `sanitise: true` or any `allow_twig` → High (stored XSS / code execution by editors); singleton without `order: -id` → High (wrong record shown); `type: html` → Medium; missing `uses` → Medium; non-localized text that editors translate → Medium on multilingual sites (content in the wrong language).
 
 ## 13. bolt-menu
 - **Script:** `menu.yaml` existence, YAML, structure (root-slash anchors `/#…`, label parity per locale, no locale prefixes in links, CTA flags), navigation templates, `locale_link` wrapping.
