@@ -209,8 +209,8 @@ fi
 echo "----------------------------------------------------------"
 echo " Manual (references/requirements.cs.md, Akceptační checklist): identity matches ARES (--ares);"
 echo " consumer sites: ADR with web address, where to complain, prices with VAT, discounts with the"
-echo " 30-day lowest price; online shops: terms, „Objednávka zavazující k platbě“, withdrawal notice"
-echo " and form, „Odstoupit od smlouvy“ button with e-mail confirmation (from 1. 1. 2027),"
+echo ' 30-day lowest price; online shops: terms, „Objednávka zavazující k platbě“, withdrawal notice'
+echo ' and form, „Odstoupit od smlouvy“ button with e-mail confirmation (from 1. 1. 2027),'
 echo " accessibility unless a microenterprise; whistleblowing page for obliged entities."
 echo "=========================================================="
 if [ $FAILED -ne 0 ]; then
