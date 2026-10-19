@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="en">
+  <file id="messages.en">
+    <!-- bolt-legal-cz: partials/_legal-identity.twig, partials/_reviews-notice.twig -->
+    <unit id="legal_seat" name="legal.seat"><segment><source>legal.seat</source><target>registered office</target></segment></unit>
+    <unit id="legal_ico" name="legal.ico"><segment><source>legal.ico</source><target>Company ID (IČO)</target></segment></unit>
+    <unit id="legal_dic" name="legal.dic"><segment><source>legal.dic</source><target>VAT ID</target></segment></unit>
+    <unit id="legal_registry_trade" name="legal.registry.trade"><segment><source>legal.registry.trade</source><target>Registered in the Czech Trade Register.</target></segment></unit>
+    <unit id="legal_registry_trade_office" name="legal.registry.trade_office"><segment><source>legal.registry.trade_office</source><target>Registered in the Czech Trade Register, trade licensing office: %office%.</target></segment></unit>
+    <unit id="legal_registry_company" name="legal.registry.company"><segment><source>legal.registry.company</source><target>Registered in the Commercial Register: %court%, section %section%, file %insert%.</target></segment></unit>
+    <unit id="legal_regulated" name="legal.regulated"><segment><source>legal.regulated</source><target>Professional title: %title%; professional body: %chamber%.</target></segment></unit>
+    <unit id="legal_regulated_rules" name="legal.regulated_rules"><segment><source>legal.regulated_rules</source><target>Professional rules</target></segment></unit>
+    <unit id="legal_adr" name="legal.adr"><segment><source>legal.adr</source><target>Out-of-court resolution of consumer disputes: %body%,</target></segment></unit>
+    <unit id="legal_terms" name="legal.terms"><segment><source>legal.terms</source><target>Terms and conditions</target></segment></unit>
+    <unit id="legal_complaints" name="legal.complaints"><segment><source>legal.complaints</source><target>Complaints</target></segment></unit>
+    <unit id="legal_withdrawal" name="legal.withdrawal"><segment><source>legal.withdrawal</source><target>Withdraw from the contract</target></segment></unit>
+    <unit id="legal_whistleblowing" name="legal.whistleblowing"><segment><source>legal.whistleblowing</source><target>Whistleblowing</target></segment></unit>
+    <unit id="legal_reviews_unverified" name="legal.reviews.unverified"><segment><source>legal.reviews.unverified</source><target>We do not verify that reviews come from customers who actually used the service or bought the product.</target></segment></unit>
+  </file>
+</xliff>

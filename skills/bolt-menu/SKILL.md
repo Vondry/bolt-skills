@@ -520,6 +520,9 @@ Footer columns from `menu_array('footer')`, brand column with logo, bio, phone a
   [data-cookie-settings]); it is shown whenever theme.yaml privacy.cookies lists an item
   that needs consent (trackers, embeds) — the same rule that renders the banner.
 
+  The operator's legal identity (name, seat, IČO, register entry, ADR body for consumer sites)
+  comes from partials/_legal-identity.twig (bolt-legal-cz), on every page above the bottom bar.
+
   Translation keys: footer.socials, footer.rights, footer.privacy, footer.cookie_settings
 #}
 
@@ -593,6 +596,9 @@ Footer columns from `menu_array('footer')`, brand column with logo, bio, phone a
                 {% endfor %}
             </div>
         </div>
+
+        {# Legal identity: § 435 OZ data and consumer information from theme.yaml (bolt-legal-cz) #}
+        {% include 'partials/_legal-identity.twig' ignore missing %}
 
         {# Bottom Bar: Copyright & Legal links #}
         <div class="pt-8 border-t border-night-stroke flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-night-ink-3">

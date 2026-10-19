@@ -91,6 +91,7 @@ SKILLS=(
     "bolt-theme-templates"     # Phase 6
     "bolt-helper-pages"        # Phase 6
     "bolt-cookie-consent"      # Phase 6 [privacy page always, banner if trackers or embeds]
+    "bolt-legal-cz"            # Phase 6 [identity always, consumer parts per the intake]
     "bolt-add-language"        # Phases 1-7, per secondary locale [multilingual]
 )
 

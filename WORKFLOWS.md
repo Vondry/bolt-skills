@@ -1,6 +1,6 @@
 # Bolt CMS End-to-End Website Build Workflow
 
-This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 17 skills in this repository.
+This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 18 skills in this repository.
 
 The phases are ordered by real dependencies: every step only needs what earlier steps produced. Each phase ends with a **gate** (verifications that must pass, then a commit). Steps marked **[if …]** depend on the answers recorded in the Phase 0 site plan.
 
@@ -90,7 +90,8 @@ flowchart TD
         S63["bolt-add-language — step 6:<br/>locale switcher"]
         S64["bolt-helper-pages"]
         S65["bolt-cookie-consent"]
-        S66["bolt-performance — fragment cache [optional]"]
+        S66["bolt-legal-cz"]
+        S67["bolt-performance — fragment cache [optional]"]
     end
     P6 -.-> D6
 
@@ -134,7 +135,7 @@ The skills meet in a few shared places: the master layout, the theme folder stru
 | CSS | Source `css/tailwind/index.css` → build output `css/index.css` (never edit the output) |
 | JavaScript | Source `js/src/index.ts` (imports the modules) → build output `js/app.js` |
 | Asset URLs | `{{ asset('css/index.css') }}?v={{ theme.assets_version }}`. Bolt registers the active theme as the default asset package on frontend and error pages, so paths are relative to the theme folder. Bump `assets_version` in `theme.yaml` with every CSS/JS release |
-| Site facts | `theme.yaml` → `contact:` (email, phone, address, company ID), `socials:`, `analytics:` (tracking IDs), `privacy:` (controllers, purposes, recipients, cookie inventory — the single source for the cookie banner and the privacy page, `bolt-cookie-consent`). Read in Twig as `theme.contact.email` or `config.get('theme/contact/email')` |
+| Site facts | `theme.yaml` → `contact:` (email, phone, registered address, company ID), `socials:`, `analytics:` (tracking IDs), `privacy:` (controllers, purposes, recipients, cookie inventory — the single source for the cookie banner and the privacy page, `bolt-cookie-consent`), `legal:` (operator type, register entry, DIČ, consumer information — the footer identity of `bolt-legal-cz`). Read in Twig as `theme.contact.email` or `config.get('theme/contact/email')` |
 
 ### Master Layout Skeleton (`partials/_master.twig`)
 
@@ -267,7 +268,7 @@ privacy_locale:
 
 **Goal:** decide everything later phases depend on, before any file changes.
 
-**Inputs:** project brief, design (Figma file or exported tokens), sitemap and copy, operator details for the privacy policy (legal name, company ID / IČO, registered address, registry entry, privacy e-mail, data protection officer if any — for every business on the site), the answers to `bolt-cookie-consent`'s intake (trackers, embeds, controller model, processing purposes, recipients), tracking IDs (GA4, Google Ads, Sklik, Meta), hosting details (web server, document root, Docker or not), domain.
+**Inputs:** project brief, design (Figma file or exported tokens), sitemap and copy, **who operates the website** (OSVČ – živnostník, company, regulated profession, non-business) and what the site does for consumers (`bolt-legal-cz` intake: consumers, ADR body, online contracts, reviews, whistleblowing), operator details for the privacy policy (legal name, company ID / IČO, registered address, registry entry, privacy e-mail, data protection officer if any — for every business on the site), the answers to `bolt-cookie-consent`'s intake (trackers, embeds, controller model, processing purposes, recipients), tracking IDs (GA4, Google Ads, Sklik, Meta), hosting details (web server, document root, Docker or not), domain.
 
 ### 0.1 Write the Site Plan
 
@@ -290,6 +291,7 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 - Features: gallery yes/no, downloads yes/no, carousel yes/no, catalog/products yes/no, articles yes/no
 - Tracking: none | GA4 <id> | Google Ads <id> | Sklik <id> | Meta <id>; Consent Mode: basic | advanced
 - Embeds: none | YouTube | Google Maps | Mapy.com
+- Legal (bolt-legal-cz intake): operator trade | company | profession | other; IČO; consumers yes/no (ADR body); online contracts yes/no; reviews yes/no; whistleblowing / accessibility / regulated profession
 - Privacy (bolt-cookie-consent intake): controller model single | joint | separate | hybrid; controllers; purposes; recipients; open [DOPLNIT] questions for the operator
 - Public API consumers: none (disable) | <who> (lock down instead)
 - Error-page metaphor: <industry object or scene>
@@ -307,6 +309,9 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 | **Downloadable files?** | `FileSizeExtension` (3.2); `field.path|file_size|format_file_size` | `FileSizeExtension` optional |
 | **Carousel?** | Load `css/splide_4.1.2.min.css` and `js/splide_4.1.2.min.js` (from `bolt-theme-init`) in the `head` block of the pages that use it | Delete the Splide files |
 | **Analytics, marketing tracking or third-party embeds?** | Two-layer cookie banner, Consent Mode v2, Sklik and embeds behind consent (6.5). Decide basic (trackers load only after consent, default) vs. advanced Consent Mode (`analytics.consent_mode` in `theme.yaml`) — advanced only on the operator's explicit decision | No banner (`bolt-cookie-consent/scripts/scaffold.sh --no-banner`). The privacy page is still required (server logs, contact data); `verify.sh` then checks the page only |
+| **Who operates the website?** (always asked; usually an OSVČ – živnostník) | `bolt-legal-cz` (6.6) renders name, seat, IČO and the register entry for that operator type in the footer of every page — Trade Register for a živnostník, court / section / file for a company, the chamber list for a regulated profession; ARES confirms the data | Never assumed — ask (`bolt-legal-cz` AG-01) |
+| **Sells to consumers?** (services count: plumber, hairdresser, photographer) | ADR body with its web address in the footer (ČOI unless energy, telecoms, finance or legal services), complaints information, prices with VAT, review notice under testimonials (6.6) | B2B only: the identity is still required |
+| **Contracts concluded on the website?** (cart, paid booking, subscription) | Terms and conditions, complaints procedure, withdrawal notice and model form, „Objednávka zavazující k platbě“, the „Odstoupit od smlouvy“ button from 1. 1. 2027, accessibility unless a microenterprise (6.6) | Enquiry forms only: nothing extra |
 | **More than one business on the website?** | Ask `bolt-cookie-consent`'s two controller-model questions (joint / separate / hybrid) — never guess the model | Controller model `single` |
 | **Apache?** | `bolt-htaccess` (2.1); root `.htaccess` only when the domain's document root is the project root | Nginx: use the Nginx block of `bolt-asset-caching` (2.2); run `verify-all.sh --skip=bolt-htaccess` |
 | **Docker?** | `bolt-timezone` INI and compose layers (1.1); Nginx block (2.2) if the container uses Nginx | `bolt-timezone` config and Kernel layers only |
@@ -432,7 +437,7 @@ Verifications 3.1 (partial) and 3.2 pass, `make cscheck` passes. Commit.
 - Links the theme in `config/bolt/config.yaml` and runs `npm install`, `npm update --save` and `npm run prod`.
 
 ### 4.2 Theme Settings & Shell Translations
-- Fill `theme.yaml`: `name` (= folder), `assets_version: '1.0'`, `logo.default` / `logo.light` (paths relative to the theme), `contact:` (name, IČO, address, email, phone, hours, bio — used by the footer, contact containers, privacy page, helper pages and `llms.txt`), `analytics:` **[if tracking]** (`ga4_id`, `google_ads_id`, `sklik_id`, `consent_mode`), `socials:`. The `privacy:` block is appended by `bolt-cookie-consent` in 6.5.
+- Fill `theme.yaml`: `name` (= folder), `assets_version: '1.0'`, `logo.default` / `logo.light` (paths relative to the theme), `contact:` (name and address exactly as registered — the registered seat, quoted IČO, email, phone, hours, bio — used by the footer, contact containers, privacy page, helper pages and `llms.txt`), `analytics:` **[if tracking]** (`ga4_id`, `google_ads_id`, `sklik_id`, `consent_mode`), `socials:`. The `privacy:` block is appended by `bolt-cookie-consent` in 6.5, the `legal:` block by `bolt-legal-cz` in 6.6.
 - Merge `$SKILLS/bolt-theme-init/examples/translations.<locale>.xlf` (keys of the master layout and fallbacks) — see 5.5 for the loop.
 
 ### 4.3 Navigation Shell (`bolt-menu`, templates)
@@ -546,7 +551,15 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - Hand the operator the list of `[DOPLNIT]` questions; measure every `[OVĚŘIT]` item in a clean browser profile.
 - *Verify:* `bash $SKILLS/bolt-cookie-consent/scripts/verify.sh --draft` while placeholders remain; without `--draft` for sign-off (Phase 8).
 
-### 6.6 Fragment Cache for Heavy Pages (`bolt-performance`) **[optional]**
+### 6.6 Legal Identity & Consumer Information (`bolt-legal-cz`)
+- Use the legal intake from the site plan (operator type first — never assumed; consumers, ADR body, online contracts, reviews, special cases).
+- `bash $SKILLS/bolt-legal-cz/scripts/scaffold.sh --operator=<trade|company|profession|other> --consumers|--no-consumers [--online-contracts] [--reviews] [--whistleblowing] [--adr=…]`. The script appends the `legal:` block to `theme.yaml` and copies `partials/_legal-identity.twig` (included by `bolt-menu`'s footer on every page) and, with `--reviews`, `partials/_reviews-notice.twig`.
+- Fill `contact.name`, `contact.address` (registered seat) and `contact.ico` from ARES — `verify.sh --draft --ares` prints the register data and every difference; set the Commercial Register entry or chamber text and `legal.dic` for VAT payers.
+- Include `partials/_reviews-notice.twig` below every block with reviews or testimonials. **[if online contracts]** create the terms, complaints and withdrawal pages with the operator's texts (`[DOPLNIT]` until delivered) and the „Odstoupit od smlouvy“ form (mandatory from 1. 1. 2027).
+- Merge `$SKILLS/bolt-legal-cz/examples/translations.<locale>.xlf` (`legal.*`).
+- *Verify:* `bash $SKILLS/bolt-legal-cz/scripts/verify.sh --draft --ares`; without `--draft` for sign-off (Phase 8).
+
+### 6.7 Fragment Cache for Heavy Pages (`bolt-performance`) **[optional]**
 - Only for pages with a high query count (Symfony profiler, Doctrine panel — roughly above 100 queries): homepages that aggregate several ContentTypes, record pages with relations. Small sites skip this step.
 - `composer require twig/cache-extra`, add `examples/services_twig_cache.yaml` to `config/services.yaml`, copy `examples/_cached.twig` to `partials/_cached.twig`.
 - Render the heavy containers through `partials/_cached.twig` with `tags` = the slugs of the ContentTypes they read (plus `record.cacheKey` on record pages); never around forms, menus or user-dependent output.
@@ -614,7 +627,7 @@ export BOLT_BASE_URL=http://localhost:8080           # this project's running si
 vendor/tomvondracek/bolt-skills/scripts/verify-all.sh --skip=<skills that do not apply>
 ```
 - The runner executes the skills in phase order (Appendix A) and verifies `bolt-add-language` once per secondary locale read from `config/services.yaml` (override with `--locales=en,de`). Single-language sites skip it automatically.
-- Skip only what the decision matrix allows: `bolt-htaccess` (Nginx), `bolt-disable-api` (API consumers, endpoints tested manually). `bolt-cookie-consent` always runs: without trackers it checks the privacy page only.
+- Skip only what the decision matrix allows: `bolt-htaccess` (Nginx), `bolt-disable-api` (API consumers, endpoints tested manually). `bolt-cookie-consent` and `bolt-legal-cz` always run: without trackers the first checks the privacy page only. `verify-all.sh` runs `bolt-legal-cz` without ARES; run `bash $SKILLS/bolt-legal-cz/scripts/verify.sh --ares` once for the register comparison.
 - Use `--verbose` or run the individual script to see details.
 - **Target:** zero FAIL; every WARN either fixed or listed under "Expected verification warnings" in the site plan.
 
@@ -642,6 +655,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 - Skip link jumps to `#obsah`; anchor links land below the sticky header.
 - Language switcher keeps scroll position, query string and hash **[if multilingual]**.
 - Cookie banner **[if tracking]**: the acceptance checklist of `bolt-cookie-consent` (`references/guidelines.cs.md`) in a clean browser profile, desktop and 360 px — no non-essential cookie or request before a choice, Reject and Accept equal and both visible at 360 px, Reject → reload → nothing, footer "Nastavení cookies" → withdraw → cookies deleted, keyboard and screen reader in both layers, Consent Mode updates in GA DebugView.
+- Legal information: the acceptance checklist of `bolt-legal-cz` (`references/requirements.cs.md`) — identity in the footer matches ARES, ADR body with its web address **[if consumers]**, reviews notice under every testimonial block, checkout button, withdrawal form and confirmation e-mail **[if online contracts]**.
 - Maintenance page: set `maintenance_mode: true`, check in a private window (logged-in editors still see the site), set it back.
 - 500 page: only rendered with `APP_ENV=prod`; check it on staging.
 - Admin: save a record twice and confirm its publish date did not shift (timezone).
@@ -693,7 +707,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `bolt-htaccess` | 2.1 | 2.1, 8.2 | Apache |
 | `bolt-asset-caching` | 2.2 (Steps 1–4), 4.1 (Step 5 through the master layout, `assets_version` in 4.2 / 7.4) | 2.2, 8.2 | every site |
 | `bolt-security-hardening` | 1.5 (Steps 1–5), 2.3 (Step 6), 7.5 (Step 7), 8.1 (`make audit`) | 1.5 (file sections), 8.2 and against production (live section) | every site |
-| `bolt-performance` | 6.6 | 6.6, 8.2 | optional — pages with a high query count |
+| `bolt-performance` | 6.7 | 6.7, 8.2 | optional — pages with a high query count |
 | `bolt-extension-setup` | 3.1 (Part A), 5.2, 6.2 (Part B) | 6.2, 8.2 | every site |
 | `bolt-runtime-extensions` | 3.2 | 3.2, 8.2 | `LocaleLinkExtension` everywhere; the others per features |
 | `bolt-theme-init` | 4.1, 4.2, 4.5 | Gate 4, 8.2 | every site |
@@ -703,6 +717,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `bolt-theme-templates` | 6.1 | 6.1, 8.2 | every site |
 | `bolt-helper-pages` | 6.4 | 6.4, 8.2 | every site |
 | `bolt-cookie-consent` | 0.1 (intake), 6.5 (privacy data, banner, privacy page and its routes) | 6.5, 8.2 | privacy page everywhere; banner when trackers or embeds are used |
+| `bolt-legal-cz` | 0.1 (intake), 6.6 (`legal:` data, footer identity, reviews notice, consumer pages) | 6.6, 8.2 (and `--ares`) | every business website; consumer and online-contract parts per the intake |
 
 ---
 

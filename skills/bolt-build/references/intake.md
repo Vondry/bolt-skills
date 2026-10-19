@@ -63,8 +63,15 @@ phase and skill consume it.
 
 ## Round 4 — Operator facts (legal, tracking, contact)
 
+Ask **L1 first** — who operates the website decides which legal information the site must carry (`bolt-legal-cz`).
+
 | # | Question | Default / options | Used by |
 | :- | :--- | :--- | :--- |
+| L1 | Who operates the website? | **OSVČ – živnostník** (most sites — offer it first, but ask) · company in the Commercial Register · regulated profession (advokát, lékař, architekt …) · non-business (spolek, private person) | 6.6 `--operator` |
+| L2 | IČO of the operator (ARES then gives name, registered seat, register entry, VAT status) | — *operator* | 4.2 `contact:`, 6.6 `verify.sh --ares` |
+| L3 | Does the business sell products or services to consumers? If yes and the services are energy, telecoms, financial or legal: which (ADR body) | yes, ČOI · no (B2B only) | 6.6 `--consumers`, `--adr` |
+| L4 | Are contracts concluded on the website (cart, paid booking, subscription)? Does the site show reviews or testimonials, and are they verified? | no · no | 6.6 `--online-contracts`, `--reviews` |
+| L5 | Special cases: 50+ employees or AML obliged person (whistleblowing page), 10+ employees or turnover above EUR 2 M (accessibility, with online contracts), regulated profession (chamber, title) | none | 6.6 |
 | O1 | Contact details shown on the site: name, phone, e-mail, address, opening hours, one-sentence bio, social links | — *operator* | 4.2 `theme.yaml` `contact:`, `socials:` |
 | O2 | `bolt-cookie-consent` intake Q1: measuring / advertising tools | Google Ads · GA4 · Sklik · Meta Pixel · other · none | 6.5 |
 | O3 | Q2: embedded third-party content | YouTube · Google Maps · Mapy.com · none | 6.5 |

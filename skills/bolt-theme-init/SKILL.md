@@ -334,9 +334,9 @@ assets_version: '1.0'
 
 # Operator / company contact details, shown on privacy policy, error helper pages, footer, and /llms.txt
 contact:
-  name: ~          # legal name (privacy policy)
-  ico: ~           # company ID (IČO)
-  address: ~
+  name: ~          # legal name, exactly as registered (privacy policy, bolt-legal-cz)
+  ico: ~           # company ID (IČO), quoted
+  address: ~       # registered seat (sídlo)
   email: 'info@example.cz'
   phone: '+420 123 456 789'
   hours: ~

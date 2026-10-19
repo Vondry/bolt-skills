@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="cs">
+  <file id="messages.cs">
+    <!-- bolt-legal-cz: partials/_legal-identity.twig, partials/_reviews-notice.twig -->
+    <unit id="legal_seat" name="legal.seat"><segment><source>legal.seat</source><target>sídlo</target></segment></unit>
+    <unit id="legal_ico" name="legal.ico"><segment><source>legal.ico</source><target>IČO</target></segment></unit>
+    <unit id="legal_dic" name="legal.dic"><segment><source>legal.dic</source><target>DIČ</target></segment></unit>
+    <unit id="legal_registry_trade" name="legal.registry.trade"><segment><source>legal.registry.trade</source><target>Podnikatel zapsaný v živnostenském rejstříku.</target></segment></unit>
+    <unit id="legal_registry_trade_office" name="legal.registry.trade_office"><segment><source>legal.registry.trade_office</source><target>Podnikatel zapsaný v živnostenském rejstříku, živnostenský úřad: %office%.</target></segment></unit>
+    <unit id="legal_registry_company" name="legal.registry.company"><segment><source>legal.registry.company</source><target>Zapsáno v obchodním rejstříku: %court%, oddíl %section%, vložka %insert%.</target></segment></unit>
+    <unit id="legal_regulated" name="legal.regulated"><segment><source>legal.regulated</source><target>Profesní označení: %title%; profesní komora: %chamber%.</target></segment></unit>
+    <unit id="legal_regulated_rules" name="legal.regulated_rules"><segment><source>legal.regulated_rules</source><target>Profesní předpisy</target></segment></unit>
+    <unit id="legal_adr" name="legal.adr"><segment><source>legal.adr</source><target>Mimosoudní řešení spotřebitelských sporů: %body%,</target></segment></unit>
+    <unit id="legal_terms" name="legal.terms"><segment><source>legal.terms</source><target>Obchodní podmínky</target></segment></unit>
+    <unit id="legal_complaints" name="legal.complaints"><segment><source>legal.complaints</source><target>Reklamace</target></segment></unit>
+    <unit id="legal_withdrawal" name="legal.withdrawal"><segment><source>legal.withdrawal</source><target>Odstoupit od smlouvy</target></segment></unit>
+    <unit id="legal_whistleblowing" name="legal.whistleblowing"><segment><source>legal.whistleblowing</source><target>Oznamování protiprávního jednání</target></segment></unit>
+    <unit id="legal_reviews_unverified" name="legal.reviews.unverified"><segment><source>legal.reviews.unverified</source><target>Neověřujeme, zda hodnocení pocházejí od zákazníků, kteří službu nebo výrobek skutečně využili.</target></segment></unit>
+  </file>
+</xliff>

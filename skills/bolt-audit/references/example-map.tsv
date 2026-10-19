@@ -46,6 +46,9 @@ bolt-helper-pages	root-maintenance.503.twig	{theme}/maintenance.503.twig	logic
 bolt-helper-pages	config_snippet.yaml	config/bolt/config.yaml	snippet
 bolt-htaccess	root.htaccess	.htaccess	logic
 bolt-htaccess	public.htaccess	public/.htaccess	logic
+bolt-legal-cz	_legal-identity.twig	{theme}/partials/_legal-identity.twig	design
+bolt-legal-cz	_reviews-notice.twig	{theme}/partials/_reviews-notice.twig	design
+bolt-legal-cz	theme.legal.yaml	{theme}/theme.yaml	snippet
 bolt-menu	templates/containers/header/_menu.twig	{theme}/containers/header/_menu.twig	design
 bolt-menu	templates/containers/footer/_footer.twig	{theme}/containers/footer/_footer.twig	design
 bolt-menu	templates/components/nav/item.twig	{theme}/components/nav/item.twig	design

@@ -6,6 +6,9 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 
 Fixes from a review of every skill against bolt/core 6.1.9 and four production sites.
 
+### Added
+- `bolt-legal-cz`: mandatory legal information for Czech business websites. Asks first who operates the site (OSVČ – živnostník, company, regulated profession, non-business), renders the § 435 OZ identity (name, seat, IČO, Trade / Commercial Register entry, DIČ) and the consumer information (ADR body, complaints, terms, the § 1830a withdrawal button from 1. 1. 2027, review verification) from `theme.yaml` in the footer of every page, and verifies the data against ARES and the live site. `scripts/check-site.php` checks any website without a Bolt project. Wired into `bolt-menu`'s footer, `WORKFLOWS.md` (Phase 0 decisions, step 6.6), the `bolt-build` intake (L1–L5), `verify-all.sh` and `bolt-audit`.
+
 ### Security
 - `bolt-runtime-extensions`: `locale_link()` returns `#` for any scheme other than `http`, `https`, `mailto` and `tel`, so a `javascript:` link stored in an editable field never reaches an `href`.
 - `bolt-htaccess`: `public/.htaccess` runs only `index.php`; any other `*.php` in `public/` answers 403. The verifier warns when the rule is missing.
