@@ -19,9 +19,13 @@
 @source not "../../helper-pages";
 
 /* ------------------------------------------------------------------ *
- *  Design tokens  —  Tailwind v4 @theme inline
+ *  Design tokens  —  Tailwind v4 @theme static inline
  * ------------------------------------------------------------------ */
-@theme inline {
+/* static: every token below is also emitted as a CSS variable on :root (--color-accent, …),
+   even when no utility uses it — helper pages and inline styles read them with var().
+   inline: utilities use the value directly, so tokens that point at :root variables
+   (--color-ink: var(--ink)) follow runtime changes of those variables. */
+@theme static inline {
     /* Breakpoints */
     --breakpoint-2xs: 24rem;       /* 384px */
     --breakpoint-xs: 36rem;        /* 576px */
@@ -89,8 +93,8 @@
         100% { opacity: 1; transform: translateY(0); }
     }
     @keyframes skeleton {
-        0%, 100% { background-color: var(--color-ink-200, #e2e8f0); }
-        50% { background-color: var(--color-ink-100, #f1f5f9); }
+        0%, 100% { background-color: var(--color-stroke, #e2e8f0); }
+        50% { background-color: var(--color-surface-2, #f1f5f9); }
     }
 }
 
@@ -122,7 +126,13 @@
         background-color: var(--color-canvas);
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
-        scroll-behavior: smooth;
+    }
+
+    /* Smooth anchor scrolling only for visitors who have not asked for reduced motion. */
+    @media (prefers-reduced-motion: no-preference) {
+        html {
+            scroll-behavior: smooth;
+        }
     }
 
     body {
@@ -279,7 +289,8 @@ section:where(.bg-surface) + section:where(.bg-surface) > .wrapper {
     @apply flex flex-wrap items-center justify-center gap-2 m-0 p-0;
     list-style: none;
 }
-.pagination li a {
+.pagination li a,
+.pagination li > span {
     @apply inline-flex h-9 min-w-9 items-center justify-center px-3 font-mono text-xs tracking-widest border border-stroke text-ink-2 transition-colors duration-200;
 }
 .pagination li a:hover {
@@ -289,6 +300,8 @@ section:where(.bg-surface) + section:where(.bg-surface) > .wrapper {
 .pagination li a[aria-current] {
     @apply border-ink bg-ink text-canvas;
 }
+/* li.disabled: the gap marker of components/ui/pagination.twig; li[disabled]: older templates. */
+.pagination li.disabled,
 .pagination li[disabled],
 .pagination li[disabled] a {
     @apply opacity-40 pointer-events-none;

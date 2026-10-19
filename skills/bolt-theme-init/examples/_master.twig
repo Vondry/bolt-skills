@@ -15,7 +15,8 @@
   renders as soon as bolt-theme-init has run and fills in as later skills add them.
 #}
 <!DOCTYPE html>
-<html lang="{{ htmllang() }}" class="scroll-smooth antialiased">
+{# motion-safe: smooth anchor scrolling only for visitors who have not asked the system for reduced motion. #}
+<html lang="{{ htmllang() }}" class="motion-safe:scroll-smooth antialiased">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

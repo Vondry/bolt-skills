@@ -4,9 +4,9 @@
 help:
 	@grep -E '(^[a-zA-Z_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
 
-install: ## to install all project (creates or updates the schema; never loads fixtures, keeps existing content)
+install: ## [dev] to install the project locally (runs db-update: drops tables Doctrine does not map — never on a server)
 	composer install
-	make db-update
+	$(MAKE) db-update
 
 install_prod: ## to install production dependencies (no dev packages, optimized autoloader)
 	composer install --no-dev --optimize-autoloader
@@ -26,18 +26,17 @@ cache: ## to clean cache
 
 csclear: ## to clean cache and check coding style
 	mkdir -p var/cache/ecs
-	chmod -R a+rw var/cache/ecs
 	rm -rf var/cache/ecs/*
 
 cscheck: ## to check coding style
-	make csclear
+	$(MAKE) csclear
 	composer lint
-	make stancheck
+	$(MAKE) stancheck
 
 csfix: ## to fix coding style
-	make csclear
+	$(MAKE) csclear
 	composer lint:fix
-	make stancheck
+	$(MAKE) stancheck
 
 stancheck: ## to run phpstan
 	composer phpstan

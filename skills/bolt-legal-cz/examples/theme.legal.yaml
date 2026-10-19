@@ -1,0 +1,55 @@
+# bolt-legal-cz — legal identity and consumer information (references/requirements.cs.md).
+# The identity lives in `contact:` (shared with the footer, contact pages, bolt-cookie-consent's
+# privacy page and llms.txt); `legal:` adds what only the legal checks need. scaffold.sh appends
+# `legal:` with the intake answers; fill every [DOPLNIT] from ARES (verify.sh --ares) or the operator.
+
+contact:
+  name: 'Jan Novák'                     # ID-01: exactly as in the register; a company with its legal form ('Example s.r.o.')
+  ico: '12345679'                       # ID-03: 8 digits, quoted (keeps leading zeros)
+  address: 'Ukázková 123/4, 110 00 Praha 1'   # ID-02: registered seat (sídlo), not the workshop
+  email: 'info@example.cz'
+  phone: '+420 123 456 789'
+
+legal:
+  # OP — who operates the website: trade (OSVČ – živnostník) | company (obchodní rejstřík)
+  #      | profession (advokát, lékař, architekt … — chamber register) | other (spolek, nadace …)
+  operator: trade
+
+  # ID-04 — registration entry. Fields by operator:
+  #   trade:      office: ~ or 'Úřad městské části Praha 1' (optional; the trade licensing office)
+  #   company:    court: 'Městský soud v Praze', section: 'C', insert: '12345' (spisová značka C 12345)
+  #   profession / other: text: { cs: 'Advokát zapsaný v seznamu advokátů ČAK pod ev. č. 12345', en: '…' }
+  registry:
+    office: ~
+
+  dic: ~                                # ID-07: 'CZ12345679' when a VAT payer, otherwise ~
+
+  # SP — sells products or services to consumers (B2C, services included)
+  consumers: true
+  adr:                                  # SP-01: competent ADR body; its web address is printed in full
+    name: { cs: 'Česká obchodní inspekce', en: 'Czech Trade Inspection Authority' }
+    url: 'https://coi.gov.cz'
+  # SP-03: page or section explaining how and where to file a complaint (reklamace); ~ = none yet
+  complaints_url: ~                     # e.g. '/obchodni-podminky#reklamace'
+
+  # EC — contracts concluded on the website (cart, paid booking, subscription)
+  online_contracts: false
+  terms_url: ~                          # EC-02: '/obchodni-podminky'
+  withdrawal_url: ~                     # EC-05 (from 1. 1. 2027): page with the „Odstoupit od smlouvy“ form
+  microenterprise: true                 # EC-06: < 10 employees and turnover or balance sheet ≤ EUR 2 M (EAA exemption)
+
+  # SP-06 — reviews / testimonials shown on the site. verification: how they are checked
+  # (localized), or ~ — then the notice says they are not verified.
+  reviews:
+    shown: false
+    verification: ~
+
+  # REG-01 — regulated profession: chamber, title, rules (profession operators)
+  regulated: ~
+  #  chamber: { cs: 'Česká advokátní komora', en: 'Czech Bar Association' }
+  #  title: { cs: 'advokát, Česká republika', en: 'advokát (attorney), Czech Republic' }
+  #  rules_url: 'https://www.cak.cz/predpisy'
+
+  # WB-01 — whistleblowing information page, for obliged entities (50+ employees, AML obliged persons)
+  whistleblowing: false
+  whistleblowing_url: ~                 # e.g. '/oznamovani'

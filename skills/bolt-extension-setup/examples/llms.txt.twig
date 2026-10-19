@@ -68,7 +68,7 @@ This file is generated from the website's content management system; the facts b
 ## Articles
 
 {% for article in articles %}
-- [{{ article|title|markdown_label }}]({{ article|link(true) }}){{ article.teaser is defined and article.teaser is not empty ? ': ' ~ article.teaser|html_to_text(200) }}
+- [{{ article|title|markdown_label }}]({{ article|link(true)|markdown_url }}){{ article.teaser is defined and article.teaser is not empty ? ': ' ~ article.teaser|html_to_text(200) }}
 {% endfor %}
 
 {% endif %}

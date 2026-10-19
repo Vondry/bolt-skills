@@ -166,7 +166,7 @@ Create the file `public/theme/<themename>/extensions/sitemap.xml.twig` with the 
 ```twig
 {# public/theme/<themename>/extensions/sitemap.xml.twig #}
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<?xml-stylesheet type="text/xsl" href="{{ app.request.basePath }}/sitemap.xsl"?>
 <urlset
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
@@ -227,21 +227,33 @@ Create the file `public/theme/<themename>/extensions/sitemap.xml.twig` with the 
             <priority>{{ url == '/' ? 1 : priority }}</priority>
         {% endblock priority -%}
         {% if record is defined and record.definition.locales.all|length > 1 %}
+            {%- set defaultLocale = app.request.defaultLocale -%}
+            {%- set defaultAltUrl = null -%}
             {% for locale in record.definition.locales %}
-                {%- set altUrl = record|link(true, locale) -%}
-                {# Strip trailing /{slug} on alternate singleton URLs #}
-                {%- if (record.definition.singleton or isListing) and altUrl ends with ('/' ~ record.getSlug(locale)) -%}
-                    {%- set altUrl = altUrl|split('/')|slice(0, -1)|join('/') -%}
+                {%- if isListing -%}
+                    {# Listing entry: the listing route in each locale. Deriving it from a record
+                       link would use the singular slug (/article instead of /articles). #}
+                    {%- set altUrl = locale == defaultLocale
+                        ? url('listing', { contentTypeSlug: record.definition.slug })
+                        : url('listing_locale', { contentTypeSlug: record.definition.slug, _locale: locale }) -%}
+                {%- else -%}
+                    {%- set altUrl = record|link(true, locale) -%}
+                    {# Singleton record entries are served slugless: strip the trailing /{slug}
+                       (a no-op when already slugless), so each alternate matches <loc>. #}
+                    {%- if record.definition.singleton and altUrl ends with ('/' ~ record.getSlug(locale)) -%}
+                        {%- set altUrl = altUrl|split('/')|slice(0, -1)|join('/') -%}
+                    {%- endif -%}
                 {%- endif -%}
+                {%- if locale == defaultLocale -%}{%- set defaultAltUrl = altUrl -%}{%- endif -%}
                 <xhtml:link rel="alternate" hreflang="{{ locale }}" href="{{ altUrl }}"/>
             {% endfor %}
+            {% if defaultAltUrl %}
+                <xhtml:link rel="alternate" hreflang="x-default" href="{{ defaultAltUrl }}"/>
+            {% endif %}
         {% endif %}
         {% if record is defined and record|image is not empty and not isListing -%}
             <image:image>
                 <image:loc>{{ absolute_url(record|image) }}</image:loc>
-                {% if record.image.alt|default() -%}
-                    <image:title><![CDATA[{{ record.image.alt }}]]></image:title>
-                {% endif -%}
             </image:image>
         {% endif -%}
         </url>
@@ -275,7 +287,7 @@ In `config/extensions/tomvondracek-llmstxt.yaml`:
 # config/extensions/tomvondracek-llmstxt.yaml
 enabled: true
 template: '@theme/extensions/llms.txt.twig'
-locale: en # Keep set to 'en' so AI models and crawlers receive English responses
+locale: en # 'en' when the site has English (AI crawlers read it best); otherwise leave empty for the default locale
 max_age: 3600
 ```
 
@@ -367,7 +379,7 @@ This file is generated from the website's content management system; the facts b
 ## Articles
 
 {% for article in articles %}
-- [{{ article|title|markdown_label }}]({{ article|link(true) }}){{ article.teaser is defined and article.teaser is not empty ? ': ' ~ article.teaser|html_to_text(200) }}
+- [{{ article|title|markdown_label }}]({{ article|link(true)|markdown_url }}){{ article.teaser is defined and article.teaser is not empty ? ': ' ~ article.teaser|html_to_text(200) }}
 {% endfor %}
 
 {% endif %}

@@ -57,8 +57,12 @@ fi
 
 # 3. Check Configuration Flags
 echo -n "[3/5] Checking api_platform configuration flags... "
-DOCS_FLAG=$(php bin/console debug:config api_platform 2>/dev/null | grep -E "^\s*enable_docs:" | awk '{print $2}' || true)
-GRAPHIQL_FLAG=$(php bin/console debug:config api_platform graphql 2>/dev/null | grep -A 1 "graphiql:" | grep "enabled:" | awk '{print $2}' || true)
+# debug:config with a path prints the resolved value alone (independent of key order).
+config_value() {
+    php bin/console debug:config api_platform "$1" 2>/dev/null | grep -vE '^[[:space:]]*(=+|Current configuration.*)?[[:space:]]*$' | tail -n 1 | tr -d '[:space:]' || true
+}
+DOCS_FLAG=$(config_value enable_docs)
+GRAPHIQL_FLAG=$(config_value graphql.graphiql.enabled)
 
 if [ "$DOCS_FLAG" = "false" ] && [ "$GRAPHIQL_FLAG" = "false" ]; then
     echo "PASSED (docs: disabled, graphiql: disabled)"
@@ -96,34 +100,49 @@ BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this 
 echo -n "[5/5] Checking HTTP endpoints against $BASE_URL... "
 if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
     echo ""
-    ENDPOINTS=(
-        "/api/docs.html"
-        "/api/docs.jsonopenapi"
-        "/api/graphql/graphiql"
+    # Data endpoints must be refused by the firewall (401/403). 404 there would mean the
+    # routes are gone, which breaks the admin (check 1). Documentation and GraphiQL may
+    # also answer 404, because they are switched off as features; so does the bare /api
+    # (the entrypoint is disabled, and routing answers 404 before the firewall runs).
+    DATA_ENDPOINTS=(
         "/api/contents"
         "/api/contents/1"
         "/api/fields"
         "/api/relations"
         "/index.php/api/contents"
     )
+    DOC_ENDPOINTS=(
+        "/api"
+        "/api/docs.html"
+        "/api/docs.jsonopenapi"
+        "/api/graphql/graphiql"
+    )
 
-    for ep in "${ENDPOINTS[@]}"; do
-        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL$ep" || true)
-        if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ] || [ "$STATUS" = "404" ]; then
-            echo "  $ep -> HTTP $STATUS (BLOCKED/PASSED)"
+    check_endpoint() {
+        local ep="$1" allowed="$2" status
+        status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL$ep" || true)
+        if [[ " $allowed " == *" $status "* ]]; then
+            echo "  $ep -> HTTP $status (BLOCKED/PASSED)"
         else
-            echo "  $ep -> HTTP $STATUS (FAILED - expected 401, 403, or 404)"
+            echo "  $ep -> HTTP $status (FAILED - expected one of: $allowed)"
             FAILED=1
         fi
+    }
+
+    for ep in "${DATA_ENDPOINTS[@]}"; do
+        check_endpoint "$ep" "401 403"
+    done
+    for ep in "${DOC_ENDPOINTS[@]}"; do
+        check_endpoint "$ep" "401 403 404"
     done
 
     # Test GraphQL POST
     GQL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/graphql" \
         -H "Content-Type: application/json" -d '{"query":"{ contents { edges { node { id } } } }"}' || true)
-    if [ "$GQL_STATUS" = "401" ] || [ "$GQL_STATUS" = "403" ] || [ "$GQL_STATUS" = "404" ]; then
+    if [ "$GQL_STATUS" = "401" ] || [ "$GQL_STATUS" = "403" ]; then
         echo "  /api/graphql (POST) -> HTTP $GQL_STATUS (BLOCKED/PASSED)"
     else
-        echo "  /api/graphql (POST) -> HTTP $GQL_STATUS (FAILED - expected 401, 403, or 404)"
+        echo "  /api/graphql (POST) -> HTTP $GQL_STATUS (FAILED - expected 401 or 403)"
         FAILED=1
     fi
 else

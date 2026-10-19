@@ -8,7 +8,7 @@ description: >-
 
 # Adding a New Language / Locale to Bolt CMS
 
-Adding a new language (e.g. `de`, `en`, `pl`, `fr`, `sk`) to a Bolt CMS site requires synchronized configuration across **five separate subsystems**: routing parameters, ContentType schemas, XLIFF message catalogs, navigation menus, and theme switchers. Missing any one of these steps results in 404 errors, broken routing, or un-editable content.
+Adding a new language (e.g. `de`, `en`, `pl`, `fr`, `sk`) to a Bolt CMS site requires synchronized configuration across **five separate subsystems**: routing parameters, ContentType schemas, XLIFF message catalogs, navigation menus, and theme switchers. Missing any one of these steps results in 404 errors, pages redirected back to the default language, untranslated keys, or un-editable content.
 
 This skill provides the end-to-end procedure and verification to roll out a new language completely with zero configuration drift.
 
@@ -22,7 +22,7 @@ This skill provides the end-to-end procedure and verification to roll out a new 
    ```
 2. **Read the currently registered locales**:
    ```bash
-   grep -E '(locales_array|app_locales)' config/services.yaml
+   grep -E 'app_locales' config/services.yaml
    ```
 3. Let `<target_code>` be the new 2-letter ISO code to add (e.g., `de`, `fr`, `pl`).
 
@@ -35,18 +35,17 @@ Official Doc Reference: [Bolt Localization: Locales](https://docs.boltcms.io/5.2
 
 In Bolt CMS, `app_locales` is the master parameter defining all allowed interface and routing languages for the application. Bolt's kernel (`src/Kernel.php`) automatically splits `app_locales` by pipe (`|`) to populate `%locales_array%`, which is used by Symfony's translation component (`config/packages/translation.yaml`).
 
-Add `<target_code>` (e.g. `de` or regional code like `de_DE`) to `app_locales`. If your project's `services.yaml` also explicitly defines `locales_array`, update both:
+Add `<target_code>` (e.g. `de` or regional code like `de_DE`) to `app_locales`. Do **not** define `locales_array` yourself: the kernel overwrites it from `app_locales`, so a hand-written copy can only drift. If an older project has the line, delete it.
 
 ```yaml
 # config/services.yaml
 parameters:
   locale: cs                               # Default site language (remains unchanged)
   app_locales: cs|en|de                    # Pipe-separated codes (required for routing)
-  locales_array: ['cs', 'en', 'de']        # If explicitly present in your services.yaml
 ```
 
 > [!WARNING]
-> If `app_locales` is not updated, visiting any route with the `/<target_code>/` prefix will fail with a 404 Not Found error because Symfony's routing firewall will not match the URL prefix.
+> If `app_locales` is not updated, visiting any route with the `/<target_code>/` prefix will fail with a 404 Not Found error: every localized route requires `_locale` to match `%app_locales%`, so the prefix matches no route.
 
 ---
 
@@ -55,7 +54,7 @@ parameters:
 File: `config/bolt/contenttypes.yaml`  
 Official Doc Reference: [Bolt ContentTypes: Defining ContentTypes](https://docs.boltcms.io/5.2/contenttypes/intro)
 
-In Bolt CMS, the `locales` setting on a ContentType defines which languages the content can be entered in (e.g. `locales: ['en', 'nl', 'de']`). Individual fields must have `localize: true` to allow separate values per locale. If a ContentType does not list the new locale, editors cannot create/edit records in that language, and frontend pages for that ContentType will return 404.
+In Bolt CMS, the `locales` setting on a ContentType defines which languages the content can be entered in (e.g. `locales: ['en', 'nl', 'de']`). Individual fields must have `localize: true` to allow separate values per locale. If a ContentType does not list the new locale, editors cannot create/edit records in that language, and Bolt redirects its frontend pages in that language to the default locale (`TwigAwareController::validLocaleForContentType()` → `redirectToDefaultLocale()`). A visitor who switches language lands back on the default one.
 
 Add `'<target_code>'` to the `locales:` array of **every** ContentType:
 
@@ -202,7 +201,7 @@ Add the new locale to the `locales` dictionary using its **endonym** (the langua
 > **Why endonyms?** Visitors who cannot read the current language will always recognize the native name of their own language.
 
 How the shipped partial builds the links:
-- It strips the current locale prefix from `app.request.pathinfo` and re-prefixes `/<code>` for every non-default locale (the default locale stays unprefixed; the homepage becomes `/<code>/`, matching Bolt's `homepage_locale` route), and appends the query string.
+- It strips the current locale prefix from `app.request.pathinfo` and re-prefixes `/<code>` for every non-default locale (after `app.request.basePath`, so sub-directory installs work; repeated leading slashes are collapsed, so a request for `//other.host` cannot turn into an off-site link) (the default locale stays unprefixed; the homepage becomes `/<code>/`, matching Bolt's `homepage_locale` route), and appends the query string.
 - Every link carries `data-locale-switch`, `hreflang`, `lang`, and `aria-current="page"` on the active locale; `js/src/locale-switcher.ts` (from `bolt-theme-init`) re-appends the URL hash and restores the scroll position after the switch.
 - The dropdown uses `data-dropdown-toggle` and a `.dropdown` panel, driven by `js/src/menu.ts`.
 - Record slugs are not translated by this path-based switch: when slugs differ per locale, link records with `record|link(true, code)` instead (see `bolt-extension-setup`'s sitemap for an example of per-locale record links).
@@ -233,11 +232,15 @@ Run the bundled test script to verify that the new language is completely wired 
 vendor/tomvondracek/bolt-skills/skills/bolt-add-language/scripts/verify.sh <target_code>
 ```
 
-Or run manual checks:
-```bash
-# 1. Verify unit count parity across catalogs:
-for f in translations/messages.*.xlf; do echo "$(grep -c '<unit ' "$f") $f"; done
+It parses the files instead of searching their text (`scripts/check-language.php`):
 
-# 2. Check router recognizes the new locale:
-bin/console debug:router | grep "%app_locales%"
-```
+| Check | Fails when |
+| :--- | :--- |
+| `app_locales` in `config/services.yaml` | the code is not one of the `|`-separated locales (warns when `locales_array` is defined by hand) |
+| `config/bolt/contenttypes.yaml` | a ContentType with `locales` does not list the code (warns about ContentTypes without `locales`) |
+| `translations/messages.<code>.xlf` | the catalog is missing, or a key of the default locale's catalog is missing in it (warns about extra keys) |
+| `config/bolt/menu.yaml` | a per-locale `label` map has no entry for the code (warns about plain-string labels) |
+| `bin/console lint:xliff translations` | any catalog is invalid |
+| `partials/_locale-switcher.twig` | — (warns when the code is not in the `locales` map) |
+
+To check the router by hand: `bin/console debug:router record_locale` shows the `_locale` requirement with the new code.

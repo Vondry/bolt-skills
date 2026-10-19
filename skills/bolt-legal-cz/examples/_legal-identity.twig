@@ -1,0 +1,81 @@
+{#
+  partials/_legal-identity.twig — bolt-legal-cz
+  The operator's legal identity (§ 435 OZ: name, registered seat, IČO, registration entry —
+  ID-01–ID-04, ID-07) and, on consumer sites, the out-of-court dispute resolution body with its
+  web address (§ 14 ZOS, SP-01). Included in the footer, so it is on every page as text (ID-05).
+
+  Data: theme.yaml contact: (name, address, ico) and legal: (operator, registry, dic, consumers, adr,
+  complaints_url, terms_url, withdrawal_url, regulated, whistleblowing_url). Never type these facts
+  into a template or a translation (AG-04).
+
+  Include: {% include 'partials/_legal-identity.twig' %}  (inherits the footer's text colour)
+  Translation keys: legal.*
+#}
+
+{% set contact = config.get('theme/contact')|default({}) %}
+{% set legal = config.get('theme/legal')|default({}) %}
+{% set registry = legal.registry|default({}) %}
+{% set locale = app.request.locale|default('cs') %}
+{% set link_class = 'underline underline-offset-2 hover:no-underline' %}
+
+<div class="flex flex-col gap-1 text-xs leading-relaxed" data-legal-identity>
+    {# ID-01–ID-03, ID-07 #}
+    <p>
+        <span>{{ contact.name|default('') }}</span>
+        {%- if contact.address|default(false) %}, {{ __('legal.seat') }} <span>{{ contact.address }}</span>{% endif -%}
+        {%- if contact.ico|default(false) %}, {{ __('legal.ico') }} <span>{{ contact.ico }}</span>{% endif -%}
+        {%- if legal.dic|default(false) %}, {{ __('legal.dic') }} <span>{{ legal.dic }}</span>{% endif -%}
+    </p>
+
+    {# ID-04 — registration entry by operator #}
+    {% if legal.operator|default('trade') == 'company' %}
+        <p>{{ __('legal.registry.company', { '%court%': registry.court|default(''), '%section%': registry.section|default(''), '%insert%': registry.insert|default('') }) }}</p>
+    {% elseif legal.operator|default('trade') == 'trade' %}
+        {% if registry.office|default(false) %}
+            <p>{{ __('legal.registry.trade_office', { '%office%': registry.office }) }}</p>
+        {% else %}
+            <p>{{ __('legal.registry.trade') }}</p>
+        {% endif %}
+    {% elseif registry.text|default(false) %}
+        <p>{{ registry.text is iterable ? (registry.text[locale] ?? registry.text.cs ?? '') : registry.text }}</p>
+    {% endif %}
+
+    {# REG-01 — regulated profession #}
+    {% if legal.regulated|default(false) %}
+        {% set chamber = legal.regulated.chamber|default('') %}
+        {% set title = legal.regulated.title|default('') %}
+        <p>
+            {{ __('legal.regulated', {
+                '%title%': title is iterable ? (title[locale] ?? title.cs ?? '') : title,
+                '%chamber%': chamber is iterable ? (chamber[locale] ?? chamber.cs ?? '') : chamber
+            }) }}
+            {%- if legal.regulated.rules_url|default(false) %}
+                <a href="{{ legal.regulated.rules_url }}" class="{{ link_class }}" rel="noopener">{{ __('legal.regulated_rules') }}</a>
+            {%- endif %}
+        </p>
+    {% endif %}
+
+    {# SP-01 — ADR body and its web address, printed in full (the law asks for the address) #}
+    {% if legal.consumers|default(false) and legal.adr.url|default(false) %}
+        {% set adr_name = legal.adr.name|default('') %}
+        <p>
+            {{ __('legal.adr', { '%body%': adr_name is iterable ? (adr_name[locale] ?? adr_name.cs ?? '') : adr_name }) }}
+            <a href="{{ legal.adr.url }}" class="{{ link_class }}" rel="noopener">{{ legal.adr.url|replace({'https://': '', 'http://': ''})|trim('/', 'right') }}</a>
+        </p>
+    {% endif %}
+
+    {# SP-03, EC-02, EC-05, WB-01 — links to the pages that hold the details #}
+    {% set legal_links = [
+        { url: legal.terms_url|default(null), label: 'legal.terms' },
+        { url: legal.complaints_url|default(null), label: 'legal.complaints' },
+        { url: legal.withdrawal_url|default(null), label: 'legal.withdrawal' },
+        { url: legal.whistleblowing_url|default(null), label: 'legal.whistleblowing' }
+    ]|filter(item => item.url is not empty) %}
+    {% if legal_links|length > 0 %}
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 list-none m-0 p-0">
+            {% for item in legal_links %}
+                <li><a href="{{ locale_link(item.url) }}" class="{{ link_class }}">{{ __(item.label) }}</a></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>

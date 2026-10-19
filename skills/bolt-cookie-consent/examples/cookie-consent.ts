@@ -309,6 +309,9 @@ class ConsentManager {
             Array.from(blocked.attributes).forEach((attribute) => {
                 if (attribute.name !== 'type') script.setAttribute(attribute.name, attribute.value);
             });
+            // Browsers hide a nonce from getAttribute() once the page is parsed; only the property
+            // keeps it. Without this, a nonce-based Content-Security-Policy blocks the new script.
+            if (blocked.nonce) script.nonce = blocked.nonce;
             script.text = blocked.text;
             blocked.replaceWith(script);
             this.active[category] = true;

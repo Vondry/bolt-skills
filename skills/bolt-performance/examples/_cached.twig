@@ -11,9 +11,9 @@
     vary      string    Anything else the output depends on (page number, filter), appended to the key.
     ttl       int       Safety net in seconds (default 3600) — timed (de)publishing fires no save event.
 
-  Only GET requests are cached: Bolt's preview (POST /preview/{id}) and form submissions render live.
+  Only GET and HEAD requests are cached: Bolt's preview (POST /preview/{id}) and form submissions render live.
 #}
-{% if app.request.method == 'GET' %}
+{% if app.request.method in ['GET', 'HEAD'] %}
     {% cache key ~ ';' ~ app.request.locale ~ ';' ~ (vary|default('')) ttl(ttl|default(3600)) tags(tags) %}
         {{ include(template, with|default({})) }}
     {% endcache %}

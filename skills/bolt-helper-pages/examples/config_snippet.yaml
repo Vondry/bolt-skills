@@ -9,12 +9,14 @@ notfound: [ 'helper-pages/notfound.404.twig' ]
 # Toggle maintenance mode on or off. Note: Logged-in editors will still see the site.
 maintenance_mode: false
 
-# The default for the "Maintenance mode" (503) page.
-maintenance: [ 'helper-pages/maintenance.503.twig' ]
+# The default for the "Maintenance mode" (503) page. A root entrypoint without '/': Bolt looks
+# up items containing '/' as contenttype/slug records first, a database query (SKILL.md section 5).
+maintenance: [ 'maintenance.503.twig' ]
 
 # The default content for the "Forbidden" (403) page.
 forbidden: [ 'helper-pages/forbidden.403.twig' ]
 
 # The default content for the "Internal Server Error" (500) page.
-# Note: Used in APP_ENV=prod mode. Kept strictly simple without database queries.
-internal_server_error: [ 'helper-pages/internal-server-error.500.twig' ]
+# Note: Used in APP_ENV=prod mode. Kept strictly simple without database queries; the root
+# entrypoint internal-server-error.500.twig extends helper-pages/internal-server-error.500.twig.
+internal_server_error: [ 'internal-server-error.500.twig' ]

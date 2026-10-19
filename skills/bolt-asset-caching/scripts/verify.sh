@@ -127,12 +127,13 @@ if [ -f "$NGINX_CONF" ]; then
     HAS_THUMBS_EXPIRES=$(grep -E -A 8 "location\s+\^~\s+/thumbs" "$NGINX_CONF" | grep -E "expires\s+" || true)
     HAS_ASSET_LOCATION=$(grep -E "location\s+~\*\s+\^\.\+\\\.\(" "$NGINX_CONF" || true)
 
-    if [ -n "$HAS_NGINX_THUMBS" ] && [ -n "$HAS_THUMBS_EXPIRES" ]; then
+    if [ -n "$HAS_NGINX_THUMBS" ] && [ -n "$HAS_THUMBS_EXPIRES" ] && [ -n "$HAS_ASSET_LOCATION" ]; then
         echo "PASSED (Nginx has /thumbs caching and static asset rules)"
     else
         echo "WARNING / NOTICE"
-        [ -z "$HAS_NGINX_THUMBS" ] && echo "  - Missing 'location ^~ /thumbs' block in Nginx"
+        [ -z "$HAS_NGINX_THUMBS" ] && echo "  - Missing 'location ^~ /thumbs' block in Nginx (bolt-security-hardening/examples/docker/nginx_security.conf)"
         [ -z "$HAS_THUMBS_EXPIRES" ] && echo "  - Missing expires header in Nginx /thumbs block"
+        [ -z "$HAS_ASSET_LOCATION" ] && echo "  - Missing the generic static-file location (examples/nginx_static.conf)"
         WARNINGS=$((WARNINGS + 1))
     fi
 else

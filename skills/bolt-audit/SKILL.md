@@ -2,7 +2,7 @@
 name: bolt-audit
 description: >-
   Read-only audit of an existing Bolt CMS 6 project against every bolt-skills skill. Profiles the
-  project, runs all 17 verification scripts in workflow order, compares the project's files with
+  project, runs all 18 verification scripts in workflow order, compares the project's files with
   the skills' examples, then reviews each skill one by one (logs, SKILL.md rules, references) and
   writes a prioritized AUDIT.md report — defects vs. convention deviations, severity, evidence and
   the skill step that fixes each finding. Use when asked to audit, review, check or assess an
@@ -26,7 +26,7 @@ The skills are applied in [`WORKFLOWS.md`](../../WORKFLOWS.md) phase order; the 
 
 ## Rules
 
-1. **Read-only.** Never run a skill's `scaffold.sh`, `privacy-config.php`, `merge-xliff.php`, `composer install/update/require`, `npm install`, `bin/console cache:clear` or any write command in the audited project, and never edit its files — even to "quickly fix" something. Exception: the report directory. (The verify scripts' `bin/console lint:*` calls and kernel boot may warm `var/cache`; that is runtime data.)
+1. **Read-only.** Never run a skill's `scaffold.sh`, `privacy-config.php`, `merge-xliff.php`, `composer install/update/require`, `npm install`, `bin/console cache:clear` or any write command in the audited project, and never edit its files — even to "quickly fix" something. Exceptions, all runtime data: the report directory; `var/cache/<env>` warmed by the verify scripts' `bin/console` calls; `var/cache/ecs` (ECS keeps its cache there, as `make cscheck` does). The Tailwind build check compiles into a temporary file and the timezone check boots the kernel with temporary cache folders, so neither touches the theme or `var/cache/prod`. Live checks are GET requests, but against a running site the asset delivery check (`bolt-asset-caching`) makes Bolt generate and save the thumbnails it requests — the same as a visitor's first view.
 2. **Evidence for every finding**: a file and line, a log line or an HTTP response. If you could not check something, list it under *Not checked* — do not guess.
 3. **Defect or deviation.** A project built differently from the skills' conventions is not broken. Report a deviation once per skill with the cost of aligning; report defects individually (see the top of `review-checklist.md`).
 4. **Live checks only against the right site.** Use `--base-url` only with a URL the user confirmed belongs to this project. For `bolt-htaccess` it must be served by Apache (staging), not `symfony serve`.
@@ -58,7 +58,7 @@ bash $SKILLS/bolt-audit/scripts/audit.sh --base-url=https://staging.example.cz  
 #   --strict                      exit 1 when a skill fails (CI)
 ```
 
-It writes `profile.md`, `summary.md` / `summary.tsv`, `logs/<skill>.log`, `examples.md` and `diffs/`. With `--base-url` it also requests every sitemap URL (with each secondary-locale prefix), the search page and a missing URL, and lists the status codes in `http.md` (`http-smoke` row: any 5xx is a failure, any other non-200 a warning, the missing URL must answer 404) — pages that crash are invisible to the file-based checks. Applicability is decided automatically where it can be: `bolt-htaccess` is N/A on Nginx-only sites, `bolt-add-language` runs once per secondary locale and is N/A on single-language sites. `bolt-cookie-consent` runs without `--draft`: placeholders count as failures in an audit.
+It writes `profile.md`, `summary.md` / `summary.tsv`, `logs/<skill>.log`, `examples.md` and `diffs/`. With `--base-url` it also requests every sitemap URL (with each secondary-locale prefix), the search page and a missing URL, and lists the status codes in `http.md` (`http-smoke` row: any 5xx is a failure, any other non-200 a warning, the missing URL must answer 404) — pages that crash are invisible to the file-based checks. Applicability is decided automatically where it can be: `bolt-htaccess` is N/A on Nginx-only sites, `bolt-add-language` runs once per secondary locale and is N/A on single-language sites. `bolt-cookie-consent` and `bolt-legal-cz` run without `--draft`: placeholders count as failures in an audit. For the register comparison run `bash $SKILLS/bolt-legal-cz/scripts/verify.sh --ares` once (it needs internet access).
 
 ## Step 3 — Read the profile
 

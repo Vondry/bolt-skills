@@ -175,25 +175,32 @@ else
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# Live execution if tools are available
+# Live execution if tools are available: violations fail the check, they are what this skill
+# exists to prevent. (ECS keeps its cache in var/cache/ecs, as `make cscheck` does.)
 if [ -f "vendor/bin/ecs" ] && [ -f "vendor/bin/phpstan" ]; then
     echo ""
     echo "Running live checks:"
-    echo -n "  • Testing ECS linter on src/... "
-    if php vendor/bin/ecs check --no-progress-bar --no-interaction src > /dev/null 2>&1; then
-        echo "OK (Clean)"
+    echo -n "  • ECS on src/... "
+    if ECS_OUTPUT=$(php vendor/bin/ecs check --no-progress-bar --no-interaction src 2>&1); then
+        echo "OK (clean)"
     else
-        echo "NOTICE (Code style violations found - run 'make csfix')"
-        WARNINGS=$((WARNINGS + 1))
+        echo "FAILED (code style violations — run 'make csfix'):"
+        echo "$ECS_OUTPUT" | grep -E "^ *[0-9]+\) |\[ERROR\]" | head -20 | sed 's/^ */      /'
+        FAILED=1
     fi
 
-    echo -n "  • Testing PHPStan Level 8 on src/... "
-    if php vendor/bin/phpstan --memory-limit=1G analyse -c phpstan.dist.neon src --no-progress > /dev/null 2>&1; then
-        echo "OK (Clean)"
+    echo -n "  • PHPStan (phpstan.dist.neon) on src/... "
+    if STAN_OUTPUT=$(php vendor/bin/phpstan --memory-limit=1G analyse -c phpstan.dist.neon src --no-progress --error-format=raw 2>&1); then
+        echo "OK (clean)"
     else
-        echo "NOTICE (PHPStan reported typing issues - run 'make stancheck')"
-        WARNINGS=$((WARNINGS + 1))
+        echo "FAILED (run 'make stancheck'):"
+        echo "$STAN_OUTPUT" | grep -E "\.php:[0-9]+:|^ *(Error|Fatal)" | head -20 | sed "s#^$BASE_DIR/#      #"
+        FAILED=1
     fi
+else
+    echo ""
+    echo "  NOTICE: vendor/bin/ecs or vendor/bin/phpstan not installed (composer install with dev packages) — style and static analysis not run."
+    WARNINGS=$((WARNINGS + 1))
 fi
 
 echo ""

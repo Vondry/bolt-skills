@@ -22,7 +22,7 @@ phase and skill consume it.
 | :- | :--- | :--- | :--- |
 | E1 | Project directory: an existing Bolt 6 project, or create a new one? | new: `composer create-project bolt/project <dir>` | Phase 1 prerequisites |
 | — | *Not asked:* database is **SQLite** from Bolt's default `.env` (`var/data/bolt.sqlite`) — no `DATABASE_URL` to set; `bolt:setup --no-fixtures` — **never** Bolt's sample fixtures | — | Phase 1 |
-| E3 | First account for the local site — created by the user in `bolt:setup --no-fixtures` (interactive; password never in the chat) | the user runs `! php bin/console bolt:setup --no-fixtures` in Phase 1 | Phase 7 (content), admin checks |
+| E3 | First account for the local site — created by the user in `bolt:setup --no-fixtures` (interactive; password never in the chat) | the user runs `php bin/console bolt:setup --no-fixtures` in their terminal in Phase 1 | Phase 7 (content), admin checks |
 | E4 | How the site runs locally and its URL (`BOLT_BASE_URL`) | `symfony serve` → `https://127.0.0.1:8000` · Docker · Valet / other | all live checks |
 | E5 | Production web server and document root | Apache, vhost on `public/` · Apache, document root = project root · Nginx | 2.1 `bolt-htaccess`, 2.2 `bolt-asset-caching` |
 | E6 | Docker in production or development? | no · yes (PHP INI, compose, Nginx container) | 1.1 `bolt-timezone`, 2.2 |
@@ -32,6 +32,7 @@ phase and skill consume it.
 | E10 | Git: commit after every gate? Remote to push to? | commit locally after each gate, no push | all gates |
 | E11 | How is the site deployed? | upload over SFTP · git pull on the server · CI | 1.5, 7.5 `bolt-security-hardening` (fail-safe `.env`, excluded paths, cache) |
 | E12 | Restrict the admin (`/bolt`)? | open (login throttling + password policy) · IP allowlist (give the IPs) · HTTP basic auth | `bolt-security-hardening` Step 9 |
+| E13 | Production database | SQLite in `var/data/` (uploaded once, never overwritten) · MySQL / MariaDB of the host (give host, name, user; the password goes only into the server's `.env.local`) | 1.5 `DATABASE_URL` default in `.env`, 7.5 deployment, `bolt-timezone` (`TZ` of a database container) |
 
 ## Round 2 — Structure and content (confirm the design proposal)
 
@@ -62,8 +63,15 @@ phase and skill consume it.
 
 ## Round 4 — Operator facts (legal, tracking, contact)
 
+Ask **L1 first** — who operates the website decides which legal information the site must carry (`bolt-legal-cz`).
+
 | # | Question | Default / options | Used by |
 | :- | :--- | :--- | :--- |
+| L1 | Who operates the website? | **OSVČ – živnostník** (most sites — offer it first, but ask) · company in the Commercial Register · regulated profession (advokát, lékař, architekt …) · non-business (spolek, private person) | 6.6 `--operator` |
+| L2 | IČO of the operator (ARES then gives name, registered seat, register entry, VAT status) | — *operator* | 4.2 `contact:`, 6.6 `verify.sh --ares` |
+| L3 | Does the business sell products or services to consumers? If yes and the services are energy, telecoms, financial or legal: which (ADR body) | yes, ČOI · no (B2B only) | 6.6 `--consumers`, `--adr` |
+| L4 | Are contracts concluded on the website (cart, paid booking, subscription)? Does the site show reviews or testimonials, and are they verified? | no · no | 6.6 `--online-contracts`, `--reviews` |
+| L5 | Special cases: 50+ employees or AML obliged person (whistleblowing page), 10+ employees or turnover above EUR 2 M (accessibility, with online contracts), regulated profession (chamber, title) | none | 6.6 |
 | O1 | Contact details shown on the site: name, phone, e-mail, address, opening hours, one-sentence bio, social links | — *operator* | 4.2 `theme.yaml` `contact:`, `socials:` |
 | O2 | `bolt-cookie-consent` intake Q1: measuring / advertising tools | Google Ads · GA4 · Sklik · Meta Pixel · other · none | 6.5 |
 | O3 | Q2: embedded third-party content | YouTube · Google Maps · Mapy.com · none | 6.5 |

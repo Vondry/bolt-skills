@@ -99,7 +99,7 @@ if [ ! -f "$MASTER" ]; then
     TIER_ERRORS+=("Missing partials/_master.twig layout shell (the layout every page extends)")
 else
     for block in seo head main; do
-        if ! grep -qE "\{%-?[[:space:]]*block[[:space:]]+$block[[:space:]]*-?%\}" "$MASTER"; then
+        if ! grep -qE "\{%-?[[:space:]]*block[[:space:]]+${block}[[:space:]]*-?%\}" "$MASTER"; then
             TIER_ERRORS+=("partials/_master.twig does not define {% block $block %}")
         fi
     done

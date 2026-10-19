@@ -19,6 +19,7 @@ products:
       height: 100px
     body:
       type: redactor
+      sanitise: true                # rich text is cleaned on output (bolt-contenttypes rule 7)
     image:
       type: image
     price:

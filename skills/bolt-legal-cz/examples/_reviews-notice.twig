@@ -1,0 +1,23 @@
+{#
+  partials/_reviews-notice.twig — bolt-legal-cz
+  States whether and how the reviews / testimonials shown next to it are checked to come from
+  customers who really used the service or bought the product (§ 5a odst. 5 ZOS, SP-06).
+  Include it directly below every block that shows reviews, ratings or client testimonials:
+
+    {% include 'partials/_reviews-notice.twig' %}
+
+  Data: theme.yaml legal.reviews.verification (localized text). Without it the notice says the
+  reviews are not verified — never claim a verification that does not happen.
+  Translation keys: legal.reviews.unverified
+#}
+
+{% set verification = config.get('theme/legal/reviews/verification')|default(null) %}
+{% set locale = app.request.locale|default('cs') %}
+
+<p class="text-xs text-ink-3" data-reviews-notice>
+    {% if verification is not empty %}
+        {{ verification is iterable ? (verification[locale] ?? verification.cs ?? '') : verification }}
+    {% else %}
+        {{ __('legal.reviews.unverified') }}
+    {% endif %}
+</p>

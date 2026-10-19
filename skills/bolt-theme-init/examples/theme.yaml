@@ -17,11 +17,12 @@ logo:
 
 # Operator / company contact details. Shown in the footer and contact containers,
 # on the privacy policy (data controller identity), on error/maintenance helper
-# pages, and in /llms.txt.
+# pages, and in /llms.txt. name, ico and address are the § 435 OZ identity in the footer
+# (bolt-legal-cz appends the legal: block with the register entry and consumer information).
 contact:
-  name: ~                       # legal name of the operator (privacy policy)
-  ico: ~                        # company ID (IČO)
-  address: ~                    # registered address / where to find us
+  name: ~                       # legal name of the operator, exactly as registered
+  ico: ~                        # company ID (IČO), quoted: '01234567'
+  address: ~                    # registered seat (sídlo) as in the register
   email: 'info@example.cz'
   phone: '+420 123 456 789'
   hours: ~                      # e.g. 'Po–Pá 8:00–16:00'

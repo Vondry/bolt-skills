@@ -164,33 +164,20 @@ Add the `mod_expires` configuration block. `bolt-htaccess` owns `public/.htacces
 ### Step 4: Configure Nginx Static Expiration (`docker/nginx/conf.d/default.conf`)
 File: `docker/nginx/conf.d/default.conf`
 
-Ensure both the `/thumbs` location and the generic static asset regex block define aggressive expiration:
+The `/theme/`, `/files/` and `/thumbs/` locations come from **`bolt-security-hardening`** (`examples/docker/nginx_security.conf`): they serve only allowlisted file types, set `expires 2M`, and pass a thumbnail that is not on disk yet to Bolt (`try_files $uri /index.php`). Use that file; do not add a second `/thumbs` location — Nginx refuses duplicate locations.
+
+For the rest of `public/` (Bolt's admin assets in `/assets/` and `/bundles/`, a favicon in the root) add the generic static block from [`examples/nginx_static.conf`](examples/nginx_static.conf):
 
 ```nginx
-# Generated thumbnail images
-location ^~ /thumbs {
-    try_files                     $uri /index.php?$query_string;
-
+location ~* ^.+\.(?:avif|css|gif|ico|jpe?g|js|png|svg|webp|woff2?|ttf|otf|webmanifest|pdf|mp4|webm)$ {
     access_log                    off;
     log_not_found                 off;
     expires                       2M;
-    add_header                    Pragma public;
-    add_header                    Cache-Control "public";
-}
-
-# Don't log, and do cache, asset files
-location ~* ^.+\.(?:atom|avif|bmp|bz2|css|doc|eot|exe|gif|gz|ico|jpe?g|jpeg|jpg|js|map|mid|midi|mp4|ogg|ogv|otf|pdf|png|ppt|rar|rtf|svg|svgz|tar|tgz|ttf|wav|webp|woff|woff2|xls|zip)$ {
-    access_log                    off;
-    log_not_found                 off;
-    expires                       2M;
-    add_header                    Pragma public;
-    add_header                    Cache-Control "public";
+    try_files                     $uri =404;
 }
 ```
 
-* **`try_files $uri /index.php?$query_string;`**: Checks if the thumbnail already exists on disk in `public/thumbs/`. If yes, serves it statically. If not, passes to Symfony's front controller to generate it.
-
----
+* **No `add_header` in these locations.** An `add_header` inside a location drops every `add_header` of the server block for that location — the HSTS and `nosniff` headers of `bolt-security-hardening` would disappear from every image. `expires 2M` already sends `Cache-Control: max-age=5184000`; an extra `add_header Cache-Control "public"` would send a second `Cache-Control` header, and `Pragma` has no effect on modern browsers.
 
 ### Step 5: Frontend Asset Cache-Busting (`?v=X.X`)
 
@@ -306,10 +293,16 @@ curl -I https://example.com/theme/mytheme/css/index.css?v=1.1
 
 ### Pitfall 3: `public/thumbs/` Directory Permissions
 - **Symptom:** Bolt logs `Cannot dump file public/thumbs/... Permission denied`.
-- **Cause:** Web server user (`www-data` or PHP-FPM user) lacks write permissions to `public/thumbs/`.
-- **Fix:** Ensure directory permissions match `config/bolt/config.yaml`:
+- **Cause:** the PHP process (PHP-FPM user, or the hosting account) cannot write to `public/thumbs/`.
+- **Fix (server with a shell):**
   ```bash
   mkdir -p public/thumbs
   chmod -R 775 public/thumbs
   chown -R www-data:www-data public/thumbs
   ```
+- **Fix (SFTP shared hosting):** PHP runs as the hosting account, which owns the uploaded files, so `chown` is neither possible nor needed. Create `public/thumbs/` in the SFTP client and give it write permission for the owner (`755`; `775` only when the host's panel says PHP runs as a different user). Never upload `public/thumbs/` from a local machine — the server generates its own.
+
+### Pitfall 4: A Replaced Upload Keeps Its Old Version for Two Months
+- **Symptom:** an editor replaces `files/logo.png` with a new file under the same name; visitors keep seeing the old one.
+- **Cause:** uploads are cached for two months (`access plus 2 months`) and their URL did not change — unlike CSS and JS, they have no `?v=` version.
+- **Fix:** upload the new version under a new name (`logo-2026.png`) and pick it in the record. Thumbnails of the old file stay valid for the old URL only.

@@ -53,7 +53,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 # Detect active theme
-THEME_NAME=$(grep -E "^\s*theme:" "$CONFIG_FILE" 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
+THEME_NAME=$(grep -E "^theme:" "$CONFIG_FILE" 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
 if [ -z "$THEME_NAME" ]; then
     THEME_NAME="default"
 fi
@@ -91,6 +91,27 @@ check_config_mapping "notfound" "notfound.404.twig"
 check_config_mapping "maintenance" "maintenance.503.twig"
 check_config_mapping "forbidden" "forbidden.403.twig"
 check_config_mapping "internal_server_error" "internal-server-error.500.twig"
+
+# 500 and 503 must name a root entrypoint (no '/'): Bolt's ErrorController looks up every item
+# containing '/' as a contenttype/slug record first — a database query before the page renders,
+# which fails exactly when the database is down (SKILL.md section 5).
+check_root_entrypoint() {
+    local key="$1" file="$2" severity="$3"
+    local val
+    val=$(grep -E "^$key:" "$CONFIG_FILE" 2>/dev/null | head -1 || true)
+    [ -z "$val" ] && return
+    if echo "$val" | grep -q "/"; then
+        echo "  ❌ $key names a path with '/' — Bolt queries the database for it before rendering. Use [ '$file' ] with a root entrypoint (examples/root-$file)."
+        if [ "$severity" = "fail" ]; then FAILED=1; else WARNINGS=$((WARNINGS+1)); fi
+    elif [ -f "$THEME_DIR/$file" ]; then
+        echo "  ✅ $key uses the root entrypoint $THEME_DIR/$file"
+    else
+        echo "  ❌ $key names '$file', but $THEME_DIR/$file does not exist (examples/root-$file)"
+        FAILED=1
+    fi
+}
+check_root_entrypoint "internal_server_error" "internal-server-error.500.twig" fail
+check_root_entrypoint "maintenance" "maintenance.503.twig" warn
 
 # -------------------------------------------------------------
 # 2. Check Theme Template Files

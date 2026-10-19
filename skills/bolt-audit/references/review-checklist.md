@@ -81,9 +81,9 @@ never "keep, record as deviation".
 - **Severity hints:** Google Fonts loaded from Google → High (GDPR, also bolt-cookie-consent); contrast below 4.5:1 → Medium; naming / token structure → Low.
 
 ## 12. bolt-contenttypes
-- **Script:** YAML syntax; rules: no `type: html`, singletons with `order: -id`, slug `uses`, no `repeater`, required-but-not-localized fields, `default_status` of viewless singletons; `sanitise: true` on every `redactor` / `article` field, no `allow_twig`, no `sanitise: false`.
-- **Review:** each script error (they are real configuration bugs); required non-localized fields only matter on multilingual sites — confirm with how editors translate; YAML anchors for repeated field groups.
-- **Severity hints:** Redactor / Article without `sanitise: true` or any `allow_twig` → High (stored XSS / code execution by editors); singleton without `order: -id` → High (wrong record shown); `type: html` → Medium; missing `uses` → Medium; multilingual required-field warnings → Medium on multilingual sites.
+- **Script:** YAML syntax; rules: no `type: html`, singletons with `order: -id`, slug `uses`, no `repeater`, text fields without `localize: true` on multilingual ContentTypes, `localize` without `locales`; `sanitise: true` on every `redactor` / `article` field, no `allow_twig`, no `sanitise: false`.
+- **Review:** each script error (they are real configuration bugs); non-localized text fields only matter on multilingual sites — a field the editors translate must be `localize: true` (otherwise the English tab overwrites the Czech value), a shared value (name, URL) may stay as it is; YAML anchors for repeated field groups.
+- **Severity hints:** Redactor / Article without `sanitise: true` or any `allow_twig` → High (stored XSS / code execution by editors); singleton without `order: -id` → High (wrong record shown); `type: html` → Medium; missing `uses` → Medium; non-localized text that editors translate → Medium on multilingual sites (content in the wrong language).
 
 ## 13. bolt-menu
 - **Script:** `menu.yaml` existence, YAML, structure (root-slash anchors `/#…`, label parity per locale, no locale prefixes in links, CTA flags), navigation templates, `locale_link` wrapping.
@@ -110,7 +110,16 @@ never "keep, record as deviation".
   - CB-02: YouTube / map iframes without a placeholder.
 - **Severity hints:** tracking before consent, Reject missing from layer 1, no privacy page, cookies not described → Critical (ÚOOÚ fines exactly these); unequal buttons, missing footer link, English-only descriptions → High; not using the skill's data model → Medium (one deviation; migration = scaffold with the intake).
 
-## 17. bolt-add-language *(multilingual only — once per secondary locale)*
+## 17. bolt-legal-cz
+- **Script:** the `theme.yaml` `contact:` identity and `legal:` profile (IČO check digit, register entry by operator type, ADR body, online-contract pages, privacy controller = `contact:`), the identity partial in the footer, typed-in IČOs and EU ODR links in templates, the reviews notice, translations, and the live pages through `check-site.php`.
+- **Review:** projects built before this skill have no `legal:` block — a **deviation**. The **defects** are on the rendered site, so run `php $SKILLS/bolt-legal-cz/scripts/check-site.php --url=<base-url> --ares` (it needs no `legal:` block; add `--consumers` when the operator sells to consumers) and judge against `skills/bolt-legal-cz/references/requirements.cs.md`:
+  - ID-01–ID-04: name, registered seat, IČO and the Trade / Commercial Register entry on the site, matching ARES (ID-06); an IČO of someone else (template leftover, ID-09).
+  - SP-01: ADR body with its web address on consumer sites; SP-02: links to the closed EU ODR platform (often in the terms page in the database); SP-06: testimonials without a verification statement.
+  - EC (online shops): terms, withdrawal information, the „Odstoupit od smlouvy“ button from 1. 1. 2027.
+  - Ask the operator what the script cannot know: consumers or B2B, employees (whistleblowing, accessibility), regulated profession — or list it under *Not checked*.
+- **Severity hints:** IČO, name, seat or register entry missing or wrong; no ADR information on a consumer site; no withdrawal button on an online shop from 1. 1. 2027 → High (fines up to CZK 1 M / 5 M); EU ODR link, reviews without a statement, identity only on the contact page → Medium; not using the skill's data model → Low (one deviation).
+
+## 18. bolt-add-language *(multilingual only — once per secondary locale)*
 - **Script:** locale in `services.yaml`, ContentType `locales`, catalog existence and unit parity, XLIFF lint, `menu.yaml` labels, locale switcher.
 - **Review:** in the browser (with `--base-url`), a few `/<code>/…` pages show translated text, not keys or Czech fallbacks (Appendix B.4); `hreflang` alternates in the SEO tags; the switcher keeps the current page instead of jumping home.
 - **Severity hints:** untranslated keys visible → High; missing `hreflang` → Medium; parity gaps in rarely used units → Low.

@@ -7,7 +7,8 @@
     - href (string): Link target (passed through locale_link)
     - image (Bolt image field|string|optional): Card image
     - badge (string|optional): Category or status text, rendered with components/ui/badge.twig
-    - badge_markup (Markup|optional): Pre-rendered badge, e.g. a page-scoped component:
+    - badge_markup (string|optional): Pre-rendered badge from a theme template (printed unescaped —
+        pass include() output only, never CMS or translation text), e.g. a page-scoped component:
         badge_markup: include('pages/product/components/stock-badge.twig', { stock: item.stock })
     - description (string|optional): Excerpt / summary (HTML is stripped)
     - price (string|optional): Pre-formatted price, e.g. macros.formatPrice(item.price)

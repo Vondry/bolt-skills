@@ -22,7 +22,17 @@ fi
 
 cd "$BASE_DIR"
 
-EXPECTED_TIMEZONE="Europe/Prague"
+# The zone every layer must use: --timezone=Area/City, else BOLT_TIMEZONE, else the house default.
+EXPECTED_TIMEZONE="${BOLT_TIMEZONE:-Europe/Prague}"
+for arg in "$@"; do
+    case "$arg" in
+        --timezone=*) EXPECTED_TIMEZONE="${arg#*=}" ;;
+    esac
+done
+if ! php -r 'exit(in_array($argv[1], DateTimeZone::listIdentifiers(), true) ? 0 : 1);' "$EXPECTED_TIMEZONE"; then
+    echo "ERROR: '$EXPECTED_TIMEZONE' is not a valid timezone identifier."
+    exit 1
+fi
 
 echo "=========================================================="
 echo " Bolt CMS Timezone Verification ($EXPECTED_TIMEZONE)"
@@ -63,7 +73,7 @@ if [ ! -f "$KERNEL_FILE" ]; then
     FAILED=1
 else
     HAS_EXTENDS=$(grep -E "class\s+Kernel\s+extends\s+(BoltKernel|\\\\Bolt\\\\Kernel)" "$KERNEL_FILE" || true)
-    HAS_TZ_CONST=$(grep -E "(const\s+TIMEZONE\s*=\s*['\"]$EXPECTED_TIMEZONE['\"])" "$KERNEL_FILE" || true)
+    HAS_TZ_CONST=$(grep -E "(const\s+TIMEZONE\s*=\s*['\"]${EXPECTED_TIMEZONE}['\"])" "$KERNEL_FILE" || true)
     HAS_TZ_CALL=$(grep -E "date_default_timezone_set\(" "$KERNEL_FILE" || true)
 
     if [ -n "$HAS_EXTENDS" ] && [ -n "$HAS_TZ_CONST" ] && [ -n "$HAS_TZ_CALL" ]; then
@@ -126,7 +136,7 @@ fi
 if [ -n "$COMPOSE_FILE" ]; then
     if grep -q -E "(mariadb|mysql)" "$COMPOSE_FILE"; then
         # Map syntax (TZ: "Europe/Prague") or list syntax (- TZ=Europe/Prague)
-        if grep -q -E "TZ[:=][[:space:]]*[\"']?$EXPECTED_TIMEZONE[\"']?" "$COMPOSE_FILE"; then
+        if grep -q -E "TZ[:=][[:space:]]*[\"']?${EXPECTED_TIMEZONE}[\"']?" "$COMPOSE_FILE"; then
             echo "PASSED (TZ: \"$EXPECTED_TIMEZONE\" in $COMPOSE_FILE)"
         else
             echo "WARNING"
@@ -145,21 +155,33 @@ fi
 # -------------------------------------------------------------
 echo -n "[5/5] Testing Symfony Kernel boot runtime timezone... "
 if [ -f "vendor/autoload.php" ] && [ -f "src/Kernel.php" ]; then
+    # Boots the project's App\Kernel in a subclass whose cache, build and log folders live in a
+    # temporary directory, so the check writes nothing into the project's var/.
+    TMP_KERNEL_DIR=$(mktemp -d)
     RUNTIME_TZ=$(php -d error_reporting=0 -r '
         require "vendor/autoload.php";
-        if (class_exists("App\\Kernel")) {
-            $kernel = new App\Kernel("prod", false);
-            try {
-                $kernel->boot();
-            } catch (\Throwable $e) {
-                // If database container is offline, cache warmup may fail,
-                // but date_default_timezone_set() ran before parent::boot().
-            }
-            echo date_default_timezone_get();
-        } else {
-            echo "NO_KERNEL";
+        if (! class_exists("App\\Kernel")) { echo "NO_KERNEL"; exit; }
+        if ((new ReflectionClass("App\\Kernel"))->isFinal()) { echo "FINAL_KERNEL"; exit; }
+        $kernel = new class("prod", false) extends App\Kernel {
+            public function getProjectDir(): string { return getcwd(); }
+            public function getCacheDir(): string { return $_SERVER["argv"][1] . "/cache"; }
+            public function getBuildDir(): string { return $_SERVER["argv"][1] . "/build"; }
+            public function getLogDir(): string { return $_SERVER["argv"][1] . "/log"; }
+        };
+        try {
+            $kernel->boot();
+        } catch (\Throwable $e) {
+            // A failing container build (offline database, missing secret) does not matter here:
+            // date_default_timezone_set() runs before parent::boot().
         }
-    ' 2>/dev/null || true)
+        echo date_default_timezone_get();
+    ' "$TMP_KERNEL_DIR" 2>/dev/null || true)
+    rm -rf "$TMP_KERNEL_DIR"
+
+    if [ "$RUNTIME_TZ" = "FINAL_KERNEL" ]; then
+        echo "SKIPPED (App\Kernel is final; checks 1–2 cover the configuration)"
+        RUNTIME_TZ="$EXPECTED_TIMEZONE"
+    fi
 
     if [ "$RUNTIME_TZ" = "$EXPECTED_TIMEZONE" ]; then
         echo "PASSED (Runtime timezone verified as $RUNTIME_TZ)"

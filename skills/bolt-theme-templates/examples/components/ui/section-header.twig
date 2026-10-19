@@ -7,7 +7,8 @@
     - title (string): Section heading
     - title_id (string|optional): HTML id of the heading, for aria-labelledby on the section
     - eyebrow (string|optional): Small kicker label above the heading
-    - lead (string|Markup|optional): Intro paragraph
+    - lead (string|optional): Intro paragraph; may contain HTML (a translation or CMS field) — it is
+        cleaned by Bolt's HTML cleaner (|sanitise) before output
     - layout (string|optional): 'stacked' (default) | 'split' | 'center'
     - link (object|optional): { label, href } — rendered as a secondary button ('split' layout)
     - heading_level (int|optional): 2 (default) or 1 for page titles
@@ -29,7 +30,7 @@
         {{ macros.typo(title) }}
     </{{ tag }}>
     {% if lead is defined and lead is not empty %}
-        <p class="mt-3 text-lead text-ink-2">{{ lead|raw }}</p>
+        <p class="mt-3 text-lead text-ink-2">{{ lead|sanitise|raw }}</p>
     {% endif %}
 {% endset %}
 

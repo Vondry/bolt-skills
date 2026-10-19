@@ -1,0 +1,6 @@
+{#
+  public/theme/<themename>/internal-server-error.500.twig — root entrypoint of the 500 page.
+  config/bolt/config.yaml names this file (no '/'), so Bolt's ErrorController renders it
+  without first looking for a record in the database (SKILL.md section 5).
+#}
+{% extends 'helper-pages/internal-server-error.500.twig' %}

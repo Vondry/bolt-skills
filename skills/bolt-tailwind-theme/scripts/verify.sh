@@ -109,13 +109,13 @@ fi
 # 5. Check repeating utilities (.wrapper, .btn, .cms-redactor)
 echo -n "[5/6] Checking repeating utility classes (wrapper, btn, cms-redactor)... "
 UTIL_ERRORS=()
-if ! grep -q "wrapper" "$CSS_ENTRY"; then
+if ! grep -qE "@utility[[:space:]]+wrapper\b|\.wrapper[[:space:]]*\{" "$CSS_ENTRY"; then
     UTIL_ERRORS+=("Missing wrapper utility class")
 fi
-if ! grep -q "btn" "$CSS_ENTRY"; then
+if ! grep -qE "@utility[[:space:]]+btn\b|\.btn[[:space:]]*\{" "$CSS_ENTRY"; then
     UTIL_ERRORS+=("Missing btn utility class")
 fi
-if ! grep -q "cms-redactor" "$CSS_ENTRY"; then
+if ! grep -qE "\.cms-redactor\b" "$CSS_ENTRY"; then
     UTIL_ERRORS+=("Missing .cms-redactor prose styling class")
 fi
 
@@ -129,27 +129,27 @@ else
     echo "PASSED"
 fi
 
-# 6. Test compilation with @tailwindcss/cli
+# 6. Test compilation with @tailwindcss/cli — into a temporary file, so the check never rewrites
+#    the theme's css/index.css (bolt-audit promises to change nothing in the project).
 echo -n "[6/6] Verifying Tailwind CSS compilation... "
-if [ -f "$THEME_DIR/package.json" ] && command -v npm &>/dev/null; then
-    COMPILED=0
-    if grep -q '"build:css"' "$THEME_DIR/package.json"; then
-        if (cd "$THEME_DIR" && npm run build:css > /dev/null 2>&1); then
-            COMPILED=1
+if [ -f "$THEME_DIR/package.json" ] && [ -d "$THEME_DIR/node_modules" ] && command -v npx &>/dev/null; then
+    TMP_CSS=$(mktemp -t bolt-tailwind-XXXXXX).css
+    if (cd "$THEME_DIR" && npx --no-install @tailwindcss/cli --input ./css/tailwind/index.css --output "$TMP_CSS" --minify > /dev/null 2>&1) && [ -s "$TMP_CSS" ]; then
+        SIZE=$(wc -c < "$TMP_CSS" | tr -d ' ')
+        echo "PASSED (compiles, $SIZE bytes)"
+        # Helper pages and inline styles read the tokens with var(); Tailwind v4 emits a token as a
+        # variable only when something references it, unless the block is @theme static.
+        if ! grep -q -- "--color-accent:" "$TMP_CSS"; then
+            echo "  WARNING: the build defines no --color-accent variable — use @theme static inline (section 3), or the helper pages fall back to hard-coded colours."
+            WARNINGS=$((WARNINGS + 1))
         fi
-    elif (cd "$THEME_DIR" && npx @tailwindcss/cli --input ./css/tailwind/index.css --output ./css/index.css --minify > /dev/null 2>&1); then
-        COMPILED=1
-    fi
-
-    if [ $COMPILED -eq 1 ] && [ -s "$THEME_DIR/css/index.css" ]; then
-        SIZE=$(wc -c < "$THEME_DIR/css/index.css" | tr -d ' ')
-        echo "PASSED (css/index.css compiled successfully, $SIZE bytes)"
     else
-        echo "FAILED: Compilation failed or css/index.css is empty"
+        echo "FAILED: compilation failed or produced an empty file"
         FAILED=1
     fi
+    rm -f "$TMP_CSS"
 else
-    echo "SKIPPED (npm not available or package.json not found)"
+    echo "SKIPPED (npm or the theme's node_modules not available — run npm install in $THEME_DIR)"
 fi
 
 echo "=========================================================="

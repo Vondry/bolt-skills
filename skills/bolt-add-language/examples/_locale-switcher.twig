@@ -24,7 +24,10 @@
 
 {% set default_locale = app.request.defaultLocale %}
 {% set current_locale = app.request.locale %}
-{% set current_path = app.request.pathinfo %}
+{# Collapse leading slashes: a request for //other.host must not become an off-site link. #}
+{% set current_path = app.request.pathinfo|preg_replace('#^/+#', '/') %}
+{# Sub-directory installs: links start with the base path (empty at the domain root). #}
+{% set base_url = app.request.basePath %}
 {% set dropdown_id = mobile|default(false) ? 'locale-dropdown-mobile' : 'locale-dropdown-desktop' %}
 
 {# Strip any locale prefix to get the clean base path that is re-prefixed per target locale. #}
@@ -63,7 +66,7 @@
             {% for code, name in locales %}
                 {# Default locale has no prefix; others get a /locale prefix. The homepage becomes
                    /en/ — Bolt's homepage_locale route is '/{_locale}/' (with the trailing slash). #}
-                {% set locale_url = (code == default_locale ? base_path : '/' ~ code ~ base_path) ~ query %}
+                {% set locale_url = base_url ~ (code == default_locale ? base_path : '/' ~ code ~ base_path) ~ query %}
                 <a href="{{ locale_url }}"
                    data-locale-switch
                    hreflang="{{ code }}"

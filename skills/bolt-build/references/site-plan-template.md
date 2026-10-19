@@ -44,7 +44,9 @@ refer to `intake.md`.
 - Error-page metaphor: <object or scene>                                                      (S11)
 
 ### Operator, privacy, tracking
-- Contact (theme.yaml contact:): name, IČO, address, e-mail, phone, hours, bio; socials       (O1)
+- Legal: operator trade (OSVČ – živnostník); IČO 12345679; consumers yes, ADR ČOI;
+  online contracts no; reviews yes (not verified); special cases none                        (L1–L5)
+- Contact (theme.yaml contact:): name, IČO, registered seat, e-mail, phone, hours, bio; socials (O1)
 - Tracking: Google Ads <id|[DOPLNIT]>, GA4 <id>, Sklik <id>; Consent Mode basic               (O2, O4, O9)
 - Embeds: YouTube                                                                             (O3)
 - Privacy: controller model single; controllers …; purposes web_operation, contact_form, …   (O5–O8)

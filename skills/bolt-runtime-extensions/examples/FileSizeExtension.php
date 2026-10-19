@@ -4,39 +4,62 @@ declare(strict_types=1);
 
 namespace App;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 
 /**
  * Twig extension for formatting file sizes and byte counts.
  *
- * Provides filters for downloadable files, PDF brochures, and media attachments:
- *   {{ record.attachment|file_size|format_bytes }}
+ * Provides filters for downloadable files, PDF brochures, and media attachments. The filter is
+ * `format_file_size`, not `format_bytes`: Bolt core already has a `format_bytes` filter
+ * (binary units, used by the admin), and of two filters with one name only one runs.
+ *
+ *   {{ record.attachment|file_size|format_file_size }}
  */
 class FileSizeExtension extends AbstractExtension
 {
+    public function __construct(
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir,
+    ) {
+    }
+
     public function getFilters(): array
     {
         return [
             new TwigFilter('file_size', [$this, 'getFileSize']),
-            new TwigFilter('format_bytes', [$this, 'formatBytes']),
+            new TwigFilter('format_file_size', [$this, 'formatBytes']),
         ];
     }
 
     /**
      * Formats a byte count into a human-readable string (e.g. "1.25 MB", "450 kB").
+     *
+     * Decimal (SI) units, as the labels say and as file managers show them: 1 kB = 1000 B.
+     * Pass the separator of the page's language: {{ size|format_file_size(1, ',') }} → "1,3 MB".
      */
-    public function formatBytes(int $bytes, int $decimals = 2): string
+    public function formatBytes(int $bytes, int $decimals = 2, string $decimalPoint = '.'): string
     {
         if ($bytes <= 0) {
             return '0 B';
         }
 
         $units = ['B', 'kB', 'MB', 'GB', 'TB'];
-        $power = min((int) floor(log($bytes, 1024)), count($units) - 1);
-        $value = $bytes / (1024 ** $power);
+        $power = 0;
+        $value = (float) $bytes;
+        // Compare the rounded value, so 999 999 B reads "1 MB", not "1000 kB".
+        while (round($value, $decimals) >= 1000 && $power < count($units) - 1) {
+            $value /= 1000;
+            ++$power;
+        }
 
-        return mb_rtrim(mb_rtrim(number_format($value, $decimals), '0'), '.') . ' ' . $units[$power];
+        $number = number_format($value, $power === 0 ? 0 : $decimals, $decimalPoint, '');
+        if (str_contains($number, $decimalPoint)) {
+            $number = rtrim(rtrim($number, '0'), $decimalPoint);
+        }
+
+        return $number . ' ' . $units[$power];
     }
 
     /**
@@ -56,8 +79,8 @@ class FileSizeExtension extends AbstractExtension
             return 0;
         }
 
-        $publicDir = realpath(__DIR__ . '/../public');
-        $realPath = realpath(__DIR__ . '/../public/' . mb_ltrim(rawurldecode($urlPath), '/'));
+        $publicDir = realpath($this->projectDir . '/public');
+        $realPath = realpath($this->projectDir . '/public/' . ltrim(rawurldecode($urlPath), '/'));
 
         // realpath() resolves "..", so this also rejects paths climbing out of public/
         // (the value can come from editable content).

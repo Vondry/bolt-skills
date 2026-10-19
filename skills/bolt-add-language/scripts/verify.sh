@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+# bolt-add-language verification for one locale: configuration files (scripts/check-language.php
+# parses services.yaml, contenttypes.yaml, the XLIFF catalogs and menu.yaml), XLIFF lint and the
+# theme's locale switcher.
+#
+# Usage: verify.sh <locale_code>   (e.g. verify.sh de)
+
 # Detect Bolt CMS project root
 if [ -f "./config/services.yaml" ]; then
     BASE_DIR="$(pwd)"
@@ -21,7 +27,8 @@ if [ -z "$BASE_DIR" ] || [ ! -f "$BASE_DIR/config/services.yaml" ]; then
 fi
 
 cd "$BASE_DIR"
-TARGET_LOCALE="$1"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_LOCALE="${1:-}"
 
 echo "=========================================================="
 echo " Bolt CMS New Language / Locale Verification"
@@ -30,96 +37,69 @@ echo "=========================================================="
 
 if [ -z "$TARGET_LOCALE" ]; then
     echo "Usage: $0 <locale_code> (e.g. $0 de)"
-    echo "Scanning current locales registered in config/services.yaml..."
-    grep -E "(locale|locales_array|app_locales)" config/services.yaml || true
+    echo "Locales registered in config/services.yaml:"
+    grep -E "^[[:space:]]*(locale|app_locales):" config/services.yaml || true
     exit 1
 fi
 
-echo "Verifying integration for locale: '$TARGET_LOCALE'..."
+echo "Verifying integration for locale: '$TARGET_LOCALE'"
+
 FAILED=0
+WARNINGS=0
+SECTION=0
+TOTAL_SECTIONS=6
 
-# 1. Check services.yaml
-echo -n "[1/7] Checking config/services.yaml... "
-if grep -q "$TARGET_LOCALE" config/services.yaml; then
-    echo "PASSED"
-else
-    echo "FAILED ('$TARGET_LOCALE' not found in config/services.yaml)"
-    FAILED=1
-fi
+section() { SECTION=$((SECTION + 1)); echo ""; echo "[$SECTION/$TOTAL_SECTIONS] $1"; }
+pass() { echo "  ✓ $1"; }
+warn() { echo "  ⚠ WARNING: $1"; WARNINGS=$((WARNINGS + 1)); }
+fail() { echo "  ✗ FAILED: $1"; FAILED=$((FAILED + 1)); }
 
-# 2. Check contenttypes.yaml
-echo -n "[2/7] Checking config/bolt/contenttypes.yaml... "
-MISSING_CT=$(grep -n "locales:" config/bolt/contenttypes.yaml | grep -v "'$TARGET_LOCALE'" | grep -v "$TARGET_LOCALE" || true)
-if [ -z "$MISSING_CT" ]; then
-    echo "PASSED (Declared on all ContentTypes)"
-else
-    echo "FAILED (Some ContentTypes are missing '$TARGET_LOCALE'):"
-    echo "$MISSING_CT"
-    FAILED=1
-fi
+# -------------------------------------------------------------
+# 1–4. app_locales, ContentTypes, catalogs (existence and key parity), menus
+# -------------------------------------------------------------
+while IFS= read -r line; do
+    kind="${line%% *}"
+    message="${line#* }"
+    case "$kind" in
+        SECTION) section "$message" ;;
+        PASS) pass "$message" ;;
+        WARN) warn "$message" ;;
+        FAIL) fail "$message" ;;
+        *) [ -n "$line" ] && echo "  $line" ;;
+    esac
+done < <(php "$SCRIPT_DIR/check-language.php" "$BASE_DIR" "$TARGET_LOCALE" 2>&1)
 
-# 3. Check XLIFF catalog file
-echo -n "[3/7] Checking translations/messages.$TARGET_LOCALE.xlf existence... "
-CATALOG="translations/messages.$TARGET_LOCALE.xlf"
-if [ -f "$CATALOG" ]; then
-    echo "PASSED"
-else
-    echo "FAILED ($CATALOG does not exist)"
-    FAILED=1
-fi
-
-# 4. Check Unit Parity against source catalog
-echo -n "[4/7] Checking catalog unit parity... "
-DEFAULT_LOCALE=$(grep -E "^\s*locale:" config/services.yaml | awk '{print $2}' | tr -d "'" | tr -d '"' || echo "cs")
-SOURCE_CATALOG="translations/messages.$DEFAULT_LOCALE.xlf"
-
-if [ -f "$SOURCE_CATALOG" ] && [ -f "$CATALOG" ]; then
-    SOURCE_COUNT=$(grep -c '<unit ' "$SOURCE_CATALOG" || true)
-    TARGET_COUNT=$(grep -c '<unit ' "$CATALOG" || true)
-    if [ "$SOURCE_COUNT" -eq "$TARGET_COUNT" ]; then
-        echo "PASSED (Parity: $TARGET_COUNT units)"
-    else
-        echo "WARNING / NOTICE (Source has $SOURCE_COUNT units, target has $TARGET_COUNT units)"
-    fi
-else
-    echo "SKIPPED (Source catalog $SOURCE_CATALOG not found)"
-fi
-
-# 5. Lint XLIFF Catalogs
-echo -n "[5/7] Linting XLIFF catalogs with Symfony console... "
+# -------------------------------------------------------------
+# 5. XLIFF syntax
+# -------------------------------------------------------------
+section "XLIFF syntax (bin/console lint:xliff translations)"
 if php bin/console lint:xliff translations > /dev/null 2>&1; then
-    echo "PASSED"
+    pass "all catalogs are valid XLIFF"
 else
-    echo "FAILED (XLIFF syntax errors detected)"
-    FAILED=1
+    fail "lint:xliff reports errors — run: php bin/console lint:xliff translations"
 fi
 
-# 6. Check Navigation Menu
-echo -n "[6/7] Checking config/bolt/menu.yaml... "
-if grep -q "$TARGET_LOCALE:" config/bolt/menu.yaml 2>/dev/null; then
-    echo "PASSED"
+# -------------------------------------------------------------
+# 6. Theme language switcher
+# -------------------------------------------------------------
+section "Theme language switcher (partials/_locale-switcher.twig)"
+SWITCHER=$(find public/theme -name '_locale-switcher.twig' -not -path '*/node_modules/*' 2>/dev/null | head -n 1 || true)
+if [ -z "$SWITCHER" ]; then
+    warn "no _locale-switcher.twig found — copy examples/_locale-switcher.twig (Step 6)"
+elif grep -qE "['\"]${TARGET_LOCALE}['\"][[:space:]]*:" "$SWITCHER"; then
+    pass "'$TARGET_LOCALE' is in the locales map of $SWITCHER"
 else
-    echo "WARNING / NOTICE ('$TARGET_LOCALE:' not found in menu.yaml labels)"
+    warn "'$TARGET_LOCALE' is not in the locales map of $SWITCHER — add its endonym (Step 6)"
 fi
 
-# 7. Check Theme Switcher
-echo -n "[7/7] Checking theme _locale-switcher.twig... "
-SWITCHER=$(find public/theme -name '_locale-switcher.twig' 2>/dev/null | head -n 1 || true)
-if [ -n "$SWITCHER" ]; then
-    if grep -q "'$TARGET_LOCALE'" "$SWITCHER"; then
-        echo "PASSED (Found in $SWITCHER)"
-    else
-        echo "WARNING / NOTICE ('$TARGET_LOCALE' not found in $SWITCHER)"
-    fi
-else
-    echo "SKIPPED (No _locale-switcher.twig found)"
-fi
-
+echo ""
 echo "=========================================================="
-if [ "$FAILED" -eq 0 ]; then
-    echo " RESULT: Locale '$TARGET_LOCALE' integration checks passed!"
+if [ $FAILED -eq 0 ]; then
+    echo " RESULT: Locale '$TARGET_LOCALE' integration checks passed ($WARNINGS warning(s))."
+    echo "=========================================================="
     exit 0
 else
-    echo " RESULT: Verification encountered failures."
+    echo " RESULT: Verification encountered failures ($FAILED failure(s), $WARNINGS warning(s))."
+    echo "=========================================================="
     exit 1
 fi

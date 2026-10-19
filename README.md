@@ -26,6 +26,7 @@ Compatible with **Google Antigravity**, **Claude Code**, **Gemini**, **Cursor**,
 | **`bolt-runtime-extensions`** | Deploy, register, and verify custom runtime PHP Twig extensions in `src/` (LocaleLinkExtension, ImageDimensionsExtension, FileSizeExtension). | [`skills/bolt-runtime-extensions/`](skills/bolt-runtime-extensions/SKILL.md) |
 | **`bolt-menu`** | Configure, structure, and verify navigation menus in `config/bolt/menu.yaml` (header, footer, submenus, anchors, CTAs) with Twig Component/Container patterns. | [`skills/bolt-menu/`](skills/bolt-menu/SKILL.md) |
 | **`bolt-cookie-consent`** | Asks which trackers (Google Ads, GA4, Sklik, Meta), embeds and controller model the site uses, then builds a Czech ZEK § 89 / GDPR two-layer opt-in cookie banner (equal Accept / Reject, Google Consent Mode v2) and the Privacy Policy page from one `theme.yaml` data model, verified against ÚOOÚ / EDPB guidelines. | [`skills/bolt-cookie-consent/`](skills/bolt-cookie-consent/SKILL.md) |
+| **`bolt-legal-cz`** | Asks who operates the website (usually an OSVČ – živnostník) and what it does, then renders the mandatory Czech legal information in the footer of every page — § 435 OZ identity (name, seat, IČO, Trade / Commercial Register entry, DIČ), the consumer ADR body, complaints, terms, the withdrawal button from 1. 1. 2027, review verification — and verifies it against ARES and the live site. `check-site.php` checks any website, Bolt or not. | [`skills/bolt-legal-cz/`](skills/bolt-legal-cz/SKILL.md) |
 | **`bolt-theme-templates`** | Build and verify Twig + Tailwind v4 templates under Component/Container/Page architecture (pure UI components, smart containers, zero-HTML page orchestrators). | [`skills/bolt-theme-templates/`](skills/bolt-theme-templates/SKILL.md) |
 | **`bolt-build`** | Build a complete website from a design (Figma MCP, Pencil .pen MCP, images/PDF, an existing site or a brief): reads the design, asks every question upfront, then runs the whole workflow autonomously with progress tracking, visual QA and a final audit. | [`skills/bolt-build/`](skills/bolt-build/SKILL.md) |
 | **`bolt-audit`** | Read-only audit of an existing Bolt CMS 6 project against all skills: profile, every verification script, comparison with the examples, per-skill review and a prioritized `AUDIT.md` report. | [`skills/bolt-audit/`](skills/bolt-audit/SKILL.md) |
@@ -54,6 +55,12 @@ To orchestrate and scaffold a complete, production-grade Bolt CMS website from a
 ---
 
 ## Auditing an Existing Project
+
+To check only the legal information of any live website (Bolt or not — a client's current site, a competitor, your own production):
+
+```bash
+php vendor/tomvondracek/bolt-skills/skills/bolt-legal-cz/scripts/check-site.php --url=https://www.example.cz --ares --consumers
+```
 
 Point an agent at an existing site and ask for an audit (`bolt-audit` skill), or run the automated part yourself:
 

@@ -15,7 +15,7 @@ Maintaining strict code standards and static analysis is essential for stable Bo
 1. **Easy Coding Standard (ECS)** via `ecs.php`: Enforces PSR-12, clean code, `declare(strict_types=1)`, import ordering, and custom fixer rules.
 2. **PHPStan Level 8** via `phpstan.dist.neon`: Rigorous type checking on `src/` with Symfony and Doctrine extension support.
 3. **Task Automation** via `Makefile`: Standard developer targets (`cscheck`, `csfix`, `stancheck`, `csclear`), development database workflows (`db-update`, `db-reset`) and the production migration target (`db-migrate`).
-4. **Automated CI/CD** via `.gitlab-ci.yml`: Matrix testing across PHP 8.2–8.5 with Composer caching, Twig, XLIFF, and YAML syntax validation, and `composer audit` / `npm audit` for known vulnerabilities (`make audit` locally).
+4. **Automated CI/CD** via `.gitlab-ci.yml`: PHPStan across PHP 8.2–8.5 (ECS once — style does not depend on the PHP version), pinned and signature-checked tool downloads, Composer caching, Twig, XLIFF, and YAML syntax validation, and `composer audit` / `npm audit` for known vulnerabilities (`make audit` locally).
 
 ---
 
@@ -84,7 +84,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use PhpCsFixer\Fixer\Alias\MbStrFunctionsFixer;
 use PhpCsFixer\Fixer\ArrayNotation\NoWhitespaceBeforeCommaInArrayFixer;
 use PhpCsFixer\Fixer\ArrayNotation\WhitespaceAfterCommaInArrayFixer;
-use PhpCsFixer\Fixer\Basic\BracesFixer;
+use PhpCsFixer\Fixer\Basic\BracesPositionFixer;
 use PhpCsFixer\Fixer\CastNotation\LowercaseCastFixer;
 use PhpCsFixer\Fixer\CastNotation\ShortScalarCastFixer;
 use PhpCsFixer\Fixer\ClassNotation\ClassAttributesSeparationFixer;
@@ -93,6 +93,8 @@ use PhpCsFixer\Fixer\ClassNotation\NoBlankLinesAfterClassOpeningFixer;
 use PhpCsFixer\Fixer\ClassNotation\OrderedClassElementsFixer;
 use PhpCsFixer\Fixer\ClassNotation\VisibilityRequiredFixer;
 use PhpCsFixer\Fixer\ConstantNotation\NativeConstantInvocationFixer;
+use PhpCsFixer\Fixer\ControlStructure\ControlStructureBracesFixer;
+use PhpCsFixer\Fixer\ControlStructure\ControlStructureContinuationPositionFixer;
 use PhpCsFixer\Fixer\ControlStructure\YodaStyleFixer;
 use PhpCsFixer\Fixer\FunctionNotation\NativeFunctionInvocationFixer;
 use PhpCsFixer\Fixer\FunctionNotation\PhpdocToReturnTypeFixer;
@@ -101,9 +103,11 @@ use PhpCsFixer\Fixer\Import\FullyQualifiedStrictTypesFixer;
 use PhpCsFixer\Fixer\Import\NoLeadingImportSlashFixer;
 use PhpCsFixer\Fixer\Import\OrderedImportsFixer;
 use PhpCsFixer\Fixer\LanguageConstruct\DeclareEqualNormalizeFixer;
+use PhpCsFixer\Fixer\LanguageConstruct\DeclareParenthesesFixer;
+use PhpCsFixer\Fixer\LanguageConstruct\SingleSpaceAroundConstructFixer;
 use PhpCsFixer\Fixer\Operator\ConcatSpaceFixer;
 use PhpCsFixer\Fixer\Operator\IncrementStyleFixer;
-use PhpCsFixer\Fixer\Operator\NewWithBracesFixer;
+use PhpCsFixer\Fixer\Operator\NewWithParenthesesFixer;
 use PhpCsFixer\Fixer\Operator\TernaryOperatorSpacesFixer;
 use PhpCsFixer\Fixer\Operator\UnaryOperatorSpacesFixer;
 use PhpCsFixer\Fixer\Phpdoc\NoSuperfluousPhpdocTagsFixer;
@@ -115,6 +119,7 @@ use PhpCsFixer\Fixer\PhpTag\BlankLineAfterOpeningTagFixer;
 use PhpCsFixer\Fixer\PhpUnit\PhpUnitMethodCasingFixer;
 use PhpCsFixer\Fixer\Semicolon\NoSinglelineWhitespaceBeforeSemicolonsFixer;
 use PhpCsFixer\Fixer\Whitespace\NoTrailingWhitespaceFixer;
+use PhpCsFixer\Fixer\Whitespace\StatementIndentationFixer;
 use Symplify\CodingStandard\Fixer\ArrayNotation\ArrayListItemNewlineFixer;
 use Symplify\CodingStandard\Fixer\ArrayNotation\ArrayOpenerAndCloserNewlineFixer;
 use Symplify\CodingStandard\Fixer\ArrayNotation\StandaloneLineInMultilineArrayFixer;
@@ -153,7 +158,7 @@ return ECSConfig::configure()
         ShortScalarCastFixer::class,
         BlankLineAfterOpeningTagFixer::class,
         NoLeadingImportSlashFixer::class,
-        NewWithBracesFixer::class,
+        NewWithParenthesesFixer::class,
         NoBlankLinesAfterClassOpeningFixer::class,
         TernaryOperatorSpacesFixer::class,
         ReturnTypeDeclarationFixer::class,
@@ -162,22 +167,60 @@ return ECSConfig::configure()
         NoWhitespaceBeforeCommaInArrayFixer::class,
         WhitespaceAfterCommaInArrayFixer::class,
         FullyQualifiedStrictTypesFixer::class,
+        // The rules the deprecated BracesFixer used to bundle:
+        ControlStructureBracesFixer::class,
+        StatementIndentationFixer::class,
+        SingleSpaceAroundConstructFixer::class,
+        DeclareParenthesesFixer::class,
     ])
     ->withConfiguredRule(PhpdocToReturnTypeFixer::class, ['union_types' => false])
     ->withConfiguredRule(NoSuperfluousPhpdocTagsFixer::class, ['remove_inheritdoc' => false])
-    ->withConfiguredRule(ConcatSpaceFixer::class, ['spacing' => 'one'])
-    ->withConfiguredRule(OrderedImportsFixer::class, ['imports_order' => ['class', 'const', 'function']])
-    ->withConfiguredRule(DeclareEqualNormalizeFixer::class, ['space' => 'none'])
-    ->withConfiguredRule(BracesFixer::class, [
-        'allow_single_line_closure' => false,
-        'position_after_functions_and_oop_constructs' => 'next',
-        'position_after_control_structures' => 'same',
-        'position_after_anonymous_constructs' => 'same',
-    ])
-    ->withConfiguredRule(VisibilityRequiredFixer::class, ['elements' => ['const', 'method', 'property']])
-    ->withConfiguredRule(PhpdocLineSpanFixer::class, ['property' => 'single'])
-    ->withConfiguredRule(ClassAttributesSeparationFixer::class, ['elements' => ['property' => 'none', 'method' => 'one', 'const' => 'none']]);
+    ->withConfiguredRule(
+        ConcatSpaceFixer::class,
+        ['spacing' => 'one']
+    )
+    ->withConfiguredRule(
+        OrderedImportsFixer::class,
+        [
+            'imports_order' => ['class', 'const', 'function'],
+        ]
+    )
+    ->withConfiguredRule(
+        DeclareEqualNormalizeFixer::class,
+        ['space' => 'none']
+    )
+    // Replaces the deprecated BracesFixer with the same settings: braces of classes and
+    // functions on the next line, of control structures and closures on the same line.
+    ->withConfiguredRule(
+        BracesPositionFixer::class,
+        [
+            'functions_opening_brace' => 'next_line_unless_newline_at_signature_end',
+            'classes_opening_brace' => 'next_line_unless_newline_at_signature_end',
+            'control_structures_opening_brace' => 'same_line',
+            'anonymous_functions_opening_brace' => 'same_line',
+            'anonymous_classes_opening_brace' => 'same_line',
+            'allow_single_line_anonymous_functions' => false,
+        ]
+    )
+    ->withConfiguredRule(ControlStructureContinuationPositionFixer::class, ['position' => 'same_line'])
+    ->withConfiguredRule(
+        VisibilityRequiredFixer::class,
+        [
+            'elements' => ['const', 'method', 'property'],
+        ]
+    )
+    ->withConfiguredRule(
+        PhpdocLineSpanFixer::class,
+        ['property' => 'single']
+    )
+    ->withConfiguredRule(
+        ClassAttributesSeparationFixer::class,
+        ['elements' => ['property' => 'none', 'method' => 'one', 'const' => 'none']]
+    );
 ```
+
+* **Same settings as Bolt core, without its deprecated fixers.** Bolt's own `ecs.php` still uses `BracesFixer` and `NewWithBracesFixer`, which PHP-CS-Fixer 3 marks deprecated. This config uses their successors (`BracesPositionFixer`, `ControlStructureBracesFixer`, `ControlStructureContinuationPositionFixer`, `StatementIndentationFixer`, `SingleSpaceAroundConstructFixer`, `DeclareParenthesesFixer`, `NewWithParenthesesFixer`); on a test file with mixed brace styles both configs produce identical output.
+* **`MbStrFunctionsFixer` is a risky fixer:** `csfix` rewrites `strlen()` to `mb_strlen()`, `substr()` to `mb_substr()` and so on. Right for text, wrong for byte counts (file sizes, binary data, `Content-Length`). Review its changes in the diff; for a file that must count bytes, skip the fixer for that path: `->withSkip([MbStrFunctionsFixer::class => [__DIR__ . '/src/SomeByteCounter.php']])`.
 
 ---
 
@@ -212,9 +255,9 @@ Create or update the project's `Makefile`:
 help:
 	@grep -E '(^[a-zA-Z_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
 
-install: ## to install all project (creates or updates the schema; never loads fixtures, keeps existing content)
+install: ## [dev] to install the project locally (runs db-update: drops tables Doctrine does not map — never on a server)
 	composer install
-	make db-update
+	$(MAKE) db-update
 
 install_prod: ## to install production dependencies (no dev packages, optimized autoloader)
 	composer install --no-dev --optimize-autoloader
@@ -234,18 +277,17 @@ cache: ## to clean cache
 
 csclear: ## to clean cache and check coding style
 	mkdir -p var/cache/ecs
-	chmod -R a+rw var/cache/ecs
 	rm -rf var/cache/ecs/*
 
 cscheck: ## to check coding style
-	make csclear
+	$(MAKE) csclear
 	composer lint
-	make stancheck
+	$(MAKE) stancheck
 
 csfix: ## to fix coding style
-	make csclear
+	$(MAKE) csclear
 	composer lint:fix
-	make stancheck
+	$(MAKE) stancheck
 
 stancheck: ## to run phpstan
 	composer phpstan
@@ -292,33 +334,48 @@ db-migrate: ## [prod] to run pending Doctrine migrations (what Bolt recommends a
 Create or update `.gitlab-ci.yml` at the root:
 
 ```yaml
+# GitLab CI: lint the Bolt CMS project (ECS + PHPStan) across PHP 8.2 – 8.5.
+#
+# Linting is defined via the composer scripts in composer.json:
+#   composer lint     -> vendor/bin/ecs check       (Easy Coding Standard)
+#   composer phpstan  -> vendor/bin/phpstan analyse  (level 8 on src/)
+
 stages:
   - lint
 
+# Shared setup for every lint job. Runs on the official PHP CLI image for the
+# version under test, installs the extensions Bolt/Symfony needs and Composer,
+# then pulls the dev dependencies (ecs, phpstan).
 .lint:
   stage: lint
   image: php:${PHP_VERSION}-cli
   variables:
     COMPOSER_ALLOW_SUPERUSER: "1"
     COMPOSER_NO_INTERACTION: "1"
+    IPE_VERSION: "2.12.0"   # https://github.com/mlocati/docker-php-extension-installer/releases
   cache:
     key: "composer-${PHP_VERSION}"
     paths:
       - vendor/
       - .composer-cache/
   before_script:
-    - curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions
+    # docker-php-extension-installer handles system libs + ext compilation. Pinned to a release
+    # (not latest/), so a new upstream version cannot change the pipeline unnoticed.
+    - curl -sSLf -o /usr/local/bin/install-php-extensions "https://github.com/mlocati/docker-php-extension-installer/releases/download/${IPE_VERSION}/install-php-extensions"
     - chmod +x /usr/local/bin/install-php-extensions
     - install-php-extensions intl gd zip pdo_mysql opcache exif bcmath
-    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    # Composer's installer, checked against its published signature before it runs.
+    - curl -sSLf -o composer-setup.php https://getcomposer.org/installer
+    - test "$(curl -sSLf https://composer.github.io/installer.sig)" = "$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+    - php composer-setup.php --install-dir=/usr/local/bin --filename=composer && rm composer-setup.php
     - export COMPOSER_CACHE_DIR="$CI_PROJECT_DIR/.composer-cache"
     - composer install --prefer-dist --no-progress --no-scripts
 
+# Code style does not depend on the PHP version: one run is enough.
 ecs:
   extends: .lint
-  parallel:
-    matrix:
-      - PHP_VERSION: [ "8.2", "8.3", "8.4", "8.5" ]
+  variables:
+    PHP_VERSION: "8.3"
   script:
     - composer lint
 
@@ -330,6 +387,8 @@ phpstan:
   script:
     - composer phpstan
 
+# Twig syntax validation for the theme. Not PHP-version dependent, so
+# it runs once. Boots the Symfony kernel, which uses the committed .env config.
 twig:
   extends: .lint
   variables:
@@ -337,6 +396,8 @@ twig:
   script:
     - php bin/console lint:twig public/theme/<theme_name>
 
+# XLIFF syntax validation for the translation catalogues (messages.*.xlf).
+# Catches malformed XML / invalid XLIFF before it reaches production.
 xliff:
   extends: .lint
   variables:
@@ -344,6 +405,8 @@ xliff:
   script:
     - php bin/console lint:xliff translations
 
+# YAML syntax validation for the Symfony config. --parse-tags allows the custom
+# tags (e.g. !php/const) used in the config files.
 yaml:
   extends: .lint
   variables:

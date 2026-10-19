@@ -109,7 +109,7 @@ SECONDARY="${SECONDARY# }"
 
 BOLT_VERSION="$(lock_version bolt/core)"
 WEB_SERVER="unknown"
-NGINX_CONF="$(find . -path ./vendor -prune -o -path ./node_modules -prune -o -path ./public/theme -prune -o -name '*.conf' -print 2>/dev/null | xargs grep -l "server_name\|fastcgi_pass" 2>/dev/null | head -n 1 || true)"
+NGINX_CONF="$(find . -path ./vendor -prune -o -path ./node_modules -prune -o -path ./public/theme -prune -o -name '*.conf' -print0 2>/dev/null | xargs -0 grep -l "server_name\|fastcgi_pass" 2>/dev/null | head -n 1 || true)"
 if [ -n "$NGINX_CONF" ] && [ -f public/.htaccess ]; then
     WEB_SERVER="Apache and Nginx configuration both present ($NGINX_CONF)"
 elif [ -n "$NGINX_CONF" ]; then
@@ -133,6 +133,8 @@ CT_COUNT=$(grep -cE "^[a-z_][a-z0-9_-]*:" config/bolt/contenttypes.yaml 2>/dev/n
 TRACKERS=$(grep -ohE "googletagmanager\.com|gtag\(|c\.seznam\.cz/js/rc\.js|connect\.facebook\.net|hotjar|clarity\.ms" -r "$THEME_DIR" --include="*.twig" --include="*.ts" --exclude="cookie-consent.ts" --exclude-dir=node_modules 2>/dev/null | sort -u | tr '\n' ' ' || true)
 PRIVACY_BLOCK="no"
 grep -qE "^privacy:" "$THEME_DIR/theme.yaml" 2>/dev/null && PRIVACY_BLOCK="yes"
+LEGAL_BLOCK="no"
+grep -qE "^legal:" "$THEME_DIR/theme.yaml" 2>/dev/null && LEGAL_BLOCK="yes ($(grep -E "^[[:space:]]+operator:" "$THEME_DIR/theme.yaml" | head -n 1 | awk '{print $2}'))"
 
 BOLT_MAJOR="${BOLT_VERSION#v}"
 BOLT_MAJOR="${BOLT_MAJOR%%.*}"
@@ -161,6 +163,7 @@ cat > "$OUT/profile.md" <<EOF
 | Tailwind CSS | ${TAILWIND:-not found in $THEME_DIR/package.json} |
 | Tracking found in theme sources | ${TRACKERS:-none} |
 | theme.yaml privacy: block (bolt-cookie-consent data model) | $PRIVACY_BLOCK |
+| theme.yaml legal: block (bolt-legal-cz profile) | $LEGAL_BLOCK |
 | vendor/ installed | $([ -f vendor/autoload.php ] && echo yes || echo 'no — several checks need composer install') |
 | Live HTTP checks | $LIVE |
 EOF
@@ -169,7 +172,7 @@ EOF
 SKILLS=(bolt-timezone bolt-disable-api bolt-code-quality bolt-htaccess bolt-asset-caching
         bolt-security-hardening bolt-performance bolt-extension-setup bolt-runtime-extensions bolt-theme-init
         bolt-tailwind-theme bolt-contenttypes bolt-menu bolt-theme-templates bolt-helper-pages
-        bolt-cookie-consent bolt-add-language)
+        bolt-cookie-consent bolt-legal-cz bolt-add-language)
 
 printf "skill\tstatus\tfailures\twarnings\tnote\n" > "$OUT/summary.tsv"
 
@@ -225,7 +228,7 @@ for skill in "${SKILLS[@]}"; do
             done
             ;;
         *)
-            # bolt-cookie-consent runs without --draft: an audit judges the production state.
+            # bolt-cookie-consent and bolt-legal-cz run without --draft: an audit judges the production state.
             run_skill "$skill" "$SCRIPT" "$OUT/logs/$skill.log"
             ;;
     esac

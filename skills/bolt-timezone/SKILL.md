@@ -22,14 +22,21 @@ This skill details the architectural root cause, the four required configuration
 > **If PHP's runtime timezone and Bolt's configured `timezone` do not match, every save in the Bolt backend shifts publish dates by the timezone offset!**
 
 ### Why this happens:
-1. **UTC Storage:** Bolt CMS and Doctrine store all dates and timestamps internally in UTC inside the database.
+1. **Wall-time storage:** Bolt maps its dates (`publishedAt`, `depublishedAt`, `createdAt`, `modifiedAt`) as Doctrine `datetime` columns (`Types::DATETIME_MUTABLE`). They store the date and time **without a zone**: whatever PHP's default timezone says is "now" is what lands in the database.
 2. **Admin Display:** The Bolt Admin panel displays and accepts date inputs formatted in the timezone configured in `config/bolt/config.yaml` (`timezone: Europe/Prague`).
 3. **Normalization & Conversion:** During record persistence and form normalization, Bolt converts date strings back into `DateTime` objects using PHP's current runtime timezone (`date_default_timezone_get()`).
 4. **The Glitch:**
    If PHP's runtime timezone defaults to `UTC` (standard in bare Linux, Docker, or unconfigured PHP) while `config/bolt/config.yaml` is set to `Europe/Prague`:
    - An editor opens an article with publish date `14:00` Prague time.
-   - Upon saving, Bolt treats `14:00` as if it were UTC, and when re-converting, shifts it by the +1h (CET winter) or +2h (CEST summer) offset.
+   - On save the form value is read in one zone and written back in the other, so it moves by the offset: +1h (CET, winter) or +2h (CEST, summer).
    - After saving the article 3 times in the admin, the publish date has shifted forward by **6 hours**, potentially pushing the article into the future and unpublishing it!
+
+> [!WARNING]
+> **Changing the zone of a live site moves every stored date.** Because the database holds wall time without a zone, switching PHP from `UTC` to `Europe/Prague` makes every existing `14:00` (meant as UTC) display as `14:00` Prague time — one or two hours off. Before changing a site that already has content, decide: shift the stored values once (`UPDATE … SET published_at = published_at + INTERVAL …`, per DST period), or accept the offset on old records. New sites have nothing to migrate.
+>
+> Wall time also repeats one hour each October (DST end): two records saved at 02:30 in that hour cannot be ordered by the stored value. Harmless for publishing, worth knowing for logs.
+
+**Other zones:** the skill uses `Europe/Prague` as the house default. For another zone, use the same value in every layer below and run the verification with `--timezone=Area/City`.
 
 **The rule:** The timezone must be configured identically to `Europe/Prague` across all layers so that `date_default_timezone_get()` and Bolt's configured timezone never diverge.
 
@@ -169,10 +176,11 @@ services:
   database: # or <project>-mariadb, etc.
     image: mariadb:11.4   # an LTS release; 10.4 reached end of life in 2024
     environment:
-      MYSQL_ROOT_PASSWORD: secret_root_pw
+      # Local development container only — never reuse these values on a server.
+      MYSQL_ROOT_PASSWORD: dev_root
       MYSQL_DATABASE: bolt_db
       MYSQL_USER: bolt_user
-      MYSQL_PASSWORD: bolt_pw
+      MYSQL_PASSWORD: dev_password
       TZ: "Europe/Prague"
       LANG: "en_US.UTF-8"
 ```
@@ -219,4 +227,6 @@ vendor/tomvondracek/bolt-skills/skills/bolt-timezone/scripts/verify.sh
 2. `[2/5]` **Kernel Override:** Confirms `src/Kernel.php` extends `BoltKernel`, defines `const TIMEZONE = 'Europe/Prague'`, and calls `date_default_timezone_set(self::TIMEZONE)` in `boot()`.
 3. `[3/5]` **Docker INI:** Validates `docker/php/conf.d/bolt.dev.ini` and `bolt.prod.ini` if present.
 4. `[4/5]` **Docker Compose:** Checks for `TZ: "Europe/Prague"` on database containers in `compose.yaml` / `docker-compose.yml`.
-5. `[5/5]` **Runtime Boot Check:** Boots the `App\Kernel` in CLI mode and asserts that `date_default_timezone_get()` strictly returns `Europe/Prague`.
+5. `[5/5]` **Runtime Boot Check:** Boots the `App\Kernel` in CLI mode (with cache, build and log folders in a temporary directory, so nothing is written to the project) and asserts that `date_default_timezone_get()` returns the expected zone.
+
+Every check compares against `Europe/Prague`, or the zone given with `--timezone=Area/City` (or `BOLT_TIMEZONE`).

@@ -15,7 +15,8 @@
         heading: 'Tuto stránku se nám nepodařilo najít',
         lead: 'Odkaz je nejspíš zastaralý nebo obsahuje překlep. Zkuste se vrátit na úvodní stránku — a pokud jste hledali něco konkrétního, ozvěte se nám.',
         field_key: 'Požadovaná adresa',
-        field_val: origin ~ '<strong>' ~ path|e('html') ~ '</strong>',
+        field_val: origin,
+        field_val_strong: path,
         buttons: [
             { label: 'Zpět na úvod', href: '/', variant: 'primary' },
             { label: 'Kontakt', href: '/kontakt', variant: 'secondary' }

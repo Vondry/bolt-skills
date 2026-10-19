@@ -3,7 +3,7 @@ name: bolt-build
 description: >-
   Build a complete Bolt CMS 6 website from a supplied design — Figma (Figma MCP), Pencil / pen.dev
   (.pen via Pencil MCP), exported images or PDF, an existing website, or a brief — by running the
-  whole WORKFLOWS.md (Phases 0–8, all 17 skills) autonomously. Reads the design first, asks every
+  whole WORKFLOWS.md (Phases 0–8, all 18 skills) autonomously. Reads the design first, asks every
   question the workflow needs in one upfront intake, writes the site plan, then builds, verifies,
   commits gate by gate and keeps a resumable progress log. Use when asked to create, build or
   implement a website (or "make this design into a Bolt site").
@@ -24,7 +24,7 @@ to end with as little interruption as possible*:
 
 | File | Use |
 | :--- | :--- |
-| [`references/intake.md`](references/intake.md) | Every question the 17 skills need, in five rounds, with defaults and the phase that uses each answer |
+| [`references/intake.md`](references/intake.md) | Every question the 18 skills need, in five rounds, with defaults and the phase that uses each answer |
 | [`references/design-sources.md`](references/design-sources.md) | What to extract from Figma MCP, Pencil MCP, images/PDF, an existing site or a brief; token mapping; visual QA loop |
 | [`references/site-plan-template.md`](references/site-plan-template.md) | Site plan, build progress, decisions log, open issues and handover — written into the project's `AGENTS.md` |
 | `scripts/preflight.sh` | Tools, PHP extensions, Bolt version, console, database, git, local URL — before Phase 1 |
@@ -68,16 +68,17 @@ Ask the rounds in `references/intake.md`:
 - Round 1 (environment) and Round 2 (structure — mostly the design proposal to confirm) first;
 - Round 3 only for gaps the design left; Round 4 operator facts; Round 5 autonomy.
 
-Use the question tool for multiple-choice items (recommended default first) and one message for
-free-text facts. Do not drip-feed questions across phases. What the user leaves unanswered gets
+Use the agent's structured-question tool, where it has one, for multiple-choice items (recommended
+default first), and one message for free-text facts. Do not drip-feed questions across phases. What the user leaves unanswered gets
 the default and a *Decisions log* entry; operator facts (legal identity, IDs, retention) stay
 `[DOPLNIT]` and go to the handover list — never invented.
 
 Secrets: never ask the user to paste passwords into the chat. Account creation is interactive, so the
-user runs it themselves with the `!` prefix (it runs in their session): on a new project
-`! php bin/console bolt:setup --no-fixtures` (migrations, `APP_SECRET`, first account — run it **once**:
+user runs it themselves in their own terminal (in Claude Code: type the command with the `!` prefix,
+which runs it in the user's session): on a new project
+`php bin/console bolt:setup --no-fixtures` (migrations, `APP_SECRET`, first account — run it **once**:
 it resets `APP_SECRET` and writes a new migration every time); on an existing database
-`! php bin/console bolt:add-user --admin`. `bolt:setup` writes `APP_SECRET` into the committed `.env`:
+`php bin/console bolt:add-user --admin`. `bolt:setup` writes `APP_SECRET` into the committed `.env`:
 move it to `.env.local` before the baseline commit (`bolt-security-hardening` Step 1).
 
 ## Step 4 — Site plan and Checkpoint 0
@@ -95,12 +96,12 @@ Where the design and the intake answers flow in:
 
 | Phase | Input from the intake / design | Concretely |
 | :--- | :--- | :--- |
-| 1 | E1, E3, E6, E7, E9, E11, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` (no database configuration); the user runs `! php bin/console bolt:setup --no-fixtures` (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit (with `/var/bolt-build/` in `.gitignore`), `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI, `bolt-security-hardening` configuration (`.env` defaults, trusted hosts from E7) |
+| 1 | E1, E3, E6, E7, E9, E11, E13, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` for the local build (no database configuration; the production database of E13 is set on the server in `.env.local`); the user runs `php bin/console bolt:setup --no-fixtures` in their terminal (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit (with `/var/bolt-build/` in `.gitignore`), `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI, `bolt-security-hardening` configuration (`.env` defaults, trusted hosts from E7) |
 | 2 | E5, E6, E12 | Apache vs. Nginx branch of `bolt-htaccess` / `bolt-asset-caching`; nelmio headers and baseline CSP; admin restriction if E12 asks for it |
 | 3 | S6 | keep / remove `ImageDimensionsExtension` (gallery), `FileSizeExtension` (downloads); note removals as expected warnings |
-| 4 | E8, D1–D5, O1, O9, token table | `bolt-theme-init` scaffold `<theme>`; `theme.yaml` contact, socials, logo, `analytics:`; `bolt-menu --profile=<S4> --templates --force`; tokens and self-hosted fonts from `design-notes.md` into `css/tailwind/index.css`; JS imports per features |
+| 4 | E8, D1–D5, O1, O9, L2, token table | `bolt-theme-init` scaffold `<theme>`; `theme.yaml` contact, socials, logo, `analytics:`; `bolt-menu --profile=<S4> --templates --force`; tokens and self-hosted fonts from `design-notes.md` into `css/tailwind/index.css`; JS imports per features |
 | 5 | S3–S5, S1, content model proposal | `contenttypes.yaml`, static routes, `menu.yaml` with labels per locale, catalogs |
-| 6 | frames, components, O2–O8, S7, S11 | one orchestrator per page from its frame, containers for queries, page-scoped components; **visual QA loop** (`design-sources.md`) per page; `--products=auto`; locale switcher; helper pages with the metaphor; `bolt-cookie-consent` scaffold with `--model --trackers --embeds --purposes` from O2–O7; `_privacy-form-note` beside every form; embeds through `_consent-embed`; optionally `bolt-performance` fragment caches for pages with a high query count |
+| 6 | frames, components, O2–O8, L1–L5, S7, S11 | one orchestrator per page from its frame, containers for queries, page-scoped components; **visual QA loop** (`design-sources.md`) per page; `--products=auto`; locale switcher; helper pages with the metaphor; `bolt-cookie-consent` scaffold with `--model --trackers --embeds --purposes` from O2–O7; `_privacy-form-note` beside every form; embeds through `_consent-embed`; `bolt-legal-cz` scaffold with `--operator --consumers --online-contracts --reviews` from L1–L5, identity checked with `verify.sh --ares`, `_reviews-notice` under testimonials; optionally `bolt-performance` fragment caches for pages with a high query count |
 | 7 | S2, S8–S10, O11, O12, E11, copy | records from the design copy or supplied content (through the admin in a browser if S10 allows), media-library uploads, translations, SEO per locale, `llms.txt`, `npm run prod`, `assets_version`, deployment checklist (7.5) for the hosting of E11 |
 | 8 | E4, E7 | linters, `verify-all.sh` with `BOLT_BASE_URL`, smoke checks, manual checks with a browser tool, Lighthouse, then the independent audit (Step 6) |
 
@@ -112,8 +113,8 @@ Where the design and the intake answers flow in:
 - **Verifications scheduled later** (WORKFLOWS Appendix A) are not failures — do not chase them early.
 - **Commits** after every gate, in the project's commit convention (default `chore(build): phase N — <summary>`); never push unless E10 says so; never rewrite history.
 - **Stay inside the project**: no global installs, no changes to other directories, no deployment.
-- **No fixtures, ever**: the database is SQLite from Bolt's default `.env`, initialised once with `bolt:setup --no-fixtures`. Never run `doctrine:fixtures:load` or `bolt:setup` without `--no-fixtures`; never run `make db-reset` on a database with content (it drops everything). Schema changes after Phase 5 go through `make db-update`.
-- **Operator facts are never invented** (`bolt-cookie-consent` AG-01): `[DOPLNIT]` and the handover list.
+- **No fixtures, ever**: the database is SQLite from Bolt's default `.env`, initialised once with `bolt:setup --no-fixtures`. Never run `doctrine:fixtures:load` or `bolt:setup` without `--no-fixtures`; never run `make db-reset` on a database with content (it drops everything). Schema changes after Phase 5 go through `make db-update` — on the local database only: it drops tables Doctrine does not map and marks migrations as run without running them; servers run `doctrine:migrations:migrate` (`bolt-code-quality` Step 4).
+- **Operator facts are never invented** (`bolt-cookie-consent` AG-01, `bolt-legal-cz` AG-02): `[DOPLNIT]` and the handover list. The operator type (L1) is always asked, never assumed.
 - **Context discipline** on long runs: re-read the phase section and the skill's `SKILL.md` at the start of each phase rather than relying on memory; keep design details in `design-notes.md`, not in the conversation. A new session resumes from the progress table.
 - **Parallel agents** only if the user allowed them (A4) — e.g. independent page templates in 6.1. Each gets the site plan, the Integration Contract and its frames; the main agent integrates, builds and verifies.
 
@@ -133,7 +134,7 @@ Report to the user, briefly:
 - the local URL, admin URL, and how to start the site;
 - what was built (pages, ContentTypes, languages, features) and the final verification result;
 - *Open issues* and remaining visual differences (with screenshot paths);
-- the *Handover* list: every `[DOPLNIT]` and `[OVĚŘIT]` (privacy data, tracker IDs, measured cookies), unconfirmed defaults, content the operator must supply;
+- the *Handover* list: every `[DOPLNIT]` and `[OVĚŘIT]` (privacy data, legal identity and consumer pages, tracker IDs, measured cookies), unconfirmed defaults, content the operator must supply;
 - what is outside the workflow: deployment, DNS, mail delivery for forms, production database.
 
 ---

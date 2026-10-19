@@ -5,5 +5,5 @@
 timezone: Europe/Prague
 
 # Default date formatting used across Twig's |date (without parameters),
-# |localdate, the Bolt Admin panel, and API serialization.
+# |localdate and the Bolt Admin panel. The REST/GraphQL API ignores it (ISO 8601).
 date_format: 'j. n. Y H:i'

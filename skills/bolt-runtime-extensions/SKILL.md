@@ -5,7 +5,7 @@ description: >-
   Twig extensions under src/ in Bolt CMS. Deploys App\LocaleLinkExtension for automatic
   multi-language URL prefixing (locale_link), App\ImageDimensionsExtension for cached
   disk image resolution needed by PhotoSwipe (image_dimensions), and App\FileSizeExtension
-  for human-readable download sizes (file_size, format_bytes), along with required
+  for human-readable download sizes (file_size, format_file_size), along with required
   bindings in config/services.yaml.
 ---
 
@@ -23,14 +23,14 @@ This skill standardizes the three battle-tested PHP extensions shared across pro
 src/
 ├── LocaleLinkExtension.php      # Function: locale_link(path)
 ├── ImageDimensionsExtension.php # Function: image_dimensions(imageUrl) [Cached]
-└── FileSizeExtension.php        # Filters:  file_size(path), format_bytes(bytes)
+└── FileSizeExtension.php        # Filters:  file_size(path), format_file_size(bytes)
 ```
 
 | Extension | Twig Interface | Problem Solved |
 | :--- | :--- | :--- |
 | **`LocaleLinkExtension`** | `locale_link(path)` | **Multi-language link retention.** Automatically prefixes `/en` (or current locale) to internal links when viewing translated pages, while leaving default locale links clean (`/`). Prevents navigation from kicking users back to the default language. |
 | **`ImageDimensionsExtension`** | `image_dimensions(imageUrl)` | **PhotoSwipe layout collapse.** PhotoSwipe 5 requires intrinsic `data-pswp-width` and `data-pswp-height` *before* opening slides. Bolt-managed images carry their dimensions in the media library (`image\|media` — read those first); static assets and images without a media entry lack them, so this extension reads disk headers, caches them via Symfony `CacheInterface`, and invalidates on file `mtime`. |
-| **`FileSizeExtension`** | `|file_size`, `|format_bytes` | **Human-readable downloads.** Converts disk paths or file attachments into human-friendly strings (e.g. `2.45 MB`, `450 kB`, `0 B`) for PDF brochures, manuals, and catalogs. |
+| **`FileSizeExtension`** | `|file_size`, `|format_file_size` | **Human-readable downloads.** Converts disk paths or file attachments into human-friendly strings (e.g. `2.45 MB`, `450 kB`, `0 B`) for PDF brochures, manuals, and catalogs. |
 
 ---
 
@@ -46,6 +46,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -56,12 +57,19 @@ use Twig\TwigFunction;
  * Automatically prefixes internal URLs with the current request locale when
  * viewing non-default language versions (e.g. `/en/sluzby`), while keeping
  * links clean on the default language (e.g. `/sluzby`).
+ *
+ * Links often come from editable fields (buttons, cards), so only safe schemes pass:
+ * http, https, mailto and tel. Anything else (`javascript:`, `data:`) becomes `#`.
  */
 class LocaleLinkExtension extends AbstractExtension
 {
+    private const SAFE_SCHEMES = ['http', 'https', 'mailto', 'tel'];
+
     public function __construct(
         private readonly RequestStack $requestStack,
+        #[Autowire('%app_locales%')]
         private readonly string $appLocales, // e.g. "cs|en"
+        #[Autowire('%locale%')]
         private readonly string $defaultLocale, // e.g. "cs"
     ) {
     }
@@ -79,9 +87,12 @@ class LocaleLinkExtension extends AbstractExtension
      */
     public function localeLink(string $path): string
     {
-        // Absolute URLs (and protocol-relative ones) are external — leave them untouched.
+        $path = trim($path);
+
+        // Absolute URLs (and protocol-relative ones) are external — leave them untouched,
+        // as long as the scheme is one a link may safely use.
         if ($this->isAbsoluteUrl($path)) {
-            return $path;
+            return $this->hasSafeScheme($path) ? $path : '#';
         }
 
         // Pure fragment (e.g. "#kontakt") or query string — keep it relative to the
@@ -99,7 +110,9 @@ class LocaleLinkExtension extends AbstractExtension
             return $stripped === '' ? '/' : $stripped;
         }
 
-        return '/' . $locale . ($stripped === '/' ? '' : $stripped);
+        // The localized homepage is '/{_locale}/' (Bolt's homepage_locale route, with the
+        // slash); '/en' would cost a redirect.
+        return '/' . $locale . $stripped;
     }
 
     /**
@@ -107,11 +120,30 @@ class LocaleLinkExtension extends AbstractExtension
      */
     private function isAbsoluteUrl(string $path): bool
     {
-        if (parse_url($path, PHP_URL_SCHEME) !== null || str_starts_with($path, '//')) {
+        if ($this->scheme($path) !== null || str_starts_with($path, '//')) {
             return true;
         }
 
         return preg_match('~^[a-z0-9-]+(\.[a-z0-9-]+)+([/?#].*)?$~i', $path) === 1;
+    }
+
+    private function hasSafeScheme(string $url): bool
+    {
+        $scheme = $this->scheme($url);
+
+        // Protocol-relative (//host) and bare domains (example.cz/page) have no scheme.
+        return $scheme === null || in_array($scheme, self::SAFE_SCHEMES, true);
+    }
+
+    /**
+     * The URL scheme, lower-cased, as a browser reads it: control characters and whitespace
+     * inside the scheme ("java\tscript:") are ignored by browsers, so they are removed first.
+     */
+    private function scheme(string $url): ?string
+    {
+        $cleaned = (string) preg_replace('/[\x00-\x20]+/', '', $url);
+
+        return preg_match('/^([a-z][a-z0-9+.-]*):/i', $cleaned, $match) === 1 ? mb_strtolower($match[1]) : null;
     }
 
     /**
@@ -120,12 +152,12 @@ class LocaleLinkExtension extends AbstractExtension
     private function stripLocale(string $path): string
     {
         $path = '/' . mb_ltrim($path, '/');
+        $locales = implode('|', array_map(
+            static fn (string $locale): string => preg_quote($locale, '#'),
+            explode('|', $this->appLocales),
+        ));
 
-        $stripped = preg_replace(
-            '#^/(?:' . $this->appLocales . ')(?=/|$)#',
-            '',
-            $path
-        );
+        $stripped = preg_replace('#^/(?:' . $locales . ')(?=/|$)#', '', $path);
 
         return $stripped === '' || $stripped === null ? '/' : $stripped;
     }
@@ -144,6 +176,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Twig\Extension\AbstractExtension;
@@ -172,6 +205,7 @@ class ImageDimensionsExtension extends AbstractExtension
     private array $dimensions = [];
 
     public function __construct(
+        #[Autowire('%kernel.project_dir%')]
         private readonly string $projectDir,
         private readonly CacheInterface $cache,
     ) {
@@ -250,39 +284,62 @@ declare(strict_types=1);
 
 namespace App;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 
 /**
  * Twig extension for formatting file sizes and byte counts.
  *
- * Provides filters for downloadable files, PDF brochures, and media attachments:
- *   {{ record.attachment|file_size|format_bytes }}
+ * Provides filters for downloadable files, PDF brochures, and media attachments. The filter is
+ * `format_file_size`, not `format_bytes`: Bolt core already has a `format_bytes` filter
+ * (binary units, used by the admin), and of two filters with one name only one runs.
+ *
+ *   {{ record.attachment|file_size|format_file_size }}
  */
 class FileSizeExtension extends AbstractExtension
 {
+    public function __construct(
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir,
+    ) {
+    }
+
     public function getFilters(): array
     {
         return [
             new TwigFilter('file_size', [$this, 'getFileSize']),
-            new TwigFilter('format_bytes', [$this, 'formatBytes']),
+            new TwigFilter('format_file_size', [$this, 'formatBytes']),
         ];
     }
 
     /**
      * Formats a byte count into a human-readable string (e.g. "1.25 MB", "450 kB").
+     *
+     * Decimal (SI) units, as the labels say and as file managers show them: 1 kB = 1000 B.
+     * Pass the separator of the page's language: {{ size|format_file_size(1, ',') }} → "1,3 MB".
      */
-    public function formatBytes(int $bytes, int $decimals = 2): string
+    public function formatBytes(int $bytes, int $decimals = 2, string $decimalPoint = '.'): string
     {
         if ($bytes <= 0) {
             return '0 B';
         }
 
         $units = ['B', 'kB', 'MB', 'GB', 'TB'];
-        $power = min((int) floor(log($bytes, 1024)), count($units) - 1);
-        $value = $bytes / (1024 ** $power);
+        $power = 0;
+        $value = (float) $bytes;
+        // Compare the rounded value, so 999 999 B reads "1 MB", not "1000 kB".
+        while (round($value, $decimals) >= 1000 && $power < count($units) - 1) {
+            $value /= 1000;
+            ++$power;
+        }
 
-        return mb_rtrim(mb_rtrim(number_format($value, $decimals), '0'), '.') . ' ' . $units[$power];
+        $number = number_format($value, $power === 0 ? 0 : $decimals, $decimalPoint, '');
+        if (str_contains($number, $decimalPoint)) {
+            $number = rtrim(rtrim($number, '0'), $decimalPoint);
+        }
+
+        return $number . ' ' . $units[$power];
     }
 
     /**
@@ -302,8 +359,8 @@ class FileSizeExtension extends AbstractExtension
             return 0;
         }
 
-        $publicDir = realpath(__DIR__ . '/../public');
-        $realPath = realpath(__DIR__ . '/../public/' . mb_ltrim(rawurldecode($urlPath), '/'));
+        $publicDir = realpath($this->projectDir . '/public');
+        $realPath = realpath($this->projectDir . '/public/' . ltrim(rawurldecode($urlPath), '/'));
 
         // realpath() resolves "..", so this also rejects paths climbing out of public/
         // (the value can come from editable content).
@@ -327,39 +384,11 @@ class FileSizeExtension extends AbstractExtension
 
 ## 3. Dependency Injection Configuration (`config/services.yaml`)
 
-Add parameters and service definitions to `config/services.yaml`:
+Nothing to add. Bolt's stock `config/services.yaml` registers every class in `src/` with autowiring and autoconfiguration (`App\: resource: '../src/*'`), which tags the three classes as Twig extensions. Their scalar arguments come from `#[Autowire]` attributes in the constructors (`%app_locales%`, `%locale%`, `%kernel.project_dir%`), so the classes work in any project without bindings — see [`examples/services_snippet.yaml`](examples/services_snippet.yaml).
 
-```yaml
-parameters:
-  locale: cs
-  app_locales: cs|en
+Older projects define `App\LocaleLinkExtension` explicitly with `arguments` and a `twig.extension` tag. That still works; it can be removed.
 
-services:
-  _defaults:
-    autowire: true
-    autoconfigure: true
-    public: false
-    bind:
-      $locales: '%app_locales%'
-      $defaultLocale: '%locale%'
-      $projectDir: '%kernel.project_dir%'
-
-  # Auto-discovers ImageDimensionsExtension and FileSizeExtension
-  App\:
-    resource: '../src/*'
-    exclude:
-      - ../src/DependencyInjection/
-      - ../src/Entity/
-      - ../src/Exception/
-      - ../src/Kernel.php
-
-  # Explicit service configuration for LocaleLinkExtension
-  App\LocaleLinkExtension:
-    arguments:
-      $appLocales: '%app_locales%'
-      $defaultLocale: '%locale%'
-    tags: [ 'twig.extension' ]
-```
+**PHP version:** the classes use `mb_ltrim()` (PHP 8.4). On PHP 8.2 and 8.3 it comes from `symfony/polyfill-php84`, which `bolt/core` requires — nothing to install.
 
 ---
 
@@ -397,12 +426,12 @@ services:
 ```
 `components/ui/picture.twig` from `bolt-theme-templates` implements the same order of preference (`pswp: true`).
 
-### 3. File Downloads with Formatted Size (`field.path|file_size|format_bytes`)
+### 3. File Downloads with Formatted Size (`field.path|file_size|format_file_size`)
 ```twig
 {% if record.pdf_brochure is defined and record.pdf_brochure is not empty %}
     {% set bytes = record.pdf_brochure.path|file_size %}
     <a href="{{ record.pdf_brochure.path }}" download class="btn btn-secondary">
-        <span>Stáhnout katalog (PDF{{ bytes > 0 ? ', ' ~ bytes|format_bytes : '' }})</span>
+        <span>Stáhnout katalog (PDF{{ bytes > 0 ? ', ' ~ bytes|format_file_size : '' }})</span>
     </a>
 {% endif %}
 ```
@@ -428,13 +457,19 @@ Run the automated test suite from the project root:
 The script verifies:
 1. `src/LocaleLinkExtension.php` exists, passes PHP syntax check (`php -l`), and provides `locale_link`.
 2. `src/ImageDimensionsExtension.php` exists, provides `image_dimensions`, and integrates with `CacheInterface`.
-3. `src/FileSizeExtension.php` exists and provides `file_size` and `format_bytes`.
+3. `src/FileSizeExtension.php` exists and provides `file_size` and `format_file_size`.
 4. `config/services.yaml` has `App\LocaleLinkExtension` registered with `$appLocales` and `$defaultLocale`.
 5. Symfony container compiles (`bin/console lint:container`) and all functions/filters appear in `bin/console debug:twig`.
 
 ---
 
 ## 6. Common Pitfalls & Security Safeguards
+
+### Filter name collisions with Bolt core
+Bolt core already registers `format_bytes` (`Bolt\Twig\TextExtension`: binary units, `KB`, used in the admin). An extension that registers the same name is silently ignored or replaces core's filter for the admin too — which one wins depends on registration order. Earlier versions of this skill shipped `format_bytes`; `debug:twig --filter=format_bytes` showed core's version, so the skill's never ran. The filter is now `format_file_size`. Before adding any filter or function, check the name is free: `bin/console debug:twig --filter=<name>`.
+
+### Unsafe link schemes
+`locale_link()` returns `#` for any scheme other than `http`, `https`, `mailto` and `tel`. Links in buttons, cards and menus often come from editable text fields; without the check, an editor could store `javascript:…` and run it in an administrator's browser.
 
 | Pitfall | Risk / Symptom | Solution |
 | :--- | :--- | :--- |

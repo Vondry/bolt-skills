@@ -66,6 +66,36 @@ function themeFiles(string $themeDir, string $extension): array
     return $files;
 }
 
+const UNCACHEABLE = '/csrf_token|form_start|form\(|app\.user|app\.session|app\.flashes|is_granted/';
+
+/**
+ * Searches $source and every theme template it includes (literal names only, any depth) for
+ * output that must not be cached. Returns "file: hit" or null.
+ *
+ * @param array<string, true> $seen
+ */
+function uncacheableIn(string $themeDir, string $source, string $file, array &$seen = []): ?string
+{
+    if (preg_match(UNCACHEABLE, $source, $hit)) {
+        return "{$file}: `{$hit[0]}`";
+    }
+    preg_match_all('/(?:\binclude\(\s*|\{%-?\s*(?:include|embed)\s+)[\'"]([^\'"]+\.twig)[\'"]|\btemplate\s*:\s*[\'"]([^\'"]+\.twig)[\'"]/', $source, $names, PREG_SET_ORDER);
+    foreach ($names as $name) {
+        $template = $name[1] !== '' ? $name[1] : ($name[2] ?? '');
+        $path = $themeDir . '/' . $template;
+        if ($template === '' || isset($seen[$path]) || ! is_file($path)) {
+            continue;
+        }
+        $seen[$path] = true;
+        $found = uncacheableIn($themeDir, (string) file_get_contents($path), $path, $seen);
+        if ($found !== null) {
+            return $found;
+        }
+    }
+
+    return null;
+}
+
 function lineOf(string $source, int $offset): int
 {
     return substr_count(substr($source, 0, $offset), "\n") + 1;
@@ -127,14 +157,30 @@ if ($themeDir === '' || ! is_dir($themeDir)) {
             $line = lineOf($source, $block[0][1]);
             $head = $block[1][0];
             $body = $block[2][0];
-            if (preg_match('/csrf_token|form_start|form\(|app\.user|app\.session|app\.flashes|is_granted/', $body, $hit)) {
-                out('FAIL', "{$file}:{$line}: cached block contains `{$hit[0]}` — user- or request-specific output must not be cached");
+            $found = uncacheableIn($themeDir, $body, $file);
+            if ($found !== null) {
+                out('FAIL', "{$file}:{$line}: cached block renders {$found} — user- or request-specific output must not be cached");
             }
             if (! str_contains($head, 'tags(')) {
                 out('WARN', "{$file}:{$line}: {% cache %} without tags() — refreshed only by its TTL or a deploy (Step 4)");
             }
             if (! str_contains($source, 'app.request.method')) {
                 out('WARN', "{$file}:{$line}: {% cache %} also caches Bolt's preview (POST) — render through partials/_cached.twig (examples/_cached.twig)");
+            }
+        }
+    }
+
+    // Containers cached through partials/_cached.twig: the {% cache %} block there only shows
+    // include(template), so look into the template each call passes.
+    foreach ($twigFiles as $file) {
+        $source = (string) file_get_contents($file);
+        if (! preg_match_all('/include\(\s*[\'"]partials\/_cached\.twig[\'"]\s*,\s*\{(.*?)\}\s*\)/s', $source, $calls, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            continue;
+        }
+        foreach ($calls as $call) {
+            $found = uncacheableIn($themeDir, $call[1][0], $file);
+            if ($found !== null) {
+                out('FAIL', "{$file}:" . lineOf($source, $call[0][1]) . ": cached container renders {$found} — user- or request-specific output must not be cached");
             }
         }
     }
