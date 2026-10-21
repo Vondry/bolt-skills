@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- `bolt-build`: `scripts/config-notices.php` runs the checks of the admin dashboard's **Bolt Configuration Notices** box (bolt/configuration-notices-widget) from the command line. It must exit 0 before any content is entered — a new gate in `WORKFLOWS.md` (Checkpoint 5, step 7.1) and in the `bolt-build` phase table and pitfalls.
+- `bolt-contenttypes` rule 8: reserved field names. Names that Twig resolves to a method of Bolt's `Content` entity (`icon`, `status`, `author`, `fields`, …) fail everywhere; names of `SetField` methods (`label`, `value`, `name`, `type`, …) fail inside sets, which the dashboard widget does not catch. The verification lists both and names a replacement.
+- `bolt-contenttypes` rule 9: an explicit `slug:` on every ContentType. Without it Bolt slugifies `name`, so `homepage:` named "Úvod" becomes `uvod` and `setcontent 'homepage'` throws.
+- `bolt-contenttypes/scripts/verify.sh`: third section runs `config-notices.php`.
+
 ## 1.2.0 — 2026-10-19
 
 New skill `bolt-legal-cz`, and fixes from a review of every skill against bolt/core 6.1.9 and four production sites.

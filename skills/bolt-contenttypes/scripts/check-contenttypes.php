@@ -33,6 +33,31 @@ const TEXT_TYPES = ['text', 'textarea', 'html', 'markdown', 'redactor', 'article
 /** Field names that hold the same value in every language (links, contacts, codes). */
 const SHARED_NAME = '/(^|_)(url|link|href|email|e_?mail|phone|tel|ico|dic|code|linkedin|facebook|instagram|youtube|twitter)$/i';
 
+/*
+ * Reserved field names (rule 8). Twig resolves `record.<name>` and `item.<name>` to a method of
+ * Bolt's entity before it looks for a field: a field named after a method is unreachable in
+ * templates (or returns the wrong value). Sources: bolt/configuration-notices-widget
+ * (Checks::$generalForbiddenFieldNames / $setForbiddenFieldNames) and the public getters of
+ * Bolt\Entity\Content and Bolt\Entity\Field\SetField (bolt/core 6.1). Compared lowercase.
+ * `slug` is a getter too, but it is Bolt's own slug field and resolves to it.
+ */
+const RESERVED_FIELD_NAMES = [
+    'array', 'author', 'authorname', 'cachekey', 'contenttype', 'createdat', 'defaultlocale',
+    'definition', 'definitionfromcontenttypeconfig', 'depublishedat', 'extras', 'field',
+    'fielddefined', 'fields', 'fieldvalue', 'fieldvalues', 'icon', 'id', 'listformat', 'locales',
+    'modifiedat', 'publishedat', 'rawfields', 'status', 'statuses', 'taxonomies', 'taxonomydefined',
+    'taxonomyvalues', 'toarray', 'twig',
+];
+
+/** Inside a `set` the item is a SetField: these names hit its methods (item.value → getValue()). */
+const RESERVED_SET_FIELD_NAMES = [
+    'allowempty', 'apivalue', 'content', 'contentselect', 'count', 'current', 'currentlocale',
+    'defaultlocale', 'defaultvalue', 'definition', 'get', 'id', 'key', 'label', 'length', 'locale',
+    'name', 'new', 'newtranslations', 'next', 'parent', 'parsedvalue', 'rewind', 'set', 'sortorder',
+    'translatable', 'translations', 'twigvalue', 'type', 'usedefaultlocale', 'valid', 'value',
+    'valueforeditor', 'version',
+];
+
 function out(string $kind, string $message): void
 {
     echo $kind, ' ', $message, PHP_EOL;
@@ -54,7 +79,7 @@ function readYaml(string $file): ?array
 /**
  * @param array<string, string> $findings path => [kind, message]
  */
-function checkFields(array $fields, string $prefix, bool $isLocalized, array &$findings): void
+function checkFields(array $fields, string $prefix, bool $isLocalized, array &$findings, bool $inSet = false): void
 {
     foreach ($fields as $name => $field) {
         if (! is_array($field)) {
@@ -62,6 +87,13 @@ function checkFields(array $fields, string $prefix, bool $isLocalized, array &$f
         }
         $path = $prefix . '.' . $name;
         $type = (string) ($field['type'] ?? '');
+
+        $lower = mb_strtolower((string) $name);
+        if (in_array($lower, RESERVED_FIELD_NAMES, true)) {
+            $findings[] = ['FAIL', "{$path}: field name '{$name}' is reserved by Bolt — Twig resolves it to a method of the record, not to the field (Bolt Configuration Notices warn about it); rename it, rule 8"];
+        } elseif ($inSet && in_array($lower, RESERVED_SET_FIELD_NAMES, true)) {
+            $findings[] = ['FAIL', "{$path}: field name '{$name}' inside a set is reserved — item.{$name} resolves to a method of Bolt's SetField; rename it, rule 8"];
+        }
 
         if ($type === 'html') {
             $findings[] = ['FAIL', "{$path}: type: html — use redactor (body copy) or article (long-form); rule 1"];
@@ -88,7 +120,7 @@ function checkFields(array $fields, string $prefix, bool $isLocalized, array &$f
         }
 
         if (isset($field['fields']) && is_array($field['fields'])) {
-            checkFields($field['fields'], $path, $isLocalized, $findings);
+            checkFields($field['fields'], $path, $isLocalized, $findings, $type === 'set');
         }
     }
 }
@@ -117,6 +149,15 @@ foreach ($config as $key => $definition) {
 
     if (empty($definition['name']) && empty($definition['slug'])) {
         $findings[] = ['FAIL', "{$key}: neither name nor slug"];
+    }
+    // Bolt keys ContentTypes by slug, and without `slug:` it slugifies `name` — not the YAML key.
+    // `homepage:` named "Úvod" becomes `uvod`, so setcontent 'homepage', config homepage: homepage
+    // and contenttypes/homepage/… all miss it (rule 9).
+    if (empty($definition['slug']) && ! empty($definition['name'])) {
+        $inferred = (string) (new Symfony\Component\String\Slugger\AsciiSlugger())->slug((string) $definition['name'])->lower();
+        if ($inferred !== $key) {
+            $findings[] = ['FAIL', "{$key}: no slug, so Bolt uses '{$inferred}' (from name) instead of '{$key}' — set slug: explicitly; rule 9"];
+        }
     }
     if (empty($definition['singular_name']) && empty($definition['singular_slug'])) {
         $findings[] = ['FAIL', "{$key}: neither singular_name nor singular_slug"];

@@ -4,8 +4,10 @@ description: >-
   Use this skill whenever you need to create, modify, or validate ContentTypes
   and fields in Bolt CMS (config/bolt/contenttypes.yaml). Enforces strict best practices:
   no raw html fields (use redactor or article), sanitise: true on every rich-text
-  field and never allow_twig, mandatory order: -id on singletons,
-  viewless resource blocks, collection/set structuring, and multilingual consistency.
+  field and never allow_twig, mandatory order: -id on singletons, no reserved field
+  names (icon, status, author, … — and label, value, name, type inside sets), an explicit
+  slug on every ContentType, viewless resource blocks, collection/set structuring,
+  multilingual consistency, and a clean Bolt Configuration Notices check before content.
 ---
 
 # Bolt CMS ContentTypes & Fields Standard
@@ -252,6 +254,72 @@ With YAML anchors, put `sanitise: true` into the shared field node so every Cont
 
 ---
 
+### 8. Never Use a Reserved Field Name
+> [!CAUTION]
+> Twig resolves `{{ record.icon }}` to a **method** of Bolt's `Content` entity (`getIcon()`, `getStatus()`, `getAuthor()`, …) before it looks for a field. A field named after one of them is unreachable in templates or silently returns the wrong value. Bolt's admin dashboard warns about some of them in the **Bolt Configuration Notices** box (*"A field with name icon was found inside the homepage ContentType. You may not be able to access a field with that name in Twig."*).
+
+**Reserved at the top level, in collections and inside sets** (compared lowercase):
+`array`, `author`, `authorname`, `cachekey`, `contenttype`, `createdat`, `defaultlocale`, `definition`, `definitionfromcontenttypeconfig`, `depublishedat`, `extras`, `field`, `fielddefined`, `fields`, `fieldvalue`, `fieldvalues`, **`icon`**, `id`, `listformat`, `locales`, `modifiedat`, `publishedat`, `rawfields`, `status`, `statuses`, `taxonomies`, `taxonomydefined`, `taxonomyvalues`, `toarray`, `twig`.
+
+**Also reserved inside a `set`** — each item is a `SetField`, so `item.value` calls `getValue()`, not your sub-field:
+`allowempty`, `apivalue`, `content`, `contentselect`, `count`, `current`, `currentlocale`, `defaultlocale`, `defaultvalue`, `definition`, `get`, `id`, `key`, **`label`**, `length`, `locale`, **`name`**, `new`, `newtranslations`, `next`, `parent`, `parsedvalue`, `rewind`, `set`, `sortorder`, `translatable`, `translations`, `twigvalue`, **`type`**, `usedefaultlocale`, `valid`, **`value`**, `valueforeditor`, `version`.
+
+Sources: `Checks::$generalForbiddenFieldNames` / `$setForbiddenFieldNames` of `bolt/configuration-notices-widget` and the public getters of `Bolt\Entity\Content` and `Bolt\Entity\Field\SetField` (bolt/core 6.1). The dashboard widget only checks the set's own name against the set list, so `label` / `value` **inside** a set pass it unnoticed — the verification script catches them. `slug` is a getter too, but it is Bolt's own slug field and resolves to it.
+
+Use a descriptive name instead — in Czech projects the Czech word reads well in the admin and never collides:
+
+```yaml
+# ❌ INCORRECT
+icon: { type: select, values: { … } }
+facts:
+  type: collection
+  fields:
+    fact:
+      type: set
+      fields:
+        label: { type: text }      # item.label → SetField method
+        value: { type: text }      # item.value → SetField::getValue()
+
+# ✅ CORRECT
+ikona: { type: select, values: { … } }          # or: symbol, pictogram
+facts:
+  type: collection
+  fields:
+    fact:
+      type: set
+      fields:
+        popisek: { type: text }    # or: caption, heading
+        hodnota: { type: text }    # or: detail, amount
+```
+
+### 9. Always Set `slug:` Explicitly
+Bolt keys ContentTypes by their **slug**, and without `slug:` it slugifies the `name` — not the YAML key. `homepage:` with `name: Úvod` becomes `uvod`: `{% setcontent page = 'homepage' %}` throws *"no ContentType by that name/slug exists"*, `homepage: homepage` in `config.yaml` finds nothing, `config.get('contenttypes/homepage/…')` is empty, and the listing route answers at `/uvod`. Bolt's dashboard reports it as *"There is an ambiguity in the slug of the … ContentType"*.
+
+```yaml
+homepage:
+  name: Úvod                 # Czech admin label
+  singular_name: Úvod
+  slug: homepage             # the key templates and config use
+  singular_slug: homepage    # otherwise /uvod also routes to the record
+```
+
+For a singleton page the slug **is** its URL (`/{slug}` forwards to the record), so pick the public path (`slug: podminky-sluzby`) and query it by that slug.
+
+---
+
+## Before Entering Content: Bolt Configuration Notices Must Be Clean
+
+Every notice in the **Bolt Configuration Notices** box of the admin dashboard is a configuration problem that content entered now would inherit (records saved under a wrong slug, values in a field Twig cannot read). Run the same checks from the command line and resolve **every** warning before the first record is created, and again after every change to `contenttypes.yaml`:
+
+```bash
+php vendor/tomvondracek/bolt-skills/skills/bolt-build/scripts/config-notices.php --project=.
+# exit 0: clean · exit 1: notices to resolve · exit 2: could not run
+```
+
+`scripts/verify.sh` runs it as its third section. Renaming a field after content exists loses that field's values (Bolt stores fields by name), so this check belongs before content entry, not after.
+
+---
+
 ## Verification & Automated Linting
 
 To inspect your ContentTypes configuration against all aforementioned standards, run the verification script:
@@ -271,6 +339,9 @@ The rules are checked by `scripts/check-contenttypes.php` on the parsed YAML (me
 6. **Valid Slugs:** Verifies all `type: slug` fields define the `uses` mapping.
 7. **Permitted Locales:** Verifies ContentType `locales` are declared in `app_locales`.
 8. **Sanitised Rich Text:** Flags `redactor` and `article` fields without `sanitise: true`, any `allow_twig: true`, and `sanitise: false` on any field.
+9. **Reserved Field Names:** Fails on any field (top level, collection item, set sub-field) named after a method of Bolt's `Content` entity, and on set sub-fields named after a `SetField` method (rule 8).
+10. **Explicit Slug:** Fails when a ContentType has no `slug:` and the slug Bolt infers from `name` differs from its key (rule 9).
+11. **Bolt Configuration Notices:** Runs `bolt-build/scripts/config-notices.php` — the dashboard widget's checks — and fails on any warning or danger notice.
 
 ---
 

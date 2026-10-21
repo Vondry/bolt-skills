@@ -28,6 +28,7 @@ to end with as little interruption as possible*:
 | [`references/design-sources.md`](references/design-sources.md) | What to extract from Figma MCP, Pencil MCP, images/PDF, an existing site or a brief; token mapping; visual QA loop |
 | [`references/site-plan-template.md`](references/site-plan-template.md) | Site plan, build progress, decisions log, open issues and handover — written into the project's `AGENTS.md` |
 | `scripts/preflight.sh` | Tools, PHP extensions, Bolt version, console, database, git, local URL — before Phase 1 |
+| `scripts/config-notices.php` | The admin dashboard's **Bolt Configuration Notices** from the command line — must be clean before any content is entered (Phase 5 gate, Phase 7) |
 
 The phase steps themselves are **not** repeated here: for every phase follow `WORKFLOWS.md`
 (Integration Contract, the phase section, its gate) and the `SKILL.md` of each skill it names.
@@ -102,7 +103,7 @@ Where the design and the intake answers flow in:
 | 4 | E8, D1–D5, O1, O9, L2, token table | `bolt-theme-init` scaffold `<theme>`; `theme.yaml` contact, socials, logo, `analytics:`; `bolt-menu --profile=<S4> --templates --force`; tokens and self-hosted fonts from `design-notes.md` into `css/tailwind/index.css`; JS imports per features |
 | 5 | S3–S5, S1, content model proposal | `contenttypes.yaml`, static routes, `menu.yaml` with labels per locale, catalogs |
 | 6 | frames, components, O2–O8, L1–L5, S7, S11 | one orchestrator per page from its frame, containers for queries, page-scoped components; **visual QA loop** (`design-sources.md`) per page; `--products=auto`; locale switcher; helper pages with the metaphor; `bolt-cookie-consent` scaffold with `--model --trackers --embeds --purposes` from O2–O7; `_privacy-form-note` beside every form; embeds through `_consent-embed`; `bolt-legal-cz` scaffold with `--operator --consumers --online-contracts --reviews` from L1–L5, identity checked with `verify.sh --ares`, `_reviews-notice` under testimonials; optionally `bolt-performance` fragment caches for pages with a high query count |
-| 7 | S2, S8–S10, O11, O12, E11, copy | records from the design copy or supplied content (through the admin in a browser if S10 allows), media-library uploads, translations, SEO per locale, `llms.txt`, `npm run prod`, `assets_version`, deployment checklist (7.5) for the hosting of E11 |
+| 7 | S2, S8–S10, O11, O12, E11, copy | **first** `php $SKILLS/bolt-build/scripts/config-notices.php --project=.` must exit 0 (resolve every notice, clear the cache, re-run); then records from the design copy or supplied content (through the admin in a browser if S10 allows), media-library uploads, translations, SEO per locale, `llms.txt`, `npm run prod`, `assets_version`, deployment checklist (7.5) for the hosting of E11 |
 | 8 | E4, E7 | linters, `verify-all.sh` with `BOLT_BASE_URL`, smoke checks, manual checks with a browser tool, Lighthouse, then the independent audit (Step 6) |
 
 ### Autonomy rules
@@ -148,4 +149,5 @@ Report to the user, briefly:
 - **Iframes straight from the design** (YouTube, maps) — always `_consent-embed.twig`.
 - **`bolt-menu` scaffold without `--force`** on a fresh `bolt/project` stops before copying templates (sample `menu.yaml` exists).
 - **Seeding content before Phase 5 is final** — every ContentType change after content entry means re-entering records.
+- **Entering content while Bolt shows configuration notices.** A reserved field name (`icon`, `status`, `label` / `value` inside a set …) or an inferred slug is invisible in the editor but breaks the templates, and renaming the field later drops its stored values. Run `scripts/config-notices.php` (or look at the dashboard) and resolve every notice before the first record — `bolt-contenttypes` rules 8 and 9.
 - **Skipping the progress table update** — the next session cannot resume reliably.

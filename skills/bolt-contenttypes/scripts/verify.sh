@@ -41,7 +41,7 @@ echo "=========================================================="
 FAILED=0
 WARNINGS=0
 SECTION=0
-TOTAL_SECTIONS=2
+TOTAL_SECTIONS=3
 
 section() { SECTION=$((SECTION + 1)); echo ""; echo "[$SECTION/$TOTAL_SECTIONS] $1"; }
 pass() { echo "  ✓ $1"; }
@@ -67,6 +67,28 @@ while IFS= read -r line; do
         *) [ -n "$line" ] && echo "  $line" ;;
     esac
 done < <(php "$SCRIPT_DIR/check-contenttypes.php" "$BASE_DIR" 2>&1)
+
+# The same checks Bolt shows in the "Bolt Configuration Notices" box of the admin dashboard
+# (reserved field names, ambiguous slugs, slug `uses`, unknown field types, cache not cleared
+# after a new ContentType, …), run from the command line by bolt-build/scripts/config-notices.php.
+NOTICES_SCRIPT="$SCRIPT_DIR/../../bolt-build/scripts/config-notices.php"
+section "Bolt Configuration Notices (admin dashboard widget)"
+if [ ! -d "vendor/bolt/configuration-notices-widget" ]; then
+    warn "bolt/configuration-notices-widget is not installed — open the admin dashboard to see notices."
+elif [ ! -f "$NOTICES_SCRIPT" ]; then
+    warn "bolt-build/scripts/config-notices.php not found next to this skill."
+else
+    NOTICES_STATUS=0
+    NOTICES_OUTPUT=$(php "$NOTICES_SCRIPT" --project="$BASE_DIR" 2>&1) || NOTICES_STATUS=$?
+    case "$NOTICES_STATUS" in
+        0) pass "no warning or danger notice"
+           echo "$NOTICES_OUTPUT" | grep -v '^No Bolt configuration notices' | sed 's/^/    /' ;;
+        1) fail "Bolt reports configuration notices — resolve every one before entering content:"
+           echo "$NOTICES_OUTPUT" | sed 's/^/    /' ;;
+        *) warn "could not run the notice checks:"
+           echo "$NOTICES_OUTPUT" | sed 's/^/    /' ;;
+    esac
+fi
 
 echo ""
 echo "=========================================================="
