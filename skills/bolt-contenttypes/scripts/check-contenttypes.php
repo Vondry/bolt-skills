@@ -88,6 +88,17 @@ function checkFields(array $fields, string $prefix, bool $isLocalized, array &$f
         $path = $prefix . '.' . $name;
         $type = (string) ($field['type'] ?? '');
 
+        if (preg_match('/[^\x20-\x7E]/', (string) $name) === 1) {
+            $findings[] = ['FAIL', "{$path}: field name '{$name}' is not plain English ASCII — identifiers are English, only labels use the site language; rule 10"];
+        }
+        if (isset($field['values']) && is_array($field['values']) && array_is_list($field['values']) === false) {
+            foreach (array_keys($field['values']) as $value) {
+                if (preg_match('/[^\x20-\x7E]/', (string) $value) === 1) {
+                    $findings[] = ['FAIL', "{$path}: select value '{$value}' is not plain English ASCII — keep the value English, put the site language in its label; rule 10"];
+                }
+            }
+        }
+
         $lower = mb_strtolower((string) $name);
         if (in_array($lower, RESERVED_FIELD_NAMES, true)) {
             $findings[] = ['FAIL', "{$path}: field name '{$name}' is reserved by Bolt — Twig resolves it to a method of the record, not to the field (Bolt Configuration Notices warn about it); rename it, rule 8"];
@@ -144,6 +155,9 @@ foreach ($config as $key => $definition) {
     if (! is_array($definition)) {
         $findings[] = ['FAIL', "{$key}: not a mapping of settings"];
         continue;
+    }
+    if (preg_match('/[^\x20-\x7E]/', $key) === 1) {
+        $findings[] = ['FAIL', "{$key}: ContentType key is not plain English ASCII — use an English key and a localized name / slug; rule 10"];
     }
     ++$count;
 

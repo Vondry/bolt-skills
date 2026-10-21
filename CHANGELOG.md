@@ -9,6 +9,7 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 - `bolt-contenttypes` rule 8: reserved field names. Names that Twig resolves to a method of Bolt's `Content` entity (`icon`, `status`, `author`, `fields`, …) fail everywhere; names of `SetField` methods (`label`, `value`, `name`, `type`, …) fail inside sets, which the dashboard widget does not catch. The verification lists both and names a replacement.
 - `bolt-contenttypes` rule 9: an explicit `slug:` on every ContentType. Without it Bolt slugifies `name`, so `homepage:` named "Úvod" becomes `uvod` and `setcontent 'homepage'` throws.
 - `bolt-contenttypes/scripts/verify.sh`: third section runs `config-notices.php`.
+- `bolt-contenttypes` rule 10: all configuration in English (ContentType keys, field names, select values, template paths); only names, labels and public URL slugs use the site language. A reserved name is replaced by a contextual English name (`icon_service`, `fact_label`), not a translation. The verification fails on non-ASCII identifiers.
 
 ## 1.2.0 — 2026-10-19
 

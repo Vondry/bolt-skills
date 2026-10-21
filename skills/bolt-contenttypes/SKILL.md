@@ -6,7 +6,7 @@ description: >-
   no raw html fields (use redactor or article), sanitise: true on every rich-text
   field and never allow_twig, mandatory order: -id on singletons, no reserved field
   names (icon, status, author, … — and label, value, name, type inside sets), an explicit
-  slug on every ContentType, viewless resource blocks, collection/set structuring,
+  slug on every ContentType, all identifiers in English, viewless resource blocks, collection/set structuring,
   multilingual consistency, and a clean Bolt Configuration Notices check before content.
 ---
 
@@ -266,7 +266,7 @@ With YAML anchors, put `sanitise: true` into the shared field node so every Cont
 
 Sources: `Checks::$generalForbiddenFieldNames` / `$setForbiddenFieldNames` of `bolt/configuration-notices-widget` and the public getters of `Bolt\Entity\Content` and `Bolt\Entity\Field\SetField` (bolt/core 6.1). The dashboard widget only checks the set's own name against the set list, so `label` / `value` **inside** a set pass it unnoticed — the verification script catches them. `slug` is a getter too, but it is Bolt's own slug field and resolves to it.
 
-Use a descriptive name instead — in Czech projects the Czech word reads well in the admin and never collides:
+Rename it to a more specific **English** name that says what the field is for — the reserved word plus its context (`icon_<section>`, `icon_<feature>`, `<feature>_label`), never a translation into the site language (rule 10):
 
 ```yaml
 # ❌ INCORRECT
@@ -281,15 +281,15 @@ facts:
         value: { type: text }      # item.value → SetField::getValue()
 
 # ✅ CORRECT
-ikona: { type: select, values: { … } }          # or: symbol, pictogram
+icon_service: { type: select, values: { … } }   # icon_<section> / icon_<feature>
 facts:
   type: collection
   fields:
     fact:
       type: set
       fields:
-        popisek: { type: text }    # or: caption, heading
-        hodnota: { type: text }    # or: detail, amount
+        fact_label: { type: text }   # <feature>_label
+        fact_value: { type: text }   # <feature>_value
 ```
 
 ### 9. Always Set `slug:` Explicitly
@@ -304,6 +304,33 @@ homepage:
 ```
 
 For a singleton page the slug **is** its URL (`/{slug}` forwards to the record), so pick the public path (`slug: podminky-sluzby`) and query it by that slug.
+
+### 10. All Configuration in English
+ContentType keys, field names, set and collection item names, select **values** (the keys of `values:`), `order:` fields and template paths are English, also on a Czech-only site — one consistent vocabulary for templates, translations, other projects and other developers. Only what editors and visitors read is in the site language: `name`, `singular_name`, field `label`s, select value **labels**, and the slugs that are public URLs.
+
+```yaml
+# ❌ INCORRECT — Czech identifiers mixed with English ones
+sluzby:
+  fields:
+    ikona: { type: select, values: { hlavni: "Hlavní služby" } }
+    poradi: { type: number }
+
+# ✅ CORRECT — English identifiers, Czech labels and URL
+services_page:
+  name: Služby                    # admin label (Czech)
+  slug: sluzby                    # public URL /sluzby (Czech)
+  record_template: pages/services_page/services_page.twig
+  fields:
+    icon_service:
+      type: select
+      label: "Ikona"              # admin label (Czech)
+      values: { main: "Hlavní služby" }   # English value, Czech label
+    position:
+      type: number
+      label: "Pořadí"
+```
+
+When a reserved name (rule 8) has to be avoided, pick a contextual English name (`icon_service`, `fact_label`), not the site-language word. The verification fails on identifiers with non-ASCII characters (diacritics); transliterated words (`ikona`, `poradi`) still need a review.
 
 ---
 
@@ -342,6 +369,7 @@ The rules are checked by `scripts/check-contenttypes.php` on the parsed YAML (me
 9. **Reserved Field Names:** Fails on any field (top level, collection item, set sub-field) named after a method of Bolt's `Content` entity, and on set sub-fields named after a `SetField` method (rule 8).
 10. **Explicit Slug:** Fails when a ContentType has no `slug:` and the slug Bolt infers from `name` differs from its key (rule 9).
 11. **Bolt Configuration Notices:** Runs `bolt-build/scripts/config-notices.php` — the dashboard widget's checks — and fails on any warning or danger notice.
+12. **English Identifiers:** Fails on ContentType keys, field names and select values containing non-ASCII characters (rule 10).
 
 ---
 
