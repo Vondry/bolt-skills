@@ -6,7 +6,8 @@
   Does NOT use arbitrary Tailwind utility classes, preventing CSS bundle bloat.
 
   Params:
-    code      — status code (e.g. '404', '403', '500', '503')
+    code      — optional: status code shown as the background watermark (e.g. '404', '403', '500');
+                the 503 page leaves it out
     eyebrow   — small label (e.g. 'Chyba 404 · Stránka nenalezena')
     heading   — main h1 text
     lead      — explanatory paragraph
@@ -21,7 +22,9 @@
     <div class="helper-container">
         <div class="helper-card">
 
-            <span class="helper-ghost" aria-hidden="true">{{ code }}</span>
+            {% if code is defined and code is not empty %}
+                <span class="helper-ghost" aria-hidden="true">{{ code }}</span>
+            {% endif %}
 
             <div class="helper-content">
                 {% if eyebrow is defined and eyebrow is not empty %}

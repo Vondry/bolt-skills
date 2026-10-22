@@ -7,8 +7,8 @@ description: >-
   for web hosts, plus public/.htaccess protection — an allowlist for theme/,
   files/ and thumbs/ (only built assets and accepted upload types are served,
   everything else is 403), a safety-net deny list for sources, configs, dumps
-  and .env files elsewhere in public/, and security headers for static files
-  (HSTS, nosniff, sandboxed uploads).
+  and .env files elsewhere in public/, security headers for static files
+  (HSTS, nosniff, sandboxed uploads), and gzip compression of pages, CSS and JS.
 ---
 
 # Bolt CMS Apache `.htaccess` Configuration & Source Code Hardening
@@ -274,7 +274,43 @@ In high-performance production projects, static media assets in `public/` are se
 
 ---
 
-### Step 7: Full Reference Template for `public/.htaccess`
+### Step 7: Compression (`mod_deflate`)
+
+Without compression, every page is sent uncompressed. On a typical Bolt site that is 60–70 KB of
+HTML, 50 KB of CSS and 80 KB of JS per page, about four times what gzip sends. The render-blocking
+CSS alone then adds hundreds of milliseconds to LCP on mobile. Apache applies output filters to PHP
+responses too, so one block covers both the pages rendered by Symfony and the static files:
+
+```apache
+# public/.htaccess
+
+<IfModule mod_deflate.c>
+    <IfModule mod_filter.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml text/markdown
+        AddOutputFilterByType DEFLATE text/javascript application/javascript application/json
+        AddOutputFilterByType DEFLATE application/ld+json application/manifest+json application/xml
+        AddOutputFilterByType DEFLATE application/rss+xml application/atom+xml image/svg+xml
+        AddOutputFilterByType DEFLATE image/x-icon image/vnd.microsoft.icon font/ttf font/otf
+    </IfModule>
+</IfModule>
+```
+
+- Only text types are listed. Images, WOFF2 fonts, PDFs and archives are already compressed:
+  deflating them again costs CPU and saves nothing.
+- `mod_deflate` adds `Vary: Accept-Encoding` itself, so caches keep the gzip and plain variants apart.
+- Brotli is left to the host. Many shared hosts compress with `br` at server level, where
+  `mod_brotli` and HTTP/2 are configured. The block above is the gzip baseline that works on every
+  Apache with `mod_deflate`; a response the server has already encoded is not compressed twice.
+- Symfony masks CSRF tokens on every request, so compressing HTML over HTTPS does not reopen BREACH
+  for the admin forms.
+- Check it live: `curl -s -H 'Accept-Encoding: gzip' -D - -o /dev/null https://example.cz/ | grep -i content-encoding`
+  must print `Content-Encoding: gzip` (or `br`). The same goes for `css/index.css` and `js/app.js`.
+- Nginx sites: put `gzip on; gzip_vary on; gzip_types text/plain text/css text/xml text/markdown text/javascript application/javascript application/json application/ld+json application/xml image/svg+xml;`
+  in the server block (`text/html` is always compressed).
+
+---
+
+### Step 8: Full Reference Template for `public/.htaccess`
 
 The complete, production-verified `public/.htaccess` file is available at
 [`examples/public.htaccess`](examples/public.htaccess). Tested with Apache 2.4 + PHP-FPM, with the
@@ -285,7 +321,8 @@ Key structural sections:
 2. `<FilesMatch …>` safety-net deny list and `.env*` block (Step 3)
 3. `<IfModule mod_headers.c>` security headers (Step 4)
 4. `<IfModule mod_expires.c>` asset caching headers (Step 6)
-5. `<IfModule mod_rewrite.c>`:
+5. `<IfModule mod_deflate.c>` compression of text responses (Step 7)
+6. `<IfModule mod_rewrite.c>`:
    - `node_modules/` and `.git/` denied, allowlist for `theme/`, `files/`, `thumbs/` (Step 2)
    - Base URI detection, Authorization header propagation
    - Redirection of direct `/index.php` queries (prevents duplicate content)
@@ -308,7 +345,8 @@ The script performs:
 - **Allowlist Check:** Tests sample paths against the theme and upload allowlists — built assets and accepted uploads pass, templates, configs, sources, the theme root and `.html` / `.php` uploads are denied.
 - **Safety-net Check:** Tests the `FilesMatch` deny list against sensitive file names, confirms no public asset type is blocked, and that `node_modules`, `.git` and `.env*` are denied.
 - **Security Headers Check:** HSTS, `X-Powered-By` removal, nosniff for static files, sandboxed uploads.
-- **Live HTTP Check (if `BOLT_BASE_URL` answers):** theme sources and a fake upload path answer 403 / 404, a built asset answers 200, the headers of a static file. Run it against Apache — PHP's built-in server and `symfony serve` ignore `.htaccess`.
+- **Compression Check:** a `mod_deflate` block in `public/.htaccess` that compresses `text/html`, `text/css` and JavaScript (a warning when it is missing).
+- **Live HTTP Check (if `BOLT_BASE_URL` answers):** theme sources and a fake upload path answer 403 / 404, a built asset answers 200, the headers of a static file, and `Content-Encoding` on the homepage and `css/index.css` when requested with `Accept-Encoding: gzip`. Run it against Apache — PHP's built-in server and `symfony serve` ignore `.htaccess`.
 
 ### 2. Manual HTTP Testing
 If the site is running on staging (Apache):

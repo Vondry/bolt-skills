@@ -2,6 +2,19 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Compressed pages and a maintenance page that never touches the database. Both come from the second audit of fmautoservis.cz: 204 KB of uncompressed HTML, CSS and JS per page, and a 503 page that loaded its phone and e-mail from a settings record.
+
+### Added
+- `bolt-htaccess` Step 7: a `mod_deflate` block in `examples/public.htaccess` that compresses the text responses. That covers pages rendered by Symfony and the CSS, JS, SVG, XML and JSON files Apache serves; images, WOFF2 fonts and PDFs stay out. Brotli is left to the host, and the step includes an Nginx line. `verify.sh` gets a static check (section 6, now 7 sections) and a live `Content-Encoding` probe of the homepage and `css/index.css`.
+
+### Changed
+- `bolt-helper-pages` § 5: the zero-database rule now covers the 503 page, the standalone layout and the scene, as well as the 500 page. Maintenance mode is on while the database is migrated or restored, so `setcontent`, `menu_array()` and settings records are out.
+- `bolt-helper-pages`: the 503 page shows no phone numbers, e-mail addresses, status code, times or durations, and does not call the outage planned. It can be on without anyone noticing, so it only says that the site is being worked on and offers *Zkusit znovu*. The examples and the § 7 template were updated, and `_helper_scene.twig` renders the `code` watermark only when one is passed.
+- `bolt-helper-pages/scripts/verify.sh`: fails on `setcontent` / `menu_array()` in the 500 and 503 pages, the layout and the scene, and when the 503 page does not extend the standalone layout. It warns on `tel:` / `mailto:` on the 503 page. A `maintenance` entry with `/` (or a missing root entrypoint) now fails instead of warning. Section counters fixed (`[1/5]`…`[5/5]`).
+- `bolt-audit` checklist (bolt-htaccess, bolt-helper-pages) and `WORKFLOWS.md` 2.1 / 6.4 follow both changes.
+
 ## 1.4.1 — 2026-10-22
 
 Admin icons that render: ContentType icons only from the Font Awesome version Bolt bundles — from fmautoservis.cz, where two FA 6 names showed empty boxes in the sidebar.

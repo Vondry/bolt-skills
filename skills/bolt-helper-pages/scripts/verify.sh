@@ -34,6 +34,12 @@ has_setcontent_tag() {
     perl -0777 -ne 's/\{#.*?#\}//gs; exit(/\{%-?\s*setcontent\b/ ? 0 : 1)' "$1"
 }
 
+# True when a template queries the database: a {% setcontent %} tag or a menu_array() call
+# (comments ignored).
+has_db_lookup() {
+    perl -0777 -ne 's/\{#.*?#\}//gs; exit(/\{%-?\s*setcontent\b|\bmenu_array\s*\(/ ? 0 : 1)' "$1"
+}
+
 # Lists templates under a directory that contain a real {% setcontent %} tag.
 find_setcontent_tags() {
     find "$1" -type f -name "*.twig" 2>/dev/null | while IFS= read -r tpl; do
@@ -67,7 +73,7 @@ echo ""
 # -------------------------------------------------------------
 # 1. Check config/bolt/config.yaml mappings
 # -------------------------------------------------------------
-echo "[1/4] Checking config/bolt/config.yaml error page mappings..."
+echo "[1/5] Checking config/bolt/config.yaml error page mappings..."
 
 check_config_mapping() {
     local key="$1"
@@ -111,13 +117,13 @@ check_root_entrypoint() {
     fi
 }
 check_root_entrypoint "internal_server_error" "internal-server-error.500.twig" fail
-check_root_entrypoint "maintenance" "maintenance.503.twig" warn
+check_root_entrypoint "maintenance" "maintenance.503.twig" fail
 
 # -------------------------------------------------------------
 # 2. Check Theme Template Files
 # -------------------------------------------------------------
 echo ""
-echo "[2/4] Checking helper templates in $HELPER_DIR..."
+echo "[2/5] Checking helper templates in $HELPER_DIR..."
 
 if [ ! -d "$HELPER_DIR" ]; then
     echo "  ❌ Directory $HELPER_DIR does not exist!"
@@ -139,7 +145,7 @@ fi
 # 3. Check SEO & Safety Rules
 # -------------------------------------------------------------
 echo ""
-echo "[3/4] Checking SEO and robustness rules..."
+echo "[3/5] Checking SEO and robustness rules..."
 
 # Rule: noindex, follow on error layouts
 if [ -d "$HELPER_DIR" ]; then
@@ -152,26 +158,44 @@ if [ -d "$HELPER_DIR" ]; then
         FAILED=1
     fi
 
-    # Rule: 500 template MUST NOT call setcontent
-    if [ -f "$HELPER_DIR/internal-server-error.500.twig" ]; then
-        if has_setcontent_tag "$HELPER_DIR/internal-server-error.500.twig"; then
-            echo "  ❌ SAFETY VIOLATION: internal-server-error.500.twig contains '{% setcontent %}'!"
-            echo "     The 500 page MUST NEVER execute database queries. If the database crashes,"
-            echo "     setcontent will trigger an unhandled fatal error."
+    # Rule: the 500 and 503 pages — and the standalone layout and scene they render — MUST NOT
+    # query the database (SKILL.md section 5): a 500 is often a database failure, and maintenance
+    # mode is on while the database is migrated or restored.
+    for TPL in "internal-server-error.500.twig" "maintenance.503.twig" "_helper_template_without_master.twig" "_helper_scene.twig"; do
+        [ -f "$HELPER_DIR/$TPL" ] || continue
+        if has_db_lookup "$HELPER_DIR/$TPL"; then
+            echo "  ❌ SAFETY VIOLATION: $TPL contains '{% setcontent %}' or menu_array()!"
+            echo "     The 500 and 503 pages MUST NEVER query the database. With the database down,"
+            echo "     the query throws and the error page itself turns into a white screen."
             FAILED=1
         else
-            echo "  ✅ 500 page safety verified: zero database queries ({% setcontent %}) present"
+            echo "  ✅ $TPL: zero database queries (setcontent, menu_array)"
         fi
+    done
 
-        # Rule: the 500 page extends the standalone layout. The with-master layout renders the
-        # header and footer containers (menu_array(), possibly setcontent), which would fail
-        # together with the database that caused the error.
-        if grep -qE "extends[[:space:]]+['\"]helper-pages/_helper_template_without_master\.twig['\"]" "$HELPER_DIR/internal-server-error.500.twig"; then
-            echo "  ✅ 500 page extends the standalone layout (_helper_template_without_master.twig)"
+    # Rule: the 500 and 503 pages extend the standalone layout. The with-master layout renders the
+    # header and footer containers (menu_array(), possibly setcontent), which would fail together
+    # with the database.
+    for TPL in "internal-server-error.500.twig" "maintenance.503.twig"; do
+        [ -f "$HELPER_DIR/$TPL" ] || continue
+        if grep -qE "extends[[:space:]]+['\"]helper-pages/_helper_template_without_master\.twig['\"]" "$HELPER_DIR/$TPL"; then
+            echo "  ✅ $TPL extends the standalone layout (_helper_template_without_master.twig)"
         else
-            echo "  ❌ SAFETY VIOLATION: internal-server-error.500.twig must extend helper-pages/_helper_template_without_master.twig"
+            echo "  ❌ SAFETY VIOLATION: $TPL must extend helper-pages/_helper_template_without_master.twig"
             echo "     (the with-master layout renders header/footer containers that may query the database)."
             FAILED=1
+        fi
+    done
+
+    # Rule: the 503 page shows no contact details — it can be on without anyone noticing, and the
+    # details would come from the database or go stale (SKILL.md section 5).
+    if [ -f "$HELPER_DIR/maintenance.503.twig" ]; then
+        if perl -0777 -ne 's/\{#.*?#\}//gs; exit(/(tel|mailto):/ ? 0 : 1)' "$HELPER_DIR/maintenance.503.twig"; then
+            echo "  ⚠️  maintenance.503.twig links a phone number or e-mail address (tel: / mailto:)."
+            echo "     The 503 page only says that the site is being worked on (SKILL.md section 5)."
+            WARNINGS=$((WARNINGS+1))
+        else
+            echo "  ✅ maintenance.503.twig shows no contact details"
         fi
     fi
 fi

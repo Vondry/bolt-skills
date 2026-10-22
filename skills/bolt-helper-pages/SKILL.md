@@ -4,7 +4,8 @@ description: >-
   Use this skill whenever creating, styling, or validating helper and error pages
   in Bolt CMS: 404 (Not Found), 403 (Forbidden), 500 (Internal Server Error), and
   503 (Maintenance Mode). Enforces configuration mappings in config/bolt/config.yaml,
-  dual-base layout strategy, zero-database 500 safety rule, noindex SEO directives,
+  dual-base layout strategy, the zero-database rule for the 500 and 503 pages (a
+  503 without contact details, numbers or time promises), noindex SEO directives,
   and bespoke brand-aligned visual scenes.
 ---
 
@@ -100,7 +101,7 @@ public/theme/<themename>/
 
 ### B. Layout without Master (`_helper_template_without_master.twig`)
 * **Used by:** `maintenance.503.twig` and `internal-server-error.500.twig`.
-* **Rationale:** During scheduled maintenance or deployment, database tables, search indexes, or APIs may be migrating. Normal header navigation links or search forms would lead to secondary errors. A self-contained standalone page (`<!DOCTYPE html>`) provides an elegant offline experience while displaying direct fallback communication channels (phone, email).
+* **Rationale:** During maintenance or deployment, database tables, search indexes, or APIs may be migrating. Header navigation links or search forms would lead to secondary errors. A self-contained standalone page (`<!DOCTYPE html>`) renders without them and says only that the site is being worked on (section 5).
 * **Why the 500 page uses it too:** a 500 is often caused by a failing database or cache. The with-master layout renders the header and footer containers (`menu_array()`, possibly `{% setcontent %}`), which would fail with the same cause and turn the error page itself into a white screen.
 
 ```twig
@@ -182,16 +183,27 @@ Instead of creating a separate compiled `css/helper-pages.css` file in your asse
 
 ---
 
-## 5. The 500 Safety Rule: Zero Database Lookups
+## 5. The 500 and 503 Safety Rule: Zero Database Lookups
 
 > [!CAUTION]
-> In `APP_ENV=prod`, Bolt renders `internal-server-error.500.twig` when an uncaught exception occurs.
+> In `APP_ENV=prod`, Bolt renders `internal-server-error.500.twig` when an uncaught exception occurs, and `maintenance.503.twig` while maintenance mode is on.
 >
-> **CRITICAL RULE:** Never execute `{% setcontent %}`, database queries, or external API calls inside `internal-server-error.500.twig` or any template it includes.
+> **CRITICAL RULE:** Never execute `{% setcontent %}`, `menu_array()`, database queries, or external API calls inside `internal-server-error.500.twig`, `maintenance.503.twig` or any template they include (the standalone layout, the scene).
 >
-> **Why?** If the server error was caused by a database failure, running `{% setcontent %}` inside the 500 error handler triggers a secondary unhandled fatal exception, crashing the error page itself into an ugly white screen.
+> **Why?** The database can be down. A 500 is often caused by a database failure, and maintenance mode is switched on while the database is migrated or restored. Running `{% setcontent %}` there triggers a secondary unhandled fatal exception, crashing the error page itself into an ugly white screen.
 >
-> Keep `internal-server-error.500.twig` strictly static or using safe request parameters (`app.request.uri`), and let it extend `_helper_template_without_master.twig`: the rule covers every template the 500 page renders, including the header and footer containers a with-master layout would pull in.
+> Keep both templates strictly static or using safe request parameters (`app.request.uri`), and let them extend `_helper_template_without_master.twig`: the rule covers every template they render, including the header and footer containers a with-master layout would pull in. That also rules out a "site settings" record for contact details on these pages.
+
+### The 503 page says only that the site is being worked on
+
+The maintenance page can be shown without anyone noticing: maintenance mode left on after a deployment, or switched on by a colleague or a script during an outage. Whatever it promises is then wrong for hours. So the 503 page:
+
+- shows **no phone numbers, e-mail addresses or other contact details**: they would need the settings record (a database query) or a copy of CMS data in the template that silently goes stale;
+- shows **no times, durations or dates** ("back in 10 minutes", "planned until 14:00") and does not call the outage *planned*;
+- shows **no status code**: the `503` watermark means nothing to a visitor. `_helper_scene.twig` renders the ghost only when `code` is passed;
+- says that the site is being worked on, asks the visitor to try again later, and offers a *Zkusit znovu* button (`app.request.uri`).
+
+`verify.sh` fails on `setcontent` / `menu_array()` in either page, the layout or the scene, and warns on `tel:` / `mailto:` links in the 503 page.
 
 ### Point the 500 and 503 config at a root entrypoint (no `/`)
 
@@ -233,14 +245,14 @@ Helper pages should not look generic. Use `_helper_scene.twig` to weave the clie
 | Client Domain | Visual Metaphor | 404 (Not Found) | 403 (Forbidden) | 500 (Server Error) | 503 (Maintenance) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Bakery / café** | The **Display Counter** | Empty tray with a crumb-covered label (*"Tenhle koláč už je pryč"*) | Kitchen door with a *"Jen pro personál"* sign | Smoking oven with the alarm light on (*"Něco se připálilo"*) | *"Pečeme"* sign on the door, dough rising as an indeterminate progress bar |
-| **Library / bookshop** | The **Shelf** | Gap on the shelf with an empty catalogue card (*"Kniha nenalezena"*) | Rare-books glass cabinet with a key lock (*"Jen se svolením"*) | Toppled stack of books | *"Inventura"* notice with opening hours and a quiet progress bar |
-| **Logistics / shipping** | The **Parcel** | Parcel with an unreadable address label (*"Adresát neznámý"*) | Sealed parcel stamped *"Neotvírat"* | Crushed parcel on the conveyor belt with an urgent phone contact | Paused sorting line with an indeterminate progress bar |
+| **Library / bookshop** | The **Shelf** | Gap on the shelf with an empty catalogue card (*"Kniha nenalezena"*) | Rare-books glass cabinet with a key lock (*"Jen se svolením"*) | Toppled stack of books | *"Inventura"* notice and a quiet progress bar |
+| **Logistics / shipping** | The **Parcel** | Parcel with an unreadable address label (*"Adresát neznámý"*) | Sealed parcel stamped *"Neotvírat"* | Crushed parcel on the conveyor belt with a *"Zkusit znovu"* button | Paused sorting line with an indeterminate progress bar |
 
 ### Adapting to New Projects
 When building for a new client (e.g. dental clinic, fitness studio, e-shop):
 1. **Choose an iconic physical metaphor** from their industry (e.g. appointment card, locker with a combination lock, shopping basket).
-2. Use `code` (e.g. 404, 403, 500, 503) as an oversized background watermark (`.helper-ghost`).
-3. Include clear, friendly next steps: a primary recovery button (`Zpět na úvod`), secondary contact action, and the requested path when applicable (`app.request.pathinfo`).
+2. Use `code` (404, 403, 500) as an oversized background watermark (`.helper-ghost`); the 503 page has none (section 5).
+3. Include clear, friendly next steps: a primary recovery button (`Zpět na úvod`, `Zkusit znovu`) and the requested path when applicable (`app.request.pathinfo`). The 500 and 503 pages carry no contact details from the database (section 5).
 
 ---
 
@@ -345,24 +357,22 @@ When building for a new client (e.g. dental clinic, fitness studio, e-shop):
 ```twig
 {% extends 'helper-pages/_helper_template_without_master.twig' %}
 
-{% set title = 'Probíhá údržba webu' %}
+{% set title = 'Na webu se pracuje' %}
 
 {% block head %}
     {{ include('helper-pages/_helper_scene_styles.twig') }}
 {% endblock head %}
 
+{# No setcontent, no contact details, no numbers, no time promises (section 5). #}
 {% block mainHelper %}
     {{ include('helper-pages/_helper_scene.twig', {
-        code: '503',
-        eyebrow: 'Plánovaná odstávka',
-        heading: 'Chvíli pracujeme na webu',
-        lead: 'Provádíme krátkou plánovanou údržbu. Za několik minut bude vše zpět v provozu. Děkujeme za trpělivost.',
+        eyebrow: 'Údržba webu',
+        heading: 'Na webu právě pracujeme',
+        lead: 'Web je dočasně nedostupný, protože na něm probíhají úpravy. Zkuste to prosím znovu o něco později. Děkujeme za trpělivost.',
         progress: true,
         buttons: [
-            { label: 'Zavolat +420 123 456 789', href: 'tel:+420123456789', variant: 'primary' },
-            { label: 'info@example.cz', href: 'mailto:info@example.cz', variant: 'secondary' }
-        ],
-        note: 'Telefonicky i e-mailem nás zastihnete běžně bez omezení.'
+            { label: 'Zkusit znovu', href: app.request.uri, variant: 'primary' }
+        ]
     }) }}
 {% endblock mainHelper %}
 ```
@@ -382,6 +392,6 @@ vendor/tomvondracek/bolt-skills/skills/bolt-helper-pages/scripts/verify.sh
 2. **Template files:** Confirms all 4 error templates and the 2 base layouts exist under `public/theme/<themename>/helper-pages/`.
 3. **Tailwind Bundle Isolation:** Scans helper templates to confirm they do NOT introduce rogue one-off Tailwind utilities, and checks whether Tailwind build config excludes `helper-pages/` (preventing bundle bloat).
 4. **SEO Protection:** Checks for `<meta name="robots" content="noindex, follow">`.
-5. **500 Safety Check:** Validates that `internal-server-error.500.twig` contains zero database lookups (`setcontent`) and extends `_helper_template_without_master.twig`.
-   It also fails when `internal_server_error` names a path with `/` (Bolt looks it up as a record first) or its root entrypoint is missing, and warns about the same for `maintenance`.
+5. **500 / 503 Safety Check:** Validates that `internal-server-error.500.twig`, `maintenance.503.twig`, the standalone layout and the scene contain zero database lookups (`setcontent`, `menu_array()`), and that both pages extend `_helper_template_without_master.twig`. Warns on `tel:` / `mailto:` contact links in the 503 page.
+   It also fails when `internal_server_error` or `maintenance` names a path with `/` (Bolt looks it up as a record first) or its root entrypoint is missing.
 6. **Twig Syntax:** Runs `php bin/console lint:twig public/theme/<themename>/helper-pages` to guarantee error-free Twig compilation.
