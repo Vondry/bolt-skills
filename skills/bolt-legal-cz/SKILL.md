@@ -72,7 +72,9 @@ Register entry (`legal.registry`) by operator:
 | :--- | :--- | :--- |
 | `trade` | `office` (optional) | „Podnikatel zapsaný v živnostenském rejstříku[, živnostenský úřad: …].“ |
 | `company` | `court`, `section`, `insert` (from ARES) | „Zapsáno v obchodním rejstříku: Městský soud v Praze, oddíl C, vložka 12345.“ |
-| `profession`, `other` | `text` (localized) | the text, e.g. „Advokát zapsaný v seznamu advokátů ČAK pod ev. č. 12345“ |
+| `profession`, `other` | `text` (localized) | the text, e.g. „Advokát zapsaný v seznamu advokátů ČAK pod ev. č. 12345“; a spolek „Zapsáno ve spolkovém rejstříku: Městský soud v Praze, oddíl L, vložka 12345“ |
+
+ARES reports every public register (veřejný rejstřík) as one source; the section of the spisová značka decides which one it is. A, B, C, Dr, Pr … are the Commercial Register (`company`); L is the spolkový rejstřík (spolek, pobočný spolek), N / Nf the nadační, O the o.p.s., U the ústavů and S the SVJ register — those operators are `other`, with the register named in `registry.text`. `verify.sh --ares` and `check-site.php --ares` derive the register from the section and print the sentence to use.
 
 ---
 
@@ -175,6 +177,8 @@ What a script cannot judge — the content of the terms, whether discounts state
 
 ## 7. Pitfalls
 
+- **Every page answers 500 after the scaffold (`Method Bolt\Collection\DeepCollection::dic does not exist`).** An older `_legal-identity.twig` read `legal.dic|default(false)` straight from Bolt's config collection; with `dic: ~` (or any `~` value) the access throws, `|default` does not catch it, and the error page fails too. The current partial converts `contact:` and `legal:` with `toArray()` first; `verify.sh` step 3 fails on a copy without it. Seen on rockfest-kurim (2026-10-22, caught on a local Apache before deployment).
+- **A spolek, nadace or ústav told to show the Commercial Register.** ARES reports every public register as one source; the section of the spisová značka decides (L = spolkový rejstřík). The scripts derive it and treat such an operator as `other` with `registry.text`.
 - **A workshop or office address instead of the registered seat.** § 435 asks for the seat as registered; add a "provozovna" separately and label it.
 - **Old data after a move or a change of legal form.** Re-run `verify.sh --ares` when the operator moves or converts from OSVČ to s.r.o.; ID-06 and ID-09 fail on the old identity.
 - **A template's sample IČO.** Themes bought or copied from another site often keep the previous operator's IČO in a template — `verify.sh` step 4 and `check-site.php` (other IČO) find it.

@@ -1,0 +1,43 @@
+{#
+  partials/_hreflang.twig — <link rel="alternate" hreflang> for the current page in every locale,
+  plus x-default (the default locale). Included in the `seo` block of partials/_master.twig
+  (bolt-theme-init), so the 404 / 403 helper pages, which override that block, carry none.
+
+  - Keep `locales` aligned with `app_locales` in config/services.yaml (the same codes as the
+    locale switcher). Bolt's locales() is not used: it queries the database and follows the
+    ContentType `locales`, not app_locales.
+  - The paths are built like _locale-switcher.twig: the locale prefix is stripped from
+    app.request.pathinfo and re-added per locale; the default locale has none, the localized
+    homepage is /<code>/ (Bolt's homepage_locale route).
+  - The host comes from `canonical` in config/bolt/config.yaml (BOLT_CANONICAL), so the alternates
+    name the canonical host even when the page was requested on www or a staging alias.
+  - The query string is left out: alternates name the page, not a filtered or paged view of it.
+  - Record slugs are not translated by this path-based mapping, as in the switcher.
+#}
+{% set locales = ['cs', 'en'] %}
+
+{% if locales|length > 1 %}
+    {% set default_locale = app.request.defaultLocale %}
+    {# Without a canonical host (local development) the request's own scheme, host and port. #}
+    {% set origin = config.get('general/canonical')|default(app.request.schemeAndHttpHost) %}
+    {% if not (origin matches '#^https?://#') %}
+        {% set origin = app.request.scheme ~ '://' ~ origin %}
+    {% endif %}
+    {% set origin = origin|trim('/', 'right') ~ app.request.basePath %}
+
+    {# Collapse leading slashes: a request for //other.host must not become an off-site URL. #}
+    {% set current_path = app.request.pathinfo|preg_replace('#^/+#', '/') %}
+    {% set base_path = current_path %}
+    {% for locale_code in locales %}
+        {% if locale_code != default_locale and current_path starts with '/' ~ locale_code ~ '/' %}
+            {% set base_path = current_path|slice(locale_code|length + 1) %}
+        {% elseif locale_code != default_locale and current_path == '/' ~ locale_code %}
+            {% set base_path = '/' %}
+        {% endif %}
+    {% endfor %}
+
+    {% for locale_code in locales %}
+        <link rel="alternate" hreflang="{{ locale_code }}" href="{{ origin ~ (locale_code == default_locale ? base_path : '/' ~ locale_code ~ base_path) }}">
+    {% endfor %}
+    <link rel="alternate" hreflang="x-default" href="{{ origin ~ base_path }}">
+{% endif %}

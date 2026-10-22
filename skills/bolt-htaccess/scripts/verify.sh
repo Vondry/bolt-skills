@@ -106,6 +106,15 @@ else
         [ -z "$HAS_FC_REWRITE" ] && echo "  - Missing front controller rewrite to index.php"
         WARNINGS=$((WARNINGS + 1))
     fi
+
+    # /index.php/… and /domains/<domain>/… in the requested URL become Symfony's base URL, which
+    # Bolt caches into canonical links, the sitemap and llms.txt (Pitfall 10).
+    if ! grep -qE '^\s*RewriteCond\s+%\{THE_REQUEST\}.*index\\\.php' "$PUBLIC_HTACCESS"; then
+        echo "  ERROR: no redirect of /index.php/… based on %{THE_REQUEST} — a request for /index.php/page"
+        echo "         turns the script path into the base URL of canonical links, the sitemap and llms.txt."
+        echo "         Copy the three rules after 'RewriteEngine On' from examples/public.htaccess (Pitfall 10)."
+        FAILED=1
+    fi
 fi
 
 # -------------------------------------------------------------
@@ -376,6 +385,21 @@ if curl -s -k --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
             WARNINGS=$((WARNINGS + 1))
         fi
     fi
+
+    # The front controller in the URL is redirected away before Symfony sees it (Pitfall 10).
+    TARGET=$(curl -s -k -o /dev/null --max-time 10 -w "%{http_code} %{redirect_url}" "$BASE_URL/index.php/bolt-htaccess-probe?x=1" || true)
+    case "$TARGET" in
+        "301 "*"/bolt-htaccess-probe?x=1")
+            if [ "${TARGET#*index.php}" = "$TARGET" ]; then
+                echo "  /index.php/bolt-htaccess-probe?x=1 -> ${TARGET} (redirect OK)"
+            else
+                echo "  ERROR: /index.php/bolt-htaccess-probe?x=1 -> $TARGET (index.php kept in the target; Pitfall 10)"
+                FAILED=1
+            fi ;;
+        *) echo "  ERROR: /index.php/bolt-htaccess-probe?x=1 -> $TARGET (expected 301 to /bolt-htaccess-probe?x=1;"
+           echo "         Symfony would take the script path as the base URL — Pitfall 10)"
+           FAILED=1 ;;
+    esac
 
     # Production only: the www and plain-HTTP redirects land on the same path of the canonical
     # https:// host in one hop — no /domains/<domain>/ prefix (Pitfall 9).

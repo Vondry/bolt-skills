@@ -89,6 +89,15 @@ else
             [ -z "$HAS_CACHE_DIR" ] && echo "  - Missing cache directory 'var/cache/ecs'"
             WARNINGS=$((WARNINGS + 1))
         fi
+
+        # PHP-CS-Fixer deprecated BracesFixer and NewWithBracesFixer; they still run silently and
+        # disappear in the next major version (examples/ecs.php uses their replacements).
+        DEPRECATED_FIXERS=$(grep -oE '\b(BracesFixer|NewWithBracesFixer)(::class|;)' "$ECS_FILE" | sed -E 's/(::class|;)$//' | sort -u | tr '\n' ' ' || true)
+        if [ -n "$DEPRECATED_FIXERS" ]; then
+            echo "  WARNING: ecs.php uses deprecated fixers: ${DEPRECATED_FIXERS% } — take examples/ecs.php"
+            echo "           (BracesPositionFixer + the four rules BracesFixer bundled, NewWithParenthesesFixer)."
+            WARNINGS=$((WARNINGS + 1))
+        fi
     fi
 fi
 

@@ -10,6 +10,7 @@
 #
 # skill	example	project path	kind
 bolt-add-language	_locale-switcher.twig	{theme}/partials/_locale-switcher.twig	design
+bolt-add-language	_hreflang.twig	{theme}/partials/_hreflang.twig	logic
 bolt-asset-caching	security.yaml	config/packages/security.yaml	snippet
 bolt-asset-caching	config_snippet.yaml	config/bolt/config.yaml	snippet
 bolt-asset-caching	htaccess_mod_expires.conf	public/.htaccess	snippet

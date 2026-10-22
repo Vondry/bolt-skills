@@ -99,7 +99,7 @@ if (!is_array(\$menuData)) {
 }
 
 // Configured locales: app_locales in config/services.yaml is the source of truth
-// (pipe-separated, e.g. cs|en|de). Older projects may list them under `locales:` in
+// (pipe-separated, e.g. cs|en|de). Older projects may list them under 'locales:' in
 // config/bolt/config.yaml; that is used only as a fallback.
 \$configuredLocales = [];
 if (file_exists('config/services.yaml')) {
@@ -273,6 +273,13 @@ if [ -n "$ACTIVE_THEME" ] && [ -d "public/theme/$ACTIVE_THEME" ]; then
     else
         echo "WARNING"
         echo "  Notice: Theme 'public/theme/$ACTIVE_THEME' does not call 'menu_array(...)'. Make sure header/footer templates render menu dynamically."
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    # Keyboard: Escape must close an opened menu or dropdown (bolt-theme-init's js/src/menu.ts).
+    MENU_TS="$THEME_DIR/js/src/menu.ts"
+    if [ -f "$MENU_TS" ] && ! grep -q "Escape" "$MENU_TS"; then
+        echo "  WARNING: $MENU_TS does not handle Escape — an opened mobile menu or dropdown cannot be closed"
+        echo "           from the keyboard. Port the Escape handling of bolt-theme-init's examples/js/src/menu.ts."
         WARNINGS=$((WARNINGS + 1))
     fi
 else

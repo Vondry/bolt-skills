@@ -45,8 +45,35 @@ else
     elif ! grep -q "locale_link" "$LOCALE_EXT"; then
         echo "FAILED: $LOCALE_EXT is missing the 'locale_link' TwigFunction."
         FAILED=1
+    elif [ -f vendor/autoload.php ]; then
+        # Behaviour, not text: links often come from editable fields, so javascript: / data:
+        # must not pass, and query string and hash must survive the locale prefix.
+        LOCALE_RESULT=$(php -r '
+            require "vendor/autoload.php";
+            $stack = new Symfony\Component\HttpFoundation\RequestStack();
+            $request = Symfony\Component\HttpFoundation\Request::create("/");
+            $request->setLocale("en");
+            $stack->push($request);
+            try {
+                $ext = new App\LocaleLinkExtension(requestStack: $stack, appLocales: "cs|en", defaultLocale: "cs");
+            } catch (Throwable $e) {
+                echo "SKIP constructor differs from the example (" . $e->getMessage() . ")"; exit;
+            }
+            $problems = [];
+            foreach (["javascript:alert(1)", "JavaScript:alert(1)", "java\tscript:alert(1)", "data:text/html,x"] as $url) {
+                if ($ext->localeLink($url) !== "#") { $problems[] = json_encode($url) . " is not replaced by #"; }
+            }
+            if ($ext->localeLink("/kapela?a=1#x") !== "/en/kapela?a=1#x") { $problems[] = "query string or hash lost: /kapela?a=1#x -> " . $ext->localeLink("/kapela?a=1#x"); }
+            echo $problems ? "FAIL " . implode("; ", $problems) : "OK";
+        ' 2>&1)
+        case "$LOCALE_RESULT" in
+            OK) echo "PASSED (locale_link verified: unsafe schemes become #, query and hash kept)" ;;
+            SKIP*) echo "PASSED (locale_link function present; behaviour not tested: ${LOCALE_RESULT#SKIP })" ;;
+            *) echo "FAILED: locale_link ${LOCALE_RESULT#FAIL } — copy examples/LocaleLinkExtension.php"
+               FAILED=1 ;;
+        esac
     else
-        echo "PASSED (locale_link function verified)"
+        echo "PASSED (locale_link function verified; vendor/ missing, behaviour not tested)"
     fi
 fi
 

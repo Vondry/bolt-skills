@@ -35,9 +35,9 @@ never "keep, record as deviation".
 - **Severity hints:** no static analysis at all → Medium; PHPStan level lowered or broad `ignoreErrors` → Medium; style violations → Low.
 
 ## 4. bolt-htaccess *(Apache only — N/A on Nginx)*
-- **Script:** root `.htaccess` (HTTPS, forward to `public/`), `public/.htaccess` directives, the allowlist for `theme/`, `files/`, `thumbs/` (tested with sample paths), the safety-net deny list, security headers for static files, live 403s for theme sources and a fake `.html` upload (with `--base-url` against **Apache**, not `symfony serve`).
-- **Review:** diff of `public/.htaccess` — removed allowlist / `FilesMatch` deny rules, `node_modules/` inside `public/theme`, `.env`, `composer.*`, `*.twig`, `*.yaml`, backups and dumps reachable; theme files that browsers need outside `css/`, `js/`, `img/`, `images/`, `fonts/` (they answer 403 under the allowlist); whether the vhost document root is `public/` (then the root file is optional).
-- **Severity hints:** templates / config / `.env` / dumps downloadable → Critical; no allowlist for `files/` (HTML / SVG uploads run as the site) → High; missing HTTPS redirect or HSTS → High; theme allowlist missing while the deny list exists → Medium.
+- **Script:** root `.htaccess` (HTTPS, forward to `public/`), `public/.htaccess` directives, the allowlist for `theme/`, `files/`, `thumbs/` (tested with sample paths), the safety-net deny list, security headers for static files, live 403s for theme sources and a fake `.html` upload, `/index.php/…` redirected to the clean path (with `--base-url` against **Apache**, not `symfony serve`).
+- **Review:** diff of `public/.htaccess` — removed allowlist / `FilesMatch` deny rules, `node_modules/` inside `public/theme`, `.env`, `composer.*`, `*.twig`, `*.yaml`, backups and dumps reachable; theme files that browsers need outside `css/`, `js/`, `img/`, `images/`, `fonts/` (they answer 403 under the allowlist); whether the vhost document root is `public/` (then the root file is optional). With `--base-url`: the canonical link, `/sitemap.xml` and `/llms.txt` name only the public host — a hosting path such as `/domains/<domain>/public/index.php/` there is Pitfall 10 (any visitor can trigger it with `/index.php/<page>`).
+- **Severity hints:** templates / config / `.env` / dumps downloadable → Critical; no allowlist for `files/` (HTML / SVG uploads run as the site) → High; missing HTTPS redirect or HSTS → High; theme allowlist missing while the deny list exists → Medium; hosting path in canonical / sitemap / llms.txt (Pitfall 10) → High.
 
 ## 5. bolt-asset-caching
 - **Script:** `/thumbs` firewall bypass in `security.yaml`, `save_files: true`, `mod_expires` in `public/.htaccess` (fails without it), Nginx static rules, bolt/core saving thumbnails where their URL points (warns on 6.0.1 – 6.1.x).
@@ -96,8 +96,8 @@ never "keep, record as deviation".
 - **Severity hints:** a page answering 500 (see `http.md`) → High; classes not in the CSS → High (unstyled UI); originals served instead of thumbnails → Medium (performance); literal strings on a multilingual site → Medium.
 
 ## 15. bolt-helper-pages
-- **Script:** error page mappings in `config/bolt/config.yaml`, helper templates, SEO / robustness (noindex; no `setcontent` / `menu_array()` in the 500 and 503 pages, the standalone layout or the scene; no `tel:` / `mailto:` on the 503 page), Tailwind bundle isolation, `lint:twig`.
-- **Review:** the 500 and 503 templates query nothing (no `setcontent`, no menu) — they must render with the database down; the 503 page shows no contact details, numbers or time promises (it can be on without anyone noticing); 404 offers a way back (home, search); texts in the site's tone (Appendix B.5: default locale only).
+- **Script:** error page mappings in `config/bolt/config.yaml`, helper templates, SEO / robustness (noindex; no `setcontent` / `menu_array()` in the 500 and 503 pages, the standalone layout or the scene; no `tel:` / `mailto:` on the 503 page — also through the catalog units it uses or `theme/contact/…`), Tailwind bundle isolation, `lint:twig`.
+- **Review:** the 500 and 503 templates query nothing (no `setcontent`, no menu) — they must render with the database down; the 503 page shows no contact details, numbers or time promises (it can be on without anyone noticing) — read the `error.503.*` units of every catalog, the script does not see time promises; 404 offers a way back (home, search); texts in the site's tone (Appendix B.5: default locale only).
 - **Severity hints:** 500 or 503 page querying the database → High; contact details or time promises on the 503 page → Low; default Bolt error pages in production → Medium.
 
 ## 16. bolt-cookie-consent
@@ -120,7 +120,7 @@ never "keep, record as deviation".
 - **Severity hints:** IČO, name, seat or register entry missing or wrong; no ADR information on a consumer site; no withdrawal button on an online shop from 1. 1. 2027 → High (fines up to CZK 1 M / 5 M); EU ODR link, reviews without a statement, identity only on the contact page → Medium; not using the skill's data model → Low (one deviation).
 
 ## 18. bolt-add-language *(multilingual only — once per secondary locale)*
-- **Script:** locale in `services.yaml`, ContentType `locales`, catalog existence and unit parity, XLIFF lint, `menu.yaml` labels, locale switcher.
+- **Script:** locale in `services.yaml`, ContentType `locales`, catalog existence and unit parity, XLIFF lint, `menu.yaml` labels, locale switcher, `partials/_hreflang.twig` in the master layout.
 - **Review:** in the browser (with `--base-url`), a few `/<code>/…` pages show translated text, not keys or Czech fallbacks (Appendix B.4); `hreflang` alternates in the SEO tags; the switcher keeps the current page instead of jumping home.
 - **Severity hints:** untranslated keys visible → High; missing `hreflang` → Medium; parity gaps in rarely used units → Low.
 

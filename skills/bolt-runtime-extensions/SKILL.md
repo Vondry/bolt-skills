@@ -455,7 +455,7 @@ Run the automated test suite from the project root:
 ```
 
 The script verifies:
-1. `src/LocaleLinkExtension.php` exists, passes PHP syntax check (`php -l`), and provides `locale_link`.
+1. `src/LocaleLinkExtension.php` exists, passes PHP syntax check (`php -l`), and provides `locale_link` — and, with `vendor/` installed, behaves safely: `javascript:` / `data:` URLs (also mixed case or with a tab inside the scheme) become `#`, and `/page?a=1#x` keeps its query string and hash under the `/en` prefix. An older copy without the safe-scheme filter fails here; replace it with `examples/LocaleLinkExtension.php`.
 2. `src/ImageDimensionsExtension.php` exists, provides `image_dimensions`, and integrates with `CacheInterface`.
 3. `src/FileSizeExtension.php` exists and provides `file_size` and `format_file_size`.
 4. `config/services.yaml` has `App\LocaleLinkExtension` registered with `$appLocales` and `$defaultLocale`.

@@ -2,8 +2,8 @@
 set -e
 
 # bolt-add-language verification for one locale: configuration files (scripts/check-language.php
-# parses services.yaml, contenttypes.yaml, the XLIFF catalogs and menu.yaml), XLIFF lint and the
-# theme's locale switcher.
+# parses services.yaml, contenttypes.yaml, the XLIFF catalogs and menu.yaml), XLIFF lint, the
+# theme's locale switcher and its hreflang alternates.
 #
 # Usage: verify.sh <locale_code>   (e.g. verify.sh de)
 
@@ -47,7 +47,7 @@ echo "Verifying integration for locale: '$TARGET_LOCALE'"
 FAILED=0
 WARNINGS=0
 SECTION=0
-TOTAL_SECTIONS=6
+TOTAL_SECTIONS=7
 
 section() { SECTION=$((SECTION + 1)); echo ""; echo "[$SECTION/$TOTAL_SECTIONS] $1"; }
 pass() { echo "  ✓ $1"; }
@@ -90,6 +90,27 @@ elif grep -qE "['\"]${TARGET_LOCALE}['\"][[:space:]]*:" "$SWITCHER"; then
     pass "'$TARGET_LOCALE' is in the locales map of $SWITCHER"
 else
     warn "'$TARGET_LOCALE' is not in the locales map of $SWITCHER — add its endonym (Step 6)"
+fi
+
+# -------------------------------------------------------------
+# 7. hreflang alternates in <head>
+# -------------------------------------------------------------
+section "hreflang alternates (partials/_hreflang.twig in the master layout)"
+HREFLANG=$(find public/theme -name '_hreflang.twig' -not -path '*/node_modules/*' 2>/dev/null | head -n 1 || true)
+MASTER=$(find public/theme -path '*/partials/_master.twig' -not -path '*/node_modules/*' 2>/dev/null | head -n 1 || true)
+if [ -n "$HREFLANG" ]; then
+    if [ -n "$MASTER" ] && ! grep -q "_hreflang.twig" "$MASTER"; then
+        fail "$HREFLANG exists but $MASTER does not include it — add {% include 'partials/_hreflang.twig' ignore missing %} to the seo block (Step 6)"
+    elif grep -qE "['\"]${TARGET_LOCALE}['\"]" "$HREFLANG"; then
+        pass "'$TARGET_LOCALE' is in the locales list of $HREFLANG"
+    else
+        fail "'$TARGET_LOCALE' is not in the locales list of $HREFLANG — search engines do not learn about this version (Step 6)"
+    fi
+# Page <link> tags only: the sitemap template's <xhtml:link rel="alternate" hreflang> does not count.
+elif grep -rqE '<link[^>]*rel="alternate"[^>]*hreflang|<link[^>]*hreflang[^>]*rel="alternate"' public/theme --include='*.twig' 2>/dev/null; then
+    pass "the theme prints its own <link rel=\"alternate\" hreflang> tags"
+else
+    fail "no <link rel=\"alternate\" hreflang> in the theme — copy examples/_hreflang.twig and include it in the master layout (Step 6)"
 fi
 
 echo ""

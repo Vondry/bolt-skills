@@ -106,6 +106,10 @@ if [ -f "$PARTIAL" ]; then
     grep -q "theme/contact" "$PARTIAL" && grep -q "theme/legal" "$PARTIAL" \
         && pass "rendered from theme.yaml contact: and legal: (AG-04)." \
         || fail "partials/_legal-identity.twig must read theme.yaml contact: and legal: — facts typed into the template drift (AG-04)."
+    # Bolt returns theme.yaml blocks as collections: a key set to ~ (dic: ~) throws on access and
+    # every page answers 500. The current partial converts them with toArray() first.
+    grep -q "toArray()" "$PARTIAL" \
+        || fail "partials/_legal-identity.twig reads theme.yaml without toArray() — with dic: ~ (or any ~ value) every page answers 500. Copy examples/_legal-identity.twig."
     INCLUDED_IN=$(grep -rlE "_legal-identity\.twig" "$THEME_DIR" --include="*.twig" --exclude-dir=node_modules 2>/dev/null | grep -v "partials/_legal-identity.twig" || true)
     if echo "$INCLUDED_IN" | grep -qiE "footer|_master\.twig"; then
         pass "included in $(echo "$INCLUDED_IN" | grep -iE "footer|_master\.twig" | head -n 1) (every page)."

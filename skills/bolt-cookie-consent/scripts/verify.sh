@@ -109,6 +109,13 @@ MASTER_FILE="$THEME_DIR/partials/_master.twig"
 for partial in _privacy-macros.twig _cookie-table.twig; do
     [ -f "$THEME_DIR/partials/$partial" ] || fail "partials/$partial missing (used by the privacy page and the banner)."
 done
+# Bolt returns theme.yaml blocks as collections: |column('category') finds nothing in them (no
+# consent categories → no banner, no consent configuration) and a key set to ~ throws on access.
+for file in "$THEME_DIR/partials/_consent-mode.twig" "$THEME_DIR/partials/_cookie-banner.twig" "$THEME_DIR/partials/_privacy-form-note.twig" "$THEME_DIR/static-pages/gdpr.twig"; do
+    if [ -f "$file" ] && grep -qE "config\.get\('theme/(privacy|analytics)'\)" "$file" && ! grep -q "toArray()" "$file"; then
+        fail "${file#$THEME_DIR/} reads theme.yaml privacy: / analytics: without toArray() — Bolt's collections make the banner disappear and ~ values throw. Copy the current example."
+    fi
+done
 if [ $HAS_CONSENT -eq 1 ]; then
     [ -f "$BANNER_FILE" ] || fail "partials/_cookie-banner.twig missing."
     [ -f "$CONSENT_FILE" ] || fail "partials/_consent-mode.twig missing."

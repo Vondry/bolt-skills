@@ -203,7 +203,7 @@ The maintenance page can be shown without anyone noticing: maintenance mode left
 - shows **no status code**: the `503` watermark means nothing to a visitor. `_helper_scene.twig` renders the ghost only when `code` is passed;
 - says that the site is being worked on, asks the visitor to try again later, and offers a *Zkusit znovu* button (`app.request.uri`).
 
-`verify.sh` fails on `setcontent` / `menu_array()` in either page, the layout or the scene, and warns on `tel:` / `mailto:` links in the 503 page.
+`verify.sh` fails on `setcontent` / `menu_array()` in either page, the layout or the scene, and warns on `tel:` / `mailto:` links in the 503 page — also when they come from the translation catalog (`__('error.503.note')` resolved in `translations/*.xlf`) or from `theme/contact/…` in `theme.yaml`. A time promise inside a translated text ("back within a few hours") is not detected; read the 503 units of the catalogs.
 
 ### Point the 500 and 503 config at a root entrypoint (no `/`)
 
@@ -392,6 +392,6 @@ vendor/tomvondracek/bolt-skills/skills/bolt-helper-pages/scripts/verify.sh
 2. **Template files:** Confirms all 4 error templates and the 2 base layouts exist under `public/theme/<themename>/helper-pages/`.
 3. **Tailwind Bundle Isolation:** Scans helper templates to confirm they do NOT introduce rogue one-off Tailwind utilities, and checks whether Tailwind build config excludes `helper-pages/` (preventing bundle bloat).
 4. **SEO Protection:** Checks for `<meta name="robots" content="noindex, follow">`.
-5. **500 / 503 Safety Check:** Validates that `internal-server-error.500.twig`, `maintenance.503.twig`, the standalone layout and the scene contain zero database lookups (`setcontent`, `menu_array()`), and that both pages extend `_helper_template_without_master.twig`. Warns on `tel:` / `mailto:` contact links in the 503 page.
+5. **500 / 503 Safety Check:** Validates that `internal-server-error.500.twig`, `maintenance.503.twig`, the standalone layout and the scene contain zero database lookups (`setcontent`, `menu_array()`), and that both pages extend `_helper_template_without_master.twig`. Warns on `tel:` / `mailto:` contact links in the 503 page, in the catalog units its `__()` keys resolve to, and on `theme/contact/…` passed into it.
    It also fails when `internal_server_error` or `maintenance` names a path with `/` (Bolt looks it up as a record first) or its root entrypoint is missing.
 6. **Twig Syntax:** Runs `php bin/console lint:twig public/theme/<themename>/helper-pages` to guarantee error-free Twig compilation.

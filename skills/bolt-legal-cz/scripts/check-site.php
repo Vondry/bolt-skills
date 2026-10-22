@@ -179,7 +179,8 @@ if ($withAres && legal_ico_valid($ico)) {
 }
 $operator = $options['operator'];
 if ($operator === '' && $ares !== null) {
-    $operator = $ares['vr'] ? 'company' : ($ares['rzp'] ? 'trade' : '');
+    // VR covers every public register: only the Commercial Register makes a "company".
+    $operator = $ares['commercial'] ? 'company' : ($ares['vr'] ? 'other' : ($ares['rzp'] ? 'trade' : ''));
 }
 
 // ---------------------------------------------------------------- ID-01 name, ID-02 seat
@@ -216,7 +217,9 @@ if (isset($registryPatterns[$operator])) {
         : $fail("no registration entry for operator type „{$operator}“ — " . match ($operator) {
             'trade' => '„Podnikatel zapsaný v živnostenském rejstříku“',
             'company' => '„Zapsáno v obchodním rejstříku: <soud>, oddíl <X>, vložka <N>“',
-            default => 'the register or chamber list and number',
+            default => $ares !== null && $ares['vr']
+                ? "„Zapsáno {$ares['register_in']}: {$ares['court']}, oddíl {$ares['section']}, vložka {$ares['insert']}“"
+                : 'the register or chamber list and number',
         } . ' (ID-04, § 435 OZ)');
 } else {
     preg_match('~rejstř|evidenc|spisov\w+\s+značk~iu', $identityText) ? $ok('a registration entry is stated (ID-04)')
@@ -224,8 +227,8 @@ if (isset($registryPatterns[$operator])) {
 }
 if ($ares !== null && $ares['vr'] && $ares['insert'] !== null) {
     preg_match('~vložk\w*\s*(č\.\s*)?' . preg_quote($ares['insert'], '~') . '\b|\b' . preg_quote((string) $ares['section'], '~') . '\s+' . preg_quote($ares['insert'], '~') . '\b~iu', $identityText)
-        ? $ok("Commercial Register file {$ares['section']} {$ares['insert']} matches ARES")
-        : $fail("Commercial Register file {$ares['section']} {$ares['insert']} ({$ares['court']}) not found (ID-04, ID-06)");
+        ? $ok("{$ares['register']} file {$ares['section']} {$ares['insert']} matches ARES")
+        : $fail("{$ares['register']} file {$ares['section']} {$ares['insert']} ({$ares['court']}) not found (ID-04, ID-06)");
 }
 
 // ---------------------------------------------------------------- ID-07 DIČ
