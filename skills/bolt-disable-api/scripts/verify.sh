@@ -109,7 +109,6 @@ if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
         "/api/contents/1"
         "/api/fields"
         "/api/relations"
-        "/index.php/api/contents"
     )
     DOC_ENDPOINTS=(
         "/api"
@@ -135,6 +134,32 @@ if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
     for ep in "${DOC_ENDPOINTS[@]}"; do
         check_endpoint "$ep" "401 403 404"
     done
+
+    # Front-controller path: refused, or redirected to /api/contents (bolt-htaccess redirects
+    # /index.php/… to the clean path, which is checked above). A 200 is a leak only when it
+    # carries API data; an HTML page means /index.php/… is not redirected (bolt-htaccess Pitfall 10).
+    FC_RESULT=$(curl -s -o /dev/null -w "%{http_code}|%{content_type}|%{redirect_url}" "$BASE_URL/index.php/api/contents" || true)
+    IFS="|" read -r FC_STATUS FC_TYPE FC_LOCATION <<< "$FC_RESULT"
+    case "$FC_STATUS" in
+        401|403) echo "  /index.php/api/contents -> HTTP $FC_STATUS (BLOCKED/PASSED)" ;;
+        301|302|307|308)
+            if [[ "$FC_LOCATION" == */api/contents && "$FC_LOCATION" != *index.php* ]]; then
+                echo "  /index.php/api/contents -> HTTP $FC_STATUS to /api/contents (REDIRECTED/PASSED)"
+            else
+                echo "  /index.php/api/contents -> HTTP $FC_STATUS to $FC_LOCATION (FAILED - expected a redirect to /api/contents)"
+                FAILED=1
+            fi ;;
+        200)
+            if [[ "$FC_TYPE" == *json* ]]; then
+                echo "  /index.php/api/contents -> HTTP 200 $FC_TYPE (FAILED - the API answers through the front controller)"
+                FAILED=1
+            else
+                echo "  /index.php/api/contents -> HTTP 200 $FC_TYPE (API not exposed; WARNING: /index.php/… renders a"
+                echo "    page instead of redirecting — fix it with bolt-htaccess Pitfall 10)"
+            fi ;;
+        *) echo "  /index.php/api/contents -> HTTP $FC_STATUS (FAILED - expected 401, 403 or a redirect to /api/contents)"
+           FAILED=1 ;;
+    esac
 
     # Test GraphQL POST
     GQL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/graphql" \
