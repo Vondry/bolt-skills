@@ -221,6 +221,19 @@ for ts_mod in auto-scroll.ts menu.ts locale-switcher.ts photoswipe.ts; do
     fi
 done
 
+# A gallery in the templates needs the lightbox wired (import, npm dependency, CSS)
+if grep -rqs --include='*.twig' 'photoswipe-gallery' "$THEME_DIR" --exclude-dir=node_modules; then
+    if ! grep -qsE "^import '\./photoswipe'" "$THEME_DIR/js/src/index.ts"; then
+        TOOL_ERRORS+=("Templates use .photoswipe-gallery but js/src/index.ts does not import './photoswipe'")
+    fi
+    if ! grep -qs '"photoswipe"' "$THEME_DIR/package.json"; then
+        TOOL_ERRORS+=("Templates use .photoswipe-gallery but package.json has no photoswipe dependency")
+    fi
+    if ! grep -qs 'photoswipe/dist/photoswipe.css' "$THEME_DIR/css/tailwind/index.css"; then
+        TOOL_ERRORS+=("Templates use .photoswipe-gallery but css/tailwind/index.css does not @import photoswipe.css")
+    fi
+fi
+
 # Check Article CSS assets
 if [ ! -f "$THEME_DIR/css/article/grid.css" ]; then
     TOOL_ERRORS+=("Missing css/article/grid.css")

@@ -394,3 +394,17 @@ button[aria-expanded="true"] .rotate-svg {
 [data-dropdown-toggle] > * {
     pointer-events: none;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Gallery Lightbox Caption (PhotoSwipe 5, js/src/photoswipe.ts)
+ * ------------------------------------------------------------------ */
+.pswp__custom-caption {
+    position: absolute;
+    z-index: 10;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(transparent, color-mix(in srgb, var(--color-night) 85%, transparent));
+    @apply font-body text-sm text-night-ink text-center text-pretty pointer-events-none;
+}

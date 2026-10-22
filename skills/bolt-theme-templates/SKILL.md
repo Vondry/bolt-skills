@@ -316,6 +316,8 @@ The stretched link (`absolute inset-0` on the title link) makes the whole card c
 
 ### C. Pure Picture Component (`components/ui/picture.twig`)
 Dimensions come from the media library first (`image|media`), then from `image_dimensions()` (`bolt-runtime-extensions`) for images without a media entry. With `pswp: true` the picture is rendered as a PhotoSwipe slide link (`a.photoswipe-gallery__link` with `data-pswp-width` / `data-pswp-height`) — wrap the pictures of one gallery in `<div class="photoswipe-gallery">` (`js/src/photoswipe.ts`).
+
+Every photo gallery opens in this lightbox, also when the design shows none (a static design has no click state). The gallery container carries the lightbox's UI labels from the translation catalog — PhotoSwipe's own are English: `data-pswp-close-title="{{ __('gallery.close') }}"`, `data-pswp-zoom-title` (`gallery.zoom`), `data-pswp-arrow-prev-title` (`gallery.previous`), `data-pswp-arrow-next-title` (`gallery.next`), `data-pswp-error-msg` (`gallery.error`). Put the alt text in a hidden `.photoswipe-gallery__caption` inside the link to show it as the lightbox caption; a link whose image has no alt gets `aria-label="{{ __('gallery.open_photo', { '%index%': loop.index }) }}"`. Galleries with their own tile layout (2×2 first tile, fixed row heights) keep the same contract on their own `<a>` tiles instead of `picture.twig`.
 ```twig
 {#
   Pure Component: Responsive Picture / Image
@@ -1040,7 +1042,12 @@ The homepage stays free of `setcontent`: the query lives in this container.
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
 
             {# Left: Media. One PhotoSwipe gallery for the main image and the thumbnails. #}
-            <div class="photoswipe-gallery flex flex-col gap-4">
+            <div data-pswp-close-title="{{ __('gallery.close') }}"
+                 data-pswp-zoom-title="{{ __('gallery.zoom') }}"
+                 data-pswp-arrow-prev-title="{{ __('gallery.previous') }}"
+                 data-pswp-arrow-next-title="{{ __('gallery.next') }}"
+                 data-pswp-error-msg="{{ __('gallery.error') }}"
+                 class="photoswipe-gallery flex flex-col gap-4">
                 {% if record.image is defined and record.image is not empty %}
                     <div class="rounded-md overflow-hidden border border-stroke aspect-4/3 bg-surface">
                         {% include 'components/ui/picture.twig' with {
