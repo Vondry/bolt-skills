@@ -31,6 +31,7 @@ FAILED=0
 WARNINGS=0
 ROOT_HTACCESS=".htaccess"
 PUBLIC_HTACCESS="public/.htaccess"
+HAS_INDEX_PHP_REDIRECT=""
 
 # -------------------------------------------------------------
 # 1. Check Root .htaccess (Tier 1: HTTPS & public/ rewrite)
@@ -109,7 +110,9 @@ else
 
     # /index.php/… and /domains/<domain>/… in the requested URL become Symfony's base URL, which
     # Bolt caches into canonical links, the sitemap and llms.txt (Pitfall 10).
-    if ! grep -qE '^\s*RewriteCond\s+%\{THE_REQUEST\}.*index\\\.php' "$PUBLIC_HTACCESS"; then
+    if grep -qE '^\s*RewriteCond\s+%\{THE_REQUEST\}.*index\\\.php' "$PUBLIC_HTACCESS"; then
+        HAS_INDEX_PHP_REDIRECT=1
+    else
         echo "  ERROR: no redirect of /index.php/… based on %{THE_REQUEST} — a request for /index.php/page"
         echo "         turns the script path into the base URL of canonical links, the sitemap and llms.txt."
         echo "         Copy the three rules after 'RewriteEngine On' from examples/public.htaccess (Pitfall 10)."
@@ -389,8 +392,19 @@ if curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     fi
 
     # The front controller in the URL is redirected away before Symfony sees it (Pitfall 10).
-    TARGET=$(curl -s -k -o /dev/null --max-time 10 -w "%{http_code} %{redirect_url}" "$BASE_URL/index.php/bolt-htaccess-probe?x=1" || true)
+    # Requested only when the project's public/.htaccess has the rules: on a site without them the
+    # request itself puts the script path into Bolt's cached links (canonical, llms.txt) for the
+    # cache lifetime — the probe would cause the bug it looks for. If the local file has the rules
+    # but the server's copy does not, the probe fails and that one request has the same effect.
+    if [ -z "$HAS_INDEX_PHP_REDIRECT" ]; then
+        TARGET="skip"
+        echo "  SKIPPED: /index.php/… not requested — without the Pitfall 10 rules in public/.htaccess (section 2)"
+        echo "           the request would put the script path into Bolt's cached canonical links and llms.txt."
+    else
+        TARGET=$(curl -s -k -o /dev/null --max-time 10 -w "%{http_code} %{redirect_url}" "$BASE_URL/index.php/bolt-htaccess-probe?x=1" || true)
+    fi
     case "$TARGET" in
+        skip) ;;
         "301 "*"/bolt-htaccess-probe?x=1")
             if [ "${TARGET#*index.php}" = "$TARGET" ]; then
                 echo "  /index.php/bolt-htaccess-probe?x=1 -> ${TARGET} (redirect OK)"
@@ -399,7 +413,8 @@ if curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
                 FAILED=1
             fi ;;
         *) echo "  ERROR: /index.php/bolt-htaccess-probe?x=1 -> $TARGET (expected 301 to /bolt-htaccess-probe?x=1;"
-           echo "         Symfony would take the script path as the base URL — Pitfall 10)"
+           echo "         the local public/.htaccess has the rules — upload it to the server. Until then Symfony"
+           echo "         takes the script path as the base URL, also for this request — Pitfall 10)"
            FAILED=1 ;;
     esac
 
