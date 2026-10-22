@@ -2,6 +2,20 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.4.0 — 2026-10-22
+
+Every photo gallery opens in the PhotoSwipe lightbox, and template classes use their canonical token form — both from building fmautoservis.cz.
+
+### Added
+- `bolt-theme-templates/scripts/canonical-classes.mjs`: reports every template class that has a shorter canonical form — the IDE's "The class `rounded-[var(--radius-card)]` can be written as `rounded-card`" hint — using the theme's own design system (`tailwindcss canonicalize`, Tailwind CSS v4.3+). Unlike the IDE inspection it also sees classes inside Twig strings and interpolated attributes; `--fix` rewrites the templates. `verify.sh` runs it as step 8 (now 9 steps) and fails until the templates are canonical.
+- Rules for canonical classes and tokens over arbitrary values (`bolt-theme-templates` section 5, `bolt-tailwind-theme` section 3, `WORKFLOWS.md` 6.1): IDE diagnostics while editing, the script before the gate; a value match is not a meaning match; a value repeated with the same meaning becomes a role-named token (`--tracking-label`, `--spacing-page`, `--text-page`, `--breakpoint-3xs`).
+- `bolt-theme-init` `photoswipe.ts`: localised UI — the button titles and error message come from the first gallery's `data-pswp-close-title`, `-zoom-title`, `-arrow-prev-title`, `-arrow-next-title`, `-error-msg` (new `gallery.*` units in the `bolt-theme-templates` catalogs); up to 12 slides kept decoded.
+- `bolt-tailwind-theme` 5.H: `.pswp__custom-caption` styles (the module registered the caption element, but no skill styled it).
+- `bolt-theme-init/scripts/verify.sh`: fails when templates use `.photoswipe-gallery` without the `./photoswipe` import, the `photoswipe` npm dependency or the CSS `@import`.
+
+### Changed
+- Any photo gallery gets the PhotoSwipe lightbox, also when the design does not show one (a static design has no click state) — `WORKFLOWS.md` decision matrix and 6.1, `bolt-build` intake S6, `bolt-theme-init`, `bolt-theme-templates`.
+
 ## 1.3.0 — 2026-10-22
 
 ContentType safety (reserved field names, explicit slugs, English configuration) with a config-notices gate before content, and fixes from the fmautoservis.cz audit.
