@@ -2,6 +2,28 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Fixes found by auditing rockfest-kurim.cz (WEDOS) with `bolt-audit` and fixing the findings. They were checked on a local Apache with the project's `.htaccess` and in Bolt 6.1.9's own Twig environment.
+
+### Fixed
+- `bolt-htaccess`: `/index.php/<page>` answered 200 with the homepage. Symfony then took the hosting path as its base URL, and Bolt cached it into the canonical links, `/sitemap.xml` and `/llms.txt` (`https://example.cz/domains/example.cz/public/index.php/…`). Any visitor could trigger this. `examples/public.htaccess` now redirects `/…/index.php/page` to `/…/page` and `/domains/<host>[/public]/page` to `/page`, and answers 404 to any other path naming `index.php`. All three rules match `%{THE_REQUEST}`, so internal rewrites never trigger them. New Pitfall 10. `verify.sh` section 2 fails without the rules; section 6 expects `/index.php/bolt-htaccess-probe?x=1` → 301. Pitfall 9 no longer claims rockfest-kurim.cz sits directly in `www/`.
+- `bolt-legal-cz`: with `dic: ~` (the scaffold default) or any other `~` value, `_legal-identity.twig` made every page answer 500 (`Method Bolt\Collection\DeepCollection::dic does not exist`). The partial now converts `contact:` and `legal:` with `toArray()`, and `verify.sh` step 3 fails on a copy without it.
+- `bolt-legal-cz`: ARES reports every public register as one source (VR). `check-site.php` and `check-legal.php` therefore treated a spolek, nadace, ústav, o.p.s. or SVJ as a Commercial Register company and asked for „Zapsáno v obchodním rejstříku“. The register is now derived from the section of the spisová značka (L = spolkový rejstřík, …), such operators are `other`, and the scripts print the sentence to use and compare `registry.text` with ARES. The scaffold's placeholder for `other` is an association example, not an attorney's.
+- `bolt-cookie-consent`: in Bolt, `theme.yaml` blocks are collections. `|column('category')` found no consent categories in them, so `_consent-mode.twig` and `_cookie-banner.twig` rendered nothing. `gdpr.twig` threw on `summary: ~`. Every template now converts `privacy:` / `analytics:` with `toArray()`, and `verify.sh` step 3 fails on a copy without it.
+- `bolt-menu` `verify.sh`: a backtick in the embedded PHP ran as a shell command (`locales:: command not found`).
+- `bolt-disable-api` `verify.sh`: `/index.php/api/contents` may answer a redirect to `/api/contents`. A 200 with HTML (the homepage) is reported as the `bolt-htaccess` Pitfall 10 problem, not as an exposed API.
+
+### Added
+- `bolt-add-language`: `examples/_hreflang.twig`, `<link rel="alternate" hreflang>` for every locale plus `x-default`. Neither Bolt nor bolt-seo prints these. The `bolt-theme-init` master layout (and the `WORKFLOWS.md` skeleton) includes it in the `seo` block, so the 404 / 403 pages carry none. `verify.sh` section 7 checks the include and the locale list.
+- `bolt-extension-setup` § 2.6: `robots.txt` names the sitemap. `verify.sh` warns without the line.
+- `bolt-runtime-extensions` `verify.sh`: calls `locale_link()` and fails when `javascript:` / `data:` URLs pass or the query string and hash are lost.
+- `bolt-helper-pages` `verify.sh`: catches contact details on the 503 page that come from the catalog units it uses or from `theme/contact/…`.
+- `bolt-menu` `verify.sh`: warns when `js/src/menu.ts` has no Escape handling.
+- `bolt-code-quality` `verify.sh`: warns on the deprecated `BracesFixer` / `NewWithBracesFixer` in `ecs.php`.
+- `bolt-audit`: example-map row for `_hreflang.twig`; checklist points for the hosting path in canonical / sitemap / llms.txt, the 503 catalog texts and hreflang.
+- `WORKFLOWS.md` Integration Contract: read whole `theme.yaml` blocks through `toArray()`.
+
 ## 1.6.1 — 2026-10-22
 
 The www and HTTPS redirects work on hosts that serve the domain from a webroot subfolder. On fmautoservis.cz (WEDOS, `www/domains/fmautoservis.cz/`), `https://www.fmautoservis.cz/` redirected to `https://fmautoservis.cz/domains/fmautoservis.cz/` (404), and plain-HTTP links did the same.
