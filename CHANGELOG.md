@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.6.2 — 2026-10-22
 
 Fixes found by auditing rockfest-kurim.cz (WEDOS) with `bolt-audit` and fixing the findings. They were checked on a local Apache with the project's `.htaccess` and in Bolt 6.1.9's own Twig environment.
 
@@ -23,6 +23,11 @@ Fixes found by auditing rockfest-kurim.cz (WEDOS) with `bolt-audit` and fixing t
 - `bolt-code-quality` `verify.sh`: warns on the deprecated `BracesFixer` / `NewWithBracesFixer` in `ecs.php`.
 - `bolt-audit`: example-map row for `_hreflang.twig`; checklist points for the hosting path in canonical / sitemap / llms.txt, the 503 catalog texts and hreflang.
 - `WORKFLOWS.md` Integration Contract: read whole `theme.yaml` blocks through `toArray()`.
+
+### Migrating a project
+- **`bolt-legal-cz` / `bolt-cookie-consent` in use:** copy the current `_legal-identity.twig`, `_consent-mode.twig`, `_cookie-banner.twig`, `_privacy-form-note.twig` and `gdpr.twig` from the skills' `examples/`. A copy without `toArray()` now fails `verify.sh`.
+- **Apache sites:** add the three `%{THE_REQUEST}` rules from `examples/public.htaccess` right after `RewriteEngine On` in `public/.htaccess`, upload it, and purge `/llms.txt` in any CDN.
+- **Multilingual sites:** copy `examples/_hreflang.twig` to `partials/`, set its `locales` list, and include it after `{{ seo.metatags() }}` in the master layout's `seo` block.
 
 ## 1.6.1 — 2026-10-22
 
