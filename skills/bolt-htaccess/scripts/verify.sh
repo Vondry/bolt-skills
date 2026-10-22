@@ -74,6 +74,17 @@ if ! grep -qsE 'RewriteCond[[:space:]]+%\{HTTP_HOST\}[[:space:]]+!?\^www' "$ROOT
     WARNINGS=$((WARNINGS + 1))
 fi
 
+# Redirect targets are built from $1, never from %{REQUEST_URI}: on hosts that serve the domain from a
+# webroot subfolder (WEDOS www/domains/<domain>/), REQUEST_URI carries that prefix and www.example.cz
+# redirects to https://example.cz/domains/example.cz/ (Pitfall 9).
+BAD_REDIRECTS=$(grep -nsE '^[[:space:]]*RewriteRule[[:space:]].*%\{REQUEST_URI\}.*R=30' "$ROOT_HTACCESS" "$PUBLIC_HTACCESS" || true)
+if [ -n "$BAD_REDIRECTS" ]; then
+    echo "  ERROR: redirect target built from %{REQUEST_URI} — on a host with a webroot subfolder it"
+    echo "         redirects to /domains/<domain>/… Use RewriteRule (.*) https://…/\$1 (SKILL.md Pitfall 9):"
+    echo "$BAD_REDIRECTS" | sed 's/^/           /'
+    FAILED=1
+fi
+
 # -------------------------------------------------------------
 # 2. Check public/.htaccess (Tier 2: Charset & Front Controller)
 # -------------------------------------------------------------
@@ -364,6 +375,22 @@ if curl -s -k --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
             echo "  WARNING: /theme/$THEME_NAME/css/index.css -> HTTP $STATUS — the allowlist blocks the built stylesheet."
             WARNINGS=$((WARNINGS + 1))
         fi
+    fi
+
+    # Production only: the www and plain-HTTP redirects land on the same path of the canonical
+    # https:// host in one hop — no /domains/<domain>/ prefix (Pitfall 9).
+    LIVE_HOST=$(echo "$BASE_URL" | sed -E 's#^https://([^/:]+).*#\1#')
+    if [ "${BASE_URL#https://}" != "$BASE_URL" ] && ! echo "$LIVE_HOST" | grep -qE '^(localhost|127\.|www\.)|\.(test|local|localhost)$'; then
+        EXPECTED="https://$LIVE_HOST/bolt-htaccess-probe?x=1"
+        for FROM in "https://www.$LIVE_HOST" "http://$LIVE_HOST"; do
+            TARGET=$(curl -s -o /dev/null --max-time 10 -w "%{http_code} %{redirect_url}" "$FROM/bolt-htaccess-probe?x=1" || true)
+            case "$TARGET" in
+                000*) echo "  $FROM/ -> no answer (SKIPPED: host does not resolve or refuses)" ;;
+                "301 $EXPECTED") echo "  $FROM/bolt-htaccess-probe?x=1 -> 301 $EXPECTED (redirect OK)" ;;
+                *) echo "  ERROR: $FROM/bolt-htaccess-probe?x=1 -> $TARGET (expected 301 $EXPECTED; Pitfall 9)"
+                   FAILED=1 ;;
+            esac
+        done
     fi
 else
     echo "SKIPPED (Local server not running on $BASE_URL)"

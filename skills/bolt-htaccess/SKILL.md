@@ -94,15 +94,19 @@ RewriteEngine on
 # canonical host is www, replace the two lines with (it also redirects localhost and staging hosts —
 # add a RewriteCond %{HTTP_HOST} !^(localhost|staging\.) [NC] for those):
 #   RewriteCond %{HTTP_HOST} !^www\. [NC]
-#   RewriteRule (.*) https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+#   RewriteRule (.*) https://www.%{HTTP_HOST}/$1 [L,R=301]
+# The redirects use $1 (the path relative to this folder), not %{REQUEST_URI}: hosts that serve a
+# domain from a subfolder of the webroot (WEDOS: www/domains/<domain>/) forward it there with an
+# internal rewrite, so REQUEST_URI carries that prefix (www.example.cz/ →
+# https://example.cz/domains/example.cz/). Apache keeps the query string.
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-RewriteRule (.*) https://%1%{REQUEST_URI} [L,R=301]
+RewriteRule (.*) https://%1/$1 [L,R=301]
 
 # HTTPS redirect — works both on direct Apache TLS and behind a TLS-terminating proxy:
 # redirect when Apache itself did not receive HTTPS AND no proxy reported an HTTPS request.
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
-RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteRule (.*) https://%{HTTP_HOST}/$1 [L,R=301]
 
 # Redirect all traffic to ./public folder
 RewriteRule (.*) public/$1 [QSA,L]
@@ -115,17 +119,17 @@ RewriteRule (.*) public/$1 [QSA,L]
 - `RewriteCond %{HTTPS} off`: Apache itself did not receive the request over TLS (plain HTTP on a direct connection — or any request behind a proxy that terminates TLS).
 - `RewriteCond %{HTTP:X-Forwarded-Proto} !https`: No reverse proxy, load balancer or Cloudflare reported that the visitor used HTTPS. A missing header also matches, so direct HTTP requests are redirected.
 - The two conditions are combined with AND: redirect only when neither Apache nor a proxy saw HTTPS. Do **not** use `^http$` for the header condition — without a proxy the header is absent, the condition never matches, and plain HTTP is never redirected.
-- `RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]`: Issues an HTTP 301 Permanent Redirect to HTTPS.
+- `RewriteRule (.*) https://%{HTTP_HOST}/$1 [L,R=301]`: Issues an HTTP 301 Permanent Redirect to HTTPS. Both redirects build the target from `$1`, never from `%{REQUEST_URI}` (Pitfall 9).
 - `RewriteRule (.*) public/$1 [QSA,L]`: Transparently rewrites the URL into the `public/` directory without changing the URL visible in the user's browser. `QSA` preserves query parameters (`?page=2`), and `L` stops further rewriting in the root context.
 
 **Document root on `public/`** (no root file): put the canonical-host and HTTPS rules at the top of the `<IfModule mod_rewrite.c>` block of `public/.htaccess` instead:
 
 ```apache
     RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+    RewriteRule (.*) https://%1/$1 [L,R=301]
     RewriteCond %{HTTPS} off
     RewriteCond %{HTTP:X-Forwarded-Proto} !https
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    RewriteRule (.*) https://%{HTTP_HOST}/$1 [L,R=301]
 ```
 
 ---
@@ -356,7 +360,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://example.com/var/data/bolt.sqlit
   ```apache
   RewriteCond %{HTTPS} off
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
-  RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  RewriteRule (.*) https://%{HTTP_HOST}/$1 [L,R=301]
   ```
 
 ### Pitfall 4: `node_modules/` Inside the Public Theme
@@ -379,3 +383,8 @@ curl -s -o /dev/null -w "%{http_code}\n" https://example.com/var/data/bolt.sqlit
 ### Pitfall 8: "Pages Are Sent Uncompressed" on a Local Apache
 - **Cause:** Neither Bolt nor Symfony compresses responses in any `APP_ENV`, and a local Apache (`serve-apache.sh`, MAMP, Homebrew) has no compression configured. The hosts these sites run on compress at server level: Apache / ATS on 185.8.237.11 and the openresty proxy each answered gzip for every page, CSS and JS file (2026-10-22), without any rule in the sites' `.htaccess`.
 - **Fix:** None in `.htaccess`. The template deliberately has no `mod_deflate` block. Check the production host instead, after the first deployment: `curl -s -H 'Accept-Encoding: gzip, br' -D - -o /dev/null https://example.cz/ | grep -i content-encoding`. Only a host that answers without `Content-Encoding` needs compression, and that belongs in its server configuration.
+
+### Pitfall 9: Redirects to `/domains/<domain>/…`
+- **Symptom:** `https://www.example.cz/` answers `301` → `https://example.cz/domains/example.cz/` (404), and `http://example.cz/page` → `https://example.cz/domains/example.cz/page`. Requests that need no redirect work, so the bug shows only on www or plain-HTTP links. Browsers cache the broken 301, so after the fix test in a private window. Seen on fmautoservis.cz (WEDOS, 2026-10-22). rockfest-kurim.cz on the same provider was not affected, because its site sits directly in `www/`.
+- **Cause:** The redirect target used `%{REQUEST_URI}`. WEDOS (and other shared hosts) serve an additional domain from `www/domains/<domain>/`, and the host's `www/.htaccess` forwards the request there with an internal rewrite. From then on `REQUEST_URI` is `/domains/<domain>/page`, not `/page`.
+- **Fix:** Build every redirect target from the matched path: `RewriteRule (.*) https://%1/$1 [L,R=301]` and `RewriteRule (.*) https://%{HTTP_HOST}/$1 [L,R=301]`, as the template does. In a `.htaccess`, `$1` is relative to that file's folder on every layout, and Apache appends the query string. `verify.sh` section 1 fails on `%{REQUEST_URI}` in a redirect target. Set `BOLT_BASE_URL` to the production `https://` address to also check the live www redirect.
