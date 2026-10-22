@@ -315,7 +315,7 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 | **More than one business on the website?** | Ask `bolt-cookie-consent`'s two controller-model questions (joint / separate / hybrid) — never guess the model | Controller model `single` |
 | **Apache?** | `bolt-htaccess` (2.1); root `.htaccess` only when the domain's document root is the project root | Nginx: use the Nginx block of `bolt-asset-caching` (2.2); run `verify-all.sh --skip=bolt-htaccess` |
 | **Docker?** | `bolt-timezone` INI and compose layers (1.1); Nginx block (2.2) if the container uses Nginx | `bolt-timezone` config and Kernel layers only |
-| **Deployed by uploading files (SFTP / FTP)?** | Committed `.env` holds production-safe defaults, secrets only in the server's `.env.local`, excluded upload paths, `var/cache/prod/` deleted after each upload (`bolt-security-hardening` Steps 1, 7) | Same `.env` rules; the deploy script runs `cache:clear` |
+| **Deployed by uploading files (SFTP / FTP)?** | Committed `.env` holds every production value including `APP_SECRET`, so the upload runs on its own; `.env.local` is local development only and never uploaded; excluded upload paths, `var/cache/prod/` deleted after each upload (`bolt-security-hardening` Steps 1, 7) | Same `.env` rules; the deploy script runs `cache:clear` |
 | **Editors other than the site's own staff?** | Keep SVG and iframes out (`bolt-security-hardening` Step 4) and consider the strict CSP (Step 6b) | Same defaults — they cost nothing |
 | **External consumers of the REST/GraphQL API?** | Lock down permissions instead of the deny-all firewall rule (1.3); run `verify-all.sh --skip=bolt-disable-api` and test the endpoints manually | Fully disable the API (default) |
 
@@ -330,7 +330,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 **Goal:** the project boots with correct time handling, known locales, no public API, hardened security configuration and code-quality tooling in place.
 
 **Prerequisites:**
-- A Bolt 6.1 project that boots: `composer create-project bolt/project <dir>`, SQLite from Bolt's default `.env` (set `DATABASE_URL` in `.env.local` only for another database), `php bin/console bolt:setup --no-fixtures` (no sample content), local server reachable at the URL recorded as `BOLT_BASE_URL`.
+- A Bolt 6.1 project that boots: `composer create-project bolt/project <dir>`, SQLite from Bolt's default `.env` (set `DATABASE_URL` in `.env.local` only for another local database), `php bin/console bolt:setup --no-fixtures` (no sample content), local server reachable at the URL recorded as `BOLT_BASE_URL`.
 - Skills installed: `composer require --dev tomvondracek/bolt-skills`.
 - Git initialised with a clean baseline commit.
 - Node.js and npm available (needed from Phase 4).
@@ -358,7 +358,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 - *Verify:* `bash $SKILLS/bolt-code-quality/scripts/verify.sh`
 
 ### 1.5 Application Security Baseline (`bolt-security-hardening`, Steps 1–5)
-- **`.env`:** production-safe defaults (`APP_ENV=prod`, `APP_DEBUG=0`, empty `APP_SECRET`, `SYMFONY_TRUSTED_HOSTS` from the site plan); the local `.env.local` gets `APP_ENV=dev`, the `APP_SECRET` that `bolt:setup` wrote into `.env` (move it — never commit it), an empty `SYMFONY_TRUSTED_HOSTS` and an empty `BOLT_CANONICAL`. `.env` sets `BOLT_CANONICAL` to the canonical host of the site plan.
+- **`.env`:** every production value from `examples/env`: `APP_ENV=prod`, `APP_DEBUG=0`, a fresh `APP_SECRET` (the generate command of Step 1), `SYMFONY_TRUSTED_HOSTS` and `BOLT_CANONICAL` from the site plan, and the production `DATABASE_URL` / `MAILER_DSN`. It is committed and uploaded. The local `.env.local` is `examples/env.local` only: `APP_ENV=dev`, `APP_DEBUG=1`, an empty `SYMFONY_TRUSTED_HOSTS` and an empty `BOLT_CANONICAL`, and no `APP_SECRET`.
 - Copy `config/packages/security_hardening.yaml` and `config/validator/user.yaml`; `login_throttling` (5 / 15 minutes) in `security.yaml`; `bolt.remember_lifetime: 604800`.
 - Merge the security keys into `config/bolt/config.yaml` (upload whitelist, HTML cleaner without `iframe`, `query_search` off, no version disclosure, `verify_peer: true`, reset-password notice off) and `config/bolt/permissions.yaml` (file editor for config / themes off, `ROLE_DEVELOPER` not assignable).
 - `php bin/console lint:yaml config --parse-tags && php bin/console cache:clear`
@@ -600,7 +600,7 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - `php bin/console cache:clear && APP_ENV=prod php bin/console cache:clear`
 
 ### 7.5 Production Deployment (`bolt-security-hardening`, Step 7)
-- **[SFTP]** Exclude `.env.local`, `var/`, `public/files/`, `public/thumbs/`, `.git/`, `node_modules/` (also inside the theme), `.idea/`, `tests/` in the SFTP client; create the server's `.env.local` once (`APP_SECRET`, other secrets) — never upload the local one.
+- **[SFTP]** Exclude `.env.local`, `var/`, `public/files/`, `public/thumbs/`, `.git/`, `node_modules/` (also inside the theme), `.idea/`, `tests/` in the SFTP client; the uploaded `.env` is all the server needs — never upload `.env.local` (it would switch production into dev mode).
 - Point the domain at `public/` if the host allows it; otherwise the root `.htaccess` (2.1) forwards.
 - Upload `vendor/` built with `make install_prod` (`composer install --no-dev --optimize-autoloader`), restore dev tools locally with `composer install`.
 - After every upload delete `var/cache/prod/` on the server; run `make db-migrate` where SSH exists.
@@ -666,7 +666,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 
 ### 8.5 Definition of Done
 - `verify-all.sh`: zero FAIL; warnings fixed or justified in the site plan.
-- `bolt-security-hardening/scripts/verify.sh` with `BOLT_BASE_URL` pointing at **production** after the first deployment: zero FAIL (the live section is the only check of the server's `.env.local`).
+- `bolt-security-hardening/scripts/verify.sh` with `BOLT_BASE_URL` pointing at **production** after the first deployment: zero FAIL (the live section confirms that no `.env.local` switched the server into dev or debug mode).
 - `make cscheck` and all linters from 8.1 pass.
 - Every row of the smoke-check table matches.
 - `bolt-theme-templates/scripts/verify.sh` reports no undefined classes (check [7/8]).
@@ -690,7 +690,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `/zasady-ochrany-osobnich-udaju` returns 404 | Route missing or below the `frontend:` import in `config/routes.yaml` (6.5 / 5.3) |
 | Publish dates shift after saving in the admin | Kernel timezone override missing or different from `config.yaml` (1.1) |
 | Thumbnails sent with `private, max-age=0` | `thumbs` missing from the `dev` firewall pattern (2.2) |
-| Production answers 500, `A non-empty secret is required` in `var/log/prod.log` | The server's `.env.local` has no `APP_SECRET` — intended fail-safe of 1.5 / 7.5 |
+| Production answers 500, `A non-empty secret is required` / `The secret for signing cursors must not be empty` in `var/log/prod.log` | `APP_SECRET` in `.env` is empty — generate it into `.env` (1.5) and upload again |
 | Production answers 400 for the real domain | The domain is missing from `SYMFONY_TRUSTED_HOSTS` (1.5) |
 | A theme image, font or favicon answers 403 | It lives outside `css/`, `js/`, `img/`, `images/`, `fonts/` or has a type the `bolt-htaccess` allowlist does not list — move it (2.1) |
 | Everyone is locked out after a few failed logins | A proxy in front of the site is not in `SYMFONY_TRUSTED_PROXIES`; all visitors share its IP (1.5) |
