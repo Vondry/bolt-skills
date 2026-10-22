@@ -106,7 +106,8 @@ if [ -n "$HREFLANG" ]; then
     else
         fail "'$TARGET_LOCALE' is not in the locales list of $HREFLANG — search engines do not learn about this version (Step 6)"
     fi
-elif grep -rqE 'rel="alternate"[^>]*hreflang|hreflang[^>]*rel="alternate"' public/theme --include='*.twig' 2>/dev/null; then
+# Page <link> tags only: the sitemap template's <xhtml:link rel="alternate" hreflang> does not count.
+elif grep -rqE '<link[^>]*rel="alternate"[^>]*hreflang|<link[^>]*hreflang[^>]*rel="alternate"' public/theme --include='*.twig' 2>/dev/null; then
     pass "the theme prints its own <link rel=\"alternate\" hreflang> tags"
 else
     fail "no <link rel=\"alternate\" hreflang> in the theme — copy examples/_hreflang.twig and include it in the master layout (Step 6)"
