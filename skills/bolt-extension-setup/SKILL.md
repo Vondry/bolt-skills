@@ -261,6 +261,18 @@ Create the file `public/theme/<themename>/extensions/sitemap.xml.twig` with the 
 {% endblock urlBlock -%}
 ```
 
+### 2.6 Name the Sitemap in `robots.txt`
+
+Crawlers look for the sitemap in `robots.txt`; without the line it is found only through Search Console. `public/robots.txt` (Symfony's default file, served by Apache as a static file) gets one absolute line — the `Sitemap:` directive does not accept a relative path:
+
+```text
+User-agent: *
+
+Sitemap: https://example.cz/sitemap.xml
+```
+
+Use the canonical host (`BOLT_CANONICAL`).
+
 ---
 
 ## 3. Vondry/bolt-llms-txt Setup
@@ -408,3 +420,4 @@ vendor/tomvondracek/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
 6. **Theme Extensions Directory:**
    * Verifies `sitemap.xml.twig` exists in `public/theme/<themename>/extensions/` and contains the singleton slug fix.
    * Verifies `llms.txt.twig` exists in `public/theme/<themename>/extensions/` and follows the `llmstxt.org` layout.
+   * Warns when `public/robots.txt` is missing or has no absolute `Sitemap: …/sitemap.xml` line (section 2.6).

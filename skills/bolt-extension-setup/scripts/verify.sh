@@ -222,6 +222,19 @@ else
     FAILED=1
 fi
 
+# robots.txt names the sitemap (section 2.6), so crawlers find it without Search Console.
+if [ -f "public/robots.txt" ]; then
+    if grep -qiE '^\s*Sitemap:\s*https?://[^ ]+/sitemap\.xml' public/robots.txt; then
+        echo "  ✅ public/robots.txt names the sitemap ($(grep -iE '^\s*Sitemap:' public/robots.txt | head -n 1 | tr -d '\r'))"
+    else
+        echo "  ⚠️  public/robots.txt has no 'Sitemap: https://<domain>/sitemap.xml' line (section 2.6)"
+        WARNINGS=$((WARNINGS+1))
+    fi
+else
+    echo "  ⚠️  public/robots.txt is missing — add one with a 'Sitemap: https://<domain>/sitemap.xml' line (section 2.6)"
+    WARNINGS=$((WARNINGS+1))
+fi
+
 # llms.txt check
 LLMS_FILE="$EXT_THEME_DIR/llms.txt.twig"
 if [ -f "$LLMS_FILE" ]; then
