@@ -347,7 +347,9 @@ fi
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
 BASE_URL="${BASE_URL%/}"
 echo -n "[6/6] Checking live HTTP responses against $BASE_URL... "
-if curl -s -k --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
+# 10 s: a production site on a cold cache (or behind a CDN) often needs more than 2 s; a closed
+# port still fails at once.
+if curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     echo "SERVER ONLINE"
 
     THEME_NAME=$(grep -E "^theme:" config/bolt/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)

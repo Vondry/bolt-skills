@@ -325,7 +325,9 @@ done
 [ -f "$CS_XLF" ] || fail "$CS_XLF missing — all banner and policy texts must exist in Czech (CB-23)."
 
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"
-if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
+# 10 s: a production site on a cold cache (or behind a CDN) often needs more than 2 s; a closed
+# port still fails at once.
+if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     HOME_HTML=$(curl -s --max-time 10 "$BASE_URL/" || true)
     if echo "$HOME_HTML" | grep -qE "<script[^>]+src=\"[^\"]*($TRACKER_RE)"; then
         fail "$BASE_URL/ loads a tracker script before consent (CB-01)."
