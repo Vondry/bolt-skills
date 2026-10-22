@@ -35,7 +35,7 @@ PUBLIC_HTACCESS="public/.htaccess"
 # -------------------------------------------------------------
 # 1. Check Root .htaccess (Tier 1: HTTPS & public/ rewrite)
 # -------------------------------------------------------------
-echo -n "[1/7] Checking root .htaccess... "
+echo -n "[1/6] Checking root .htaccess... "
 
 if [ ! -f "$ROOT_HTACCESS" ]; then
     echo "FAILED"
@@ -77,7 +77,7 @@ fi
 # -------------------------------------------------------------
 # 2. Check public/.htaccess (Tier 2: Charset & Front Controller)
 # -------------------------------------------------------------
-echo -n "[2/7] Checking public/.htaccess basic directives... "
+echo -n "[2/6] Checking public/.htaccess basic directives... "
 
 if [ ! -f "$PUBLIC_HTACCESS" ]; then
     echo "FAILED"
@@ -100,7 +100,7 @@ fi
 # -------------------------------------------------------------
 # 3. Allowlist for theme/, files/ and thumbs/
 # -------------------------------------------------------------
-echo "[3/7] Checking the allowlist for theme/, files/ and thumbs/..."
+echo "[3/6] Checking the allowlist for theme/, files/ and thumbs/..."
 
 # check_samples REGEX EXPECT SAMPLES... — EXPECT "allow" (must match) or "deny" (must not match).
 check_samples() {
@@ -176,7 +176,7 @@ fi
 # -------------------------------------------------------------
 # 4. Safety-net deny list (FilesMatch)
 # -------------------------------------------------------------
-echo -n "[4/7] Checking the deny list for the rest of public/... "
+echo -n "[4/6] Checking the deny list for the rest of public/... "
 if [ -f "$PUBLIC_HTACCESS" ]; then
     HAS_AUTHZ=$(grep -E "<IfModule mod_authz_core\.c>" "$PUBLIC_HTACCESS" || true)
     HAS_DENY=$(grep -E "Require all denied" "$PUBLIC_HTACCESS" || true)
@@ -296,7 +296,7 @@ fi
 # -------------------------------------------------------------
 # 5. Security headers for static files
 # -------------------------------------------------------------
-echo -n "[5/7] Checking security headers for static files... "
+echo -n "[5/6] Checking security headers for static files... "
 if [ -f "$PUBLIC_HTACCESS" ]; then
     MISSING_HEADERS=()
     grep -qE "Header[[:space:]]+always[[:space:]]+set[[:space:]]+Strict-Transport-Security" "$PUBLIC_HTACCESS" || MISSING_HEADERS+=("Strict-Transport-Security")
@@ -322,36 +322,11 @@ else
 fi
 
 # -------------------------------------------------------------
-# 6. Compression of text responses (mod_deflate)
-# -------------------------------------------------------------
-echo -n "[6/7] Checking compression of pages, CSS and JS... "
-if [ -f "$PUBLIC_HTACCESS" ]; then
-    DEFLATE_TYPES=$(grep -E "^[[:space:]]*AddOutputFilterByType[[:space:]]+DEFLATE" "$PUBLIC_HTACCESS" || true)
-    MISSING_TYPES=()
-    for type in text/html text/css text/javascript application/javascript; do
-        echo "$DEFLATE_TYPES" | grep -qF " $type" || MISSING_TYPES+=("$type")
-    done
-    if ! grep -q "<IfModule mod_deflate.c>" "$PUBLIC_HTACCESS"; then
-        echo "WARNING"
-        echo "  - No <IfModule mod_deflate.c> block: pages, CSS and JS are sent uncompressed (SKILL.md Step 7)"
-        WARNINGS=$((WARNINGS + 1))
-    elif [ ${#MISSING_TYPES[@]} -gt 0 ]; then
-        echo "WARNING"
-        echo "  - mod_deflate does not compress: ${MISSING_TYPES[*]} (SKILL.md Step 7)"
-        WARNINGS=$((WARNINGS + 1))
-    else
-        echo "PASSED (HTML, CSS and JavaScript compressed with mod_deflate)"
-    fi
-else
-    echo "SKIPPED (public/.htaccess missing)"
-fi
-
-# -------------------------------------------------------------
-# 7. Live HTTP Endpoint Test (Optional if server is running)
+# 6. Live HTTP Endpoint Test (Optional if server is running)
 # -------------------------------------------------------------
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
 BASE_URL="${BASE_URL%/}"
-echo -n "[7/7] Checking live HTTP responses against $BASE_URL... "
+echo -n "[6/6] Checking live HTTP responses against $BASE_URL... "
 if curl -s -k --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
     echo "SERVER ONLINE"
 
@@ -390,21 +365,6 @@ if curl -s -k --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
             WARNINGS=$((WARNINGS + 1))
         fi
     fi
-
-    # Pages and built assets are compressed when the client accepts it (gzip from mod_deflate, or br
-    # from the host's server configuration).
-    COMPRESSION_PATHS=("/")
-    [ -f "public/theme/$THEME_NAME/css/index.css" ] && COMPRESSION_PATHS+=("/theme/$THEME_NAME/css/index.css")
-    for p in "${COMPRESSION_PATHS[@]}"; do
-        ENCODING=$(curl -s -k -o /dev/null -D - -H "Accept-Encoding: gzip, br" "$BASE_URL$p" \
-            | grep -i "^content-encoding:" | awk '{print $2}' | tr -d '\r' || true)
-        if [ -n "$ENCODING" ]; then
-            echo "  $p -> Content-Encoding: $ENCODING (compressed)"
-        else
-            echo "  WARNING: $p is sent uncompressed although the client accepts gzip (Step 7; is mod_deflate on?)"
-            WARNINGS=$((WARNINGS + 1))
-        fi
-    done
 else
     echo "SKIPPED (Local server not running on $BASE_URL)"
 fi

@@ -35,9 +35,9 @@ never "keep, record as deviation".
 - **Severity hints:** no static analysis at all → Medium; PHPStan level lowered or broad `ignoreErrors` → Medium; style violations → Low.
 
 ## 4. bolt-htaccess *(Apache only — N/A on Nginx)*
-- **Script:** root `.htaccess` (HTTPS, forward to `public/`), `public/.htaccess` directives, the allowlist for `theme/`, `files/`, `thumbs/` (tested with sample paths), the safety-net deny list, security headers for static files, the `mod_deflate` compression block, live 403s for theme sources and a fake `.html` upload and `Content-Encoding` on the homepage and CSS (with `--base-url` against **Apache**, not `symfony serve`).
+- **Script:** root `.htaccess` (HTTPS, forward to `public/`), `public/.htaccess` directives, the allowlist for `theme/`, `files/`, `thumbs/` (tested with sample paths), the safety-net deny list, security headers for static files, live 403s for theme sources and a fake `.html` upload (with `--base-url` against **Apache**, not `symfony serve`).
 - **Review:** diff of `public/.htaccess` — removed allowlist / `FilesMatch` deny rules, `node_modules/` inside `public/theme`, `.env`, `composer.*`, `*.twig`, `*.yaml`, backups and dumps reachable; theme files that browsers need outside `css/`, `js/`, `img/`, `images/`, `fonts/` (they answer 403 under the allowlist); whether the vhost document root is `public/` (then the root file is optional).
-- **Severity hints:** templates / config / `.env` / dumps downloadable → Critical; no allowlist for `files/` (HTML / SVG uploads run as the site) → High; missing HTTPS redirect or HSTS → High; theme allowlist missing while the deny list exists → Medium; pages, CSS and JS sent uncompressed (no `mod_deflate` block and no `Content-Encoding` live) → Medium (performance).
+- **Severity hints:** templates / config / `.env` / dumps downloadable → Critical; no allowlist for `files/` (HTML / SVG uploads run as the site) → High; missing HTTPS redirect or HSTS → High; theme allowlist missing while the deny list exists → Medium.
 
 ## 5. bolt-asset-caching
 - **Script:** `/thumbs` firewall bypass in `security.yaml`, `save_files: true`, `mod_expires` in `public/.htaccess` (fails without it), Nginx static rules, bolt/core saving thumbnails where their URL points (warns on 6.0.1 – 6.1.x).

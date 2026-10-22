@@ -76,19 +76,6 @@ AddDefaultCharset UTF-8
     ExpiresByType font/woff "access plus 1 year"
 </IfModule>
 
-# Compression of text responses: the pages rendered by Symfony and the CSS, JS, SVG and XML files
-# Apache serves itself (HTML, CSS and JS shrink to about a quarter). Images, WOFF2 fonts, PDFs and
-# archives are already compressed and stay out. mod_deflate adds "Vary: Accept-Encoding" itself.
-<IfModule mod_deflate.c>
-    <IfModule mod_filter.c>
-        AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml text/markdown
-        AddOutputFilterByType DEFLATE text/javascript application/javascript application/json
-        AddOutputFilterByType DEFLATE application/ld+json application/manifest+json application/xml
-        AddOutputFilterByType DEFLATE application/rss+xml application/atom+xml image/svg+xml
-        AddOutputFilterByType DEFLATE image/x-icon image/vnd.microsoft.icon font/ttf font/otf
-    </IfModule>
-</IfModule>
-
 # By default, Apache does not evaluate symbolic links if you did not enable this
 # feature in your server configuration. Uncomment the following line if you
 # install assets as symlinks or if you experience problems related to symlinks
