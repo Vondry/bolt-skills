@@ -506,6 +506,8 @@ Add a `TemplateController` route (plus the `/{_locale}/` variant on multilingual
 ### Checkpoint 5
 Show the user the ContentType list, the URL map per locale and both menus. Get approval before building templates. Commit.
 
+*Gate:* `bash $SKILLS/bolt-contenttypes/scripts/verify.sh` passes — including no reserved field names (rule 8), an explicit `slug:` on every ContentType (rule 9) and a clean **Bolt Configuration Notices** check (`bolt-build/scripts/config-notices.php`).
+
 ---
 
 ## Phase 6: Templates & Features
@@ -579,6 +581,7 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 **Goal:** real content in every locale and production assets.
 
 ### 7.1 Seed Content
+- **Before the first record:** `php $SKILLS/bolt-build/scripts/config-notices.php --project=.` exits 0 — the same checks as the **Bolt Configuration Notices** box on the admin dashboard. Resolve every notice (then `cache:clear` and re-run); content entered under a reserved field name or an inferred slug is lost when the field or slug is fixed later.
 - Create and publish every singleton record (homepage, contact/settings) and the initial records of each ContentType in the Bolt admin. Pages whose singleton record does not exist render empty or return 404.
 - Upload images through the media library so their dimensions are stored (used by galleries and `image|media`).
 
