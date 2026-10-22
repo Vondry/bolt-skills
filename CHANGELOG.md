@@ -2,7 +2,9 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.3.0 — 2026-10-22
+
+ContentType safety (reserved field names, explicit slugs, English configuration) with a config-notices gate before content, and fixes from the fmautoservis.cz audit.
 
 ### Added
 - `bolt-build`: `scripts/config-notices.php` runs the checks of the admin dashboard's **Bolt Configuration Notices** box (bolt/configuration-notices-widget) from the command line. It must exit 0 before any content is entered — a new gate in `WORKFLOWS.md` (Checkpoint 5, step 7.1) and in the `bolt-build` phase table and pitfalls.
