@@ -190,11 +190,33 @@ if [ -d "$HELPER_DIR" ]; then
     # Rule: the 503 page shows no contact details — it can be on without anyone noticing, and the
     # details would come from the database or go stale (SKILL.md section 5).
     if [ -f "$HELPER_DIR/maintenance.503.twig" ]; then
+        WARNINGS_BEFORE_503=$WARNINGS
+        # The texts may come from the catalogs: resolve every __('key') of the template in
+        # translations/*.xlf, and catch contact details passed from theme.yaml (theme/contact/…).
+        CONTACT_IN_CATALOG=""
+        for KEY in $(perl -0777 -ne 's/\{#.*?#\}//gs; print "$1\n" while /__\(\s*["\x27]([^"\x27]+)["\x27]/g' "$HELPER_DIR/maintenance.503.twig" | sort -u); do
+            for XLF in translations/*.xlf; do
+                [ -f "$XLF" ] || continue
+                if KEY="$KEY" perl -0777 -ne 'my $k = quotemeta $ENV{KEY}; exit(/<unit\b[^>]*name="$k"[^>]*>.*?<\/unit>/s && $& =~ /(tel|mailto):/ ? 0 : 1)' "$XLF"; then
+                    CONTACT_IN_CATALOG="$CONTACT_IN_CATALOG $KEY ($XLF)"
+                fi
+            done
+        done
+        if [ -n "$CONTACT_IN_CATALOG" ]; then
+            echo "  ⚠️  maintenance.503.twig shows contact details through translations:$CONTACT_IN_CATALOG"
+            echo "     The 503 page only says that the site is being worked on (SKILL.md section 5)."
+            WARNINGS=$((WARNINGS+1))
+        fi
+        if perl -0777 -ne 's/\{#.*?#\}//gs; exit(m{theme/contact/} ? 0 : 1)' "$HELPER_DIR/maintenance.503.twig"; then
+            echo "  ⚠️  maintenance.503.twig passes contact details from theme.yaml (theme/contact/…)."
+            echo "     The 503 page only says that the site is being worked on (SKILL.md section 5)."
+            WARNINGS=$((WARNINGS+1))
+        fi
         if perl -0777 -ne 's/\{#.*?#\}//gs; exit(/(tel|mailto):/ ? 0 : 1)' "$HELPER_DIR/maintenance.503.twig"; then
             echo "  ⚠️  maintenance.503.twig links a phone number or e-mail address (tel: / mailto:)."
             echo "     The 503 page only says that the site is being worked on (SKILL.md section 5)."
             WARNINGS=$((WARNINGS+1))
-        else
+        elif [ "$WARNINGS" -eq "$WARNINGS_BEFORE_503" ]; then
             echo "  ✅ maintenance.503.twig shows no contact details"
         fi
     fi
