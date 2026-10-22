@@ -201,15 +201,25 @@ if ($withAres && legal_ico_valid($ico)) {
             legal_address_matches((string) ($contact['address'] ?? ''), $ares)
                 ? $ok('seat matches ARES (ID-02)')
                 : $fail("contact.address does not match the registered seat '{$ares['address']}' (ID-02, ID-06)");
-            if ($ares['vr'] && $operator !== 'company') {
+            // VR covers every public register; only the Commercial Register makes a "company".
+            // A spolek, nadace, ústav … states its own register as text (operator other).
+            $registryText = $registry['text'] ?? '';
+            $registryText = is_array($registryText) ? (string) ($registryText['cs'] ?? reset($registryText)) : (string) $registryText;
+            if ($ares['commercial'] && $operator !== 'company') {
                 $fail("the subject is in the Commercial Register — set legal.operator: company and court {$ares['court']}, section {$ares['section']}, insert {$ares['insert']} (ID-04)");
+            } elseif ($ares['vr'] && ! $ares['commercial'] && $operator === 'company') {
+                $fail("legal.operator is company, but ARES lists the subject in the {$ares['register']}, not the Commercial Register — set legal.operator: other and registry.text: { cs: 'Zapsáno {$ares['register_in']}: {$ares['court']}, oddíl {$ares['section']}, vložka {$ares['insert']}' } (ID-04)");
             } elseif (! $ares['vr'] && $operator === 'company') {
                 $fail('legal.operator is company, but ARES has no Commercial Register entry (ID-04, ID-09)');
-            } elseif ($ares['vr'] && ($ares['section'] !== null || $ares['insert'] !== null)) {
+            } elseif ($ares['commercial'] && ($ares['section'] !== null || $ares['insert'] !== null)) {
                 (legal_squash((string) ($registry['section'] ?? '')) === legal_squash((string) $ares['section'])
                     && legal_squash((string) ($registry['insert'] ?? '')) === legal_squash((string) $ares['insert']))
                     ? $ok("Commercial Register entry matches ({$ares['section']} {$ares['insert']})")
                     : $fail("legal.registry differs from ARES: {$ares['court']}, oddíl {$ares['section']}, vložka {$ares['insert']} (ID-04, ID-06)");
+            } elseif ($ares['vr'] && $ares['insert'] !== null) {
+                preg_match('~\b' . preg_quote((string) $ares['section'], '~') . '\b.{0,20}?\b' . preg_quote($ares['insert'], '~') . '\b~iu', $registryText)
+                    ? $ok("{$ares['register']} entry matches ({$ares['section']} {$ares['insert']})")
+                    : $fail("legal.registry.text does not name the {$ares['register']} entry from ARES: 'Zapsáno {$ares['register_in']}: {$ares['court']}, oddíl {$ares['section']}, vložka {$ares['insert']}' (ID-04, ID-06)");
             }
             if ($operator === 'trade' && ! $ares['rzp']) {
                 $warn('ARES has no active Trade Register entry — check that the trade licence is still valid (ID-04)');

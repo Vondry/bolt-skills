@@ -21,6 +21,25 @@ const LEGAL_COURTS = [
     'KSOS' => 'Krajský soud v Ostravě',
 ];
 
+// ARES reports every public register (veřejný rejstřík) as one source, VR. The section (oddíl) of
+// the spisová značka tells which register it is: the Commercial Register uses A, B, C, Dr, Pr …,
+// the others have their own letters. Name as in a sentence: „Zapsáno ve spolkovém rejstříku: …“.
+const LEGAL_PUBLIC_REGISTERS = [
+    'L' => ['spolkový rejstřík', 've spolkovém rejstříku'],
+    'N' => ['nadační rejstřík', 'v nadačním rejstříku'],
+    'NF' => ['nadační rejstřík', 'v nadačním rejstříku'],
+    'O' => ['rejstřík obecně prospěšných společností', 'v rejstříku obecně prospěšných společností'],
+    'U' => ['rejstřík ústavů', 'v rejstříku ústavů'],
+    'S' => ['rejstřík společenství vlastníků jednotek', 'v rejstříku společenství vlastníků jednotek'],
+];
+const LEGAL_COMMERCIAL_REGISTER = ['obchodní rejstřík', 'v obchodním rejstříku'];
+
+/** ID-04: [name, locative] of the public register a section (oddíl) belongs to. */
+function legal_public_register(?string $section): array
+{
+    return LEGAL_PUBLIC_REGISTERS[strtoupper((string) $section)] ?? LEGAL_COMMERCIAL_REGISTER;
+}
+
 /** ID-03: 8 digits, weights 8…2, check digit (11 - sum mod 11) mod 10. */
 function legal_ico_valid(string $ico): bool
 {
@@ -121,6 +140,10 @@ function legal_ares(string $ico): ?array
         'court' => null,
         'section' => null,
         'insert' => null,
+        // Which public register (VR covers all of them) and whether it is the Commercial Register.
+        'register' => null,
+        'register_in' => null,
+        'commercial' => false,
     ];
     if ($result['vr']) {
         [$vrStatus, $vrBody] = legal_http_get(LEGAL_ARES . "/ekonomicke-subjekty-vr/$ico", 15, 'application/json');
@@ -137,6 +160,8 @@ function legal_ares(string $ico): ?array
                 }
             }
         }
+        [$result['register'], $result['register_in']] = legal_public_register($result['section']);
+        $result['commercial'] = $result['register'] === LEGAL_COMMERCIAL_REGISTER[0];
     }
 
     return $result;

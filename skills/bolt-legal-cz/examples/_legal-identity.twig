@@ -12,8 +12,13 @@
   Translation keys: legal.*
 #}
 
-{% set contact = config.get('theme/contact')|default({}) %}
-{% set legal = config.get('theme/legal')|default({}) %}
+{# Plain arrays: theme.yaml blocks come as Bolt collections, on which a key set to ~ (dic: ~,
+   office: ~) makes `legal.dic` call a method of that name and throw — |default does not catch it,
+   and the whole page (also the error page) answers 500. toArray() converts recursively. #}
+{% set contact = config.get('theme/contact') %}
+{% set contact = contact.toArray is defined ? contact.toArray() : contact|default({}) %}
+{% set legal = config.get('theme/legal') %}
+{% set legal = legal.toArray is defined ? legal.toArray() : legal|default({}) %}
 {% set registry = legal.registry|default({}) %}
 {% set locale = app.request.locale|default('cs') %}
 {% set link_class = 'underline underline-offset-2 hover:no-underline' %}

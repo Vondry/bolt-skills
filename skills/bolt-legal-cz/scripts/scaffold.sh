@@ -110,7 +110,8 @@ else
         company) REGISTRY="    court: '[DOPLNIT rejstříkový soud, např. Městský soud v Praze]'
     section: '[DOPLNIT oddíl]'
     insert: '[DOPLNIT vložka]'" ;;
-        *) REGISTRY="    text: { cs: '[DOPLNIT zápis v evidenci, např. Advokát zapsaný v seznamu advokátů ČAK pod ev. č. …]' }" ;;
+        profession) REGISTRY="    text: { cs: '[DOPLNIT zápis v evidenci, např. Advokát zapsaný v seznamu advokátů ČAK pod ev. č. …]' }" ;;
+        *) REGISTRY="    text: { cs: '[DOPLNIT zápis ve veřejném rejstříku, např. Zapsáno ve spolkovém rejstříku: Městský soud v Praze, oddíl L, vložka … — verify.sh --ares vypíše přesné znění]' }" ;;
     esac
     REGULATED="  regulated: ~"
     if [ "$OPERATOR" = "profession" ]; then
