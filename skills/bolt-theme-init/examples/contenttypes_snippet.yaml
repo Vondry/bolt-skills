@@ -30,7 +30,7 @@ products:
       default: 0
       label: 'Skladová zásoba'
   show_in_menu: true
-  icon_many: 'fa:boxes-stacked'
+  icon_many: 'fa:boxes'
   icon_one: 'fa:box'
   # Thin root entrypoints (product.twig / product.record.twig extend pages/product/…);
   # pointing directly at 'pages/product/product.twig' works as well.
