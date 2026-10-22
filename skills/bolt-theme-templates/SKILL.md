@@ -1258,9 +1258,36 @@ bash skills/bolt-theme-templates/scripts/verify.sh
 5. **Locale Link Safety**: Audits `locale_link(...)` wrapping on template URLs.
 6. **Translation trap**: reports `__('key')|default(...)`.
 7. **Undefined classes**: colour/token utilities used in templates but missing from the compiled `css/index.css` (e.g. a token name that `bolt-tailwind-theme` does not define).
-8. **Twig Syntax Linting**: Runs `bin/console lint:twig public/theme/<active_theme>` to catch any syntax bugs.
+8. **Canonical classes**: fails when a class has a shorter canonical form (`scripts/canonical-classes.mjs`, see below).
+9. **Twig Syntax Linting**: Runs `bin/console lint:twig public/theme/<active_theme>` to catch any syntax bugs.
 
 Raw HTML in page orchestrators is a judgement call and is not checked automatically; review pages against the rule in section 1.
+
+### Canonical Tailwind Classes (`scripts/canonical-classes.mjs`)
+Write every class in its canonical form — the named token utility, not the arbitrary syntax that produces the same CSS:
+
+| Arbitrary | Canonical | Why |
+| :--- | :--- | :--- |
+| `rounded-[var(--radius-card)]` | `rounded-card` | `--radius-card` is a theme token |
+| `max-2xs:text-[0.9375rem]` | `max-2xs:text-meta` | `--text-meta: 0.9375rem` |
+| `w-[1.5rem]`, `md:w-[1.5rem]!` | `w-6`, `md:w-6!` | spacing scale |
+| `leading-[1.5]`, `aspect-16/9`, `order-none` | `leading-normal`, `aspect-video`, `order-0` | Tailwind's own names |
+
+**Finding them — IDE first, the script always:**
+1. **IDE diagnostics**, when the agent is connected to an IDE (PhpStorm / IntelliJ MCP `get_inspections` or `get_file_problems`, VS Code `getDiagnostics`): the Tailwind CSS plugin reports `The class `…` can be written as `…`` as a warning on each template. Use it while editing a file. It does **not** see classes inside Twig expressions or interpolated attributes (`class="… {{ big ? 'col-span-2' : '' }}"`, `class: '…'` include parameters, variant maps), so it misses some.
+2. **`canonical-classes.mjs`** — the reusable check, with or without an IDE. It asks the theme's own design system (`tailwindcss canonicalize --css css/tailwind/index.css`, Tailwind CSS v4.3+, the engine behind the IDE hint) about every class token in every template, including Twig strings:
+   ```bash
+   node vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/scripts/canonical-classes.mjs        # report, exit 1 when something can be shortened
+   node vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/scripts/canonical-classes.mjs --fix  # rewrite the templates in place
+   cd public/theme/<theme> && npm run prod
+   ```
+   `verify.sh` step 8 runs the report and fails until it is clean.
+
+**Review before `--fix` — a value match is not a meaning match.** The suggestion only says that a token has the same value. When the token has another role, add a semantic token instead and run the check again: a subpage H1 written as `text-[clamp(2.25rem,4vw,3.5rem)]` would become `text-slogan` (the script-font slogan of the same size) — define `--text-page` (with `--text-page--line-height`) and use `text-page`.
+
+**Promote repeated arbitrary values to tokens** (`bolt-tailwind-theme`, section 3): a value used in two or more places with the same meaning becomes a token, and the check then rewrites every use — e.g. `--tracking-label: 0.08em` (uppercase labels), `--spacing-page: clamp(3rem, 6vw, 5.5rem)` (subpage top padding → `pt-page`, `py-page`), `--text-page` / `--text-legal` / `--text-sub` heading sizes. Arbitrary breakpoints are not rewritten by `canonicalize`: after adding `--breakpoint-3xs: 22.5rem`, replace `max-[22.5rem]:` with `max-3xs:` by hand. One-off design measurements (`grid-cols-[repeat(auto-fit,minmax(min(27.5rem,100%),1fr))]`, `flex-[1_1_17.5rem]`, `object-[35%_center]`) stay arbitrary, and so do sizes that only happen to equal a token with another meaning.
+
+Name tokens by role, not by position: `--spacing-page` / `--spacing-page-end` read well as `pt-page`, `py-page`, `pb-page-end`, where `--spacing-page-top` would give the confusing `py-page-top`.
 
 ---
 
@@ -1273,6 +1300,7 @@ Raw HTML in page orchestrators is a judgement call and is not checked automatica
 | **Un-scoped one-off components** | Global `components/` folder gets cluttered with one-time tables or hero banners. | Scope page-specific components in `pages/<page>/components/<comp>.twig`. |
 | **Hardcoded URLs without `locale_link()`** | Language switcher breaks or user jumps back to default language. | Always wrap links in `{{ locale_link(item.href) }}` (the button component does it for `href`). |
 | **Dynamic Tailwind class interpolation** | `bg-{{ color }}-500` classes are purged by Tailwind v4. | Use lookup maps (e.g. `variant_map = { 'primary': 'bg-accent' }`) with full static class strings. |
+| **Arbitrary values that a token already covers** (`rounded-[var(--radius-btn)]`, `text-[0.9375rem]`) | Long class strings; the IDE warns "can be written as"; a token change does not reach these places. | `node scripts/canonical-classes.mjs --fix` (section 5), then `npm run prod`. |
 | **Colour names outside the token set** (`brand`, `ink-800`, `zinc-*`) | No CSS is generated; components render unstyled. | Use the `bolt-tailwind-theme` tokens; the verification lists missing classes. |
 | **Stretched link without `relative`** | The click overlay covers the whole section or page. | `relative` on the card root. |
 | **Bolt 3 pager API** (`records.pager`, `pager.totalpages`, `makelink`) | Pagination never renders on Bolt 6. | `{{ pager(records, template = 'components/ui/pagination.twig') }}` (Pagerfanta). |
