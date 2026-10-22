@@ -11,7 +11,10 @@
   (translated) to say that the selected person is the controller of the enquiry.
   Translation keys: privacy.form_note, privacy.form_note_link
 #}
-{% set privacy = config.get('theme/privacy')|default({}) %}
+{# Plain arrays: theme.yaml blocks come as Bolt collections — |column() finds nothing in them and a key
+   set to ~ throws on access. toArray() converts recursively. #}
+{% set privacy = config.get('theme/privacy') %}
+{% set privacy = privacy.toArray is defined ? privacy.toArray() : privacy|default({}) %}
 {% set purpose_id = purpose|default('contact_form') %}
 {% set purpose_data = privacy.purposes|default([])|filter(item => item.id == purpose_id)|first %}
 {% set locale = app.request.locale|default('cs') %}

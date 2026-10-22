@@ -16,8 +16,12 @@
   Never add preconnect / dns-prefetch hints for tracker domains here: they contact the third
   party before consent (CB-01).
 #}
-{% set privacy = config.get('theme/privacy')|default({}) %}
-{% set analytics = config.get('theme/analytics')|default({}) %}
+{# Plain arrays: theme.yaml blocks come as Bolt collections — |column() finds nothing in them and a key
+   set to ~ throws on access. toArray() converts recursively. #}
+{% set privacy = config.get('theme/privacy') %}
+{% set privacy = privacy.toArray is defined ? privacy.toArray() : privacy|default({}) %}
+{% set analytics = config.get('theme/analytics') %}
+{% set analytics = analytics.toArray is defined ? analytics.toArray() : analytics|default({}) %}
 {% set cookies = privacy.cookies|default([]) %}
 {% set used = cookies|column('category') %}
 {% set consent_categories = ['preferences', 'analytics', 'marketing', 'third_party']|filter(category => category in used)|merge([]) %}

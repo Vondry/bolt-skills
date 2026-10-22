@@ -296,6 +296,7 @@ Without trackers and embeds the banner checks are skipped and the privacy page i
 
 ## 9. Pitfalls
 
+- **No banner, no consent configuration, privacy page 500.** `theme.yaml` blocks come as Bolt collections: `|column('category')` finds nothing in them (no consent categories, so the banner and `_consent-mode.twig` render nothing) and a key set to `~` (`summary: ~`, `dpo: ~`) throws on access. Every template converts `privacy:` and `analytics:` with `toArray()` before use; `verify.sh` step 3 fails on a copy that does not. Found 2026-10-22 by rendering the examples with their own `theme.privacy.yaml` in Bolt 6.1.9.
 - **A tracker ID without inventory never loads.** That is intended: add the items to `privacy.cookies` first.
 - **`theme.yaml` is cached.** Clear Bolt's cache after every change, or the banner keeps the old configuration (and the old `config_version`).
 - **Changing purposes, controllers, recipients or categories** without bumping `config_version` leaves earlier consents in force for processing they never covered (CB-42).

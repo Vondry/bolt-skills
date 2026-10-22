@@ -16,7 +16,10 @@
 {% import 'partials/_privacy-macros.twig' as privacy_ui %}
 
 {% block main %}
-    {% set privacy = config.get('theme/privacy')|default({}) %}
+    {# Plain arrays: theme.yaml blocks come as Bolt collections — |column() finds nothing in them and a key
+       set to ~ throws on access. toArray() converts recursively. #}
+    {% set privacy = config.get('theme/privacy') %}
+    {% set privacy = privacy.toArray is defined ? privacy.toArray() : privacy|default({}) %}
     {% set locale = app.request.locale|default('cs') %}
     {% set controllers = privacy.controllers|default([]) %}
     {% set purposes = privacy.purposes|default([]) %}
@@ -28,7 +31,8 @@
     {% set joint = privacy.controller_model|default('single') in ['joint', 'hybrid'] %}
     {% set contact_id = privacy.joint_arrangement.contact_controller ?? (controllers|first).id ?? null %}
     {% set contact = controllers|filter(controller => controller.id == contact_id)|first %}
-    {% set analytics = config.get('theme/analytics')|default({}) %}
+    {% set analytics = config.get('theme/analytics') %}
+    {% set analytics = analytics.toArray is defined ? analytics.toArray() : analytics|default({}) %}
     {% set google = ('analytics' in consent_categories and analytics.ga4_id|default(null)) or ('marketing' in consent_categories and analytics.google_ads_id|default(null)) %}
 
     {% set h2 = 'font-display text-card font-semibold text-ink scroll-mt-24' %}
