@@ -215,7 +215,7 @@ The script verifies:
 4. `docker/nginx/conf.d/default.conf` (if present) has `expires` and `try_files` for `/thumbs`.
 5. `vendor/bolt/core` saves thumbnails at the path of their URL; warns on bolt/core 6.0.1 – 6.1.x (Step 2).
 6. If a Symfony CLI server runs for the project: the `Cache-Control` of a generated thumbnail is `public`, not `private, max-age=0`.
-7. The end-to-end delivery check below, when `scripts/serve-apache.sh` is running for the project or `BOLT_DELIVERY_URL` points at a staging / production site (fails on any thumbnail or upload not served from disk with full cache headers). It does not use `BOLT_BASE_URL`, which is usually `symfony serve`.
+7. The end-to-end delivery check below, when `scripts/serve-apache.sh` is running for the project or `BOLT_DELIVERY_URL` points at a staging / production site (fails on any thumbnail or upload not served from disk with full cache headers). It does not use `BOLT_BASE_URL`, which is usually `symfony serve` (`bolt-audit` sets `BOLT_DELIVERY_URL` from its `--base-url` when Apache or Nginx answers there). The quick header check of one thumbnail before it runs against `BOLT_BASE_URL` when set and reachable, otherwise against the project's `symfony serve`.
 
 The configuration checks can all pass while every thumbnail still runs PHP (bolt/core 6.0.1 – 6.1.x, a read-only `public/thumbs/`, a web server rule that never looks on disk). Only the delivery check shows what the web server actually does.
 

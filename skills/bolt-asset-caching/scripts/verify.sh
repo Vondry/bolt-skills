@@ -160,11 +160,15 @@ else
 fi
 
 # -------------------------------------------------------------
-# Live HTTP Header Inspection (Optional if server is running for this project)
+# Live HTTP Header Inspection (Optional if server is running for this project): against
+# BOLT_BASE_URL when it is set and answers, otherwise the project's `symfony serve`.
 # -------------------------------------------------------------
 echo -n "Checking live HTTP headers... "
 IS_RUNNING=0
-if command -v symfony >/dev/null 2>&1; then
+if [ -n "${BOLT_BASE_URL:-}" ] && curl -s --max-time 10 "$BOLT_BASE_URL" > /dev/null 2>&1; then
+    IS_RUNNING=1
+    SERVER_URL="${BOLT_BASE_URL%/}"
+elif command -v symfony >/dev/null 2>&1; then
     if symfony server:status --dir="$BASE_DIR" 2>/dev/null | grep -q "Listening on"; then
         IS_RUNNING=1
         SERVER_URL=$(symfony server:status --dir="$BASE_DIR" 2>/dev/null | grep -E "Listening on\s+http" | awk '{print $NF}' || true)
@@ -179,10 +183,14 @@ if [ $IS_RUNNING -eq 1 ] && [ -n "$SERVER_URL" ]; then
 
     if [ -n "$REAL_IMG" ]; then
         SAMPLE_URL="$SERVER_URL/thumbs/320x240/$REAL_IMG"
-        HEADERS=$(curl -sI "$SAMPLE_URL" 2>/dev/null || true)
+        HEADERS=$(curl -sI --max-time 30 "$SAMPLE_URL" 2>/dev/null || true)
+        STATUS=$(echo "$HEADERS" | head -n 1 | awk '{print $2}')
         CACHE_CONTROL=$(echo "$HEADERS" | grep -i "^cache-control:" || true)
 
-        if echo "$CACHE_CONTROL" | grep -i -q "private, max-age=0"; then
+        if [ "$STATUS" != "200" ]; then
+            # The local public/files/ need not match the site's uploads (production, staging).
+            echo "  Notice: /thumbs/320x240/$REAL_IMG answered HTTP ${STATUS:-<no response>} — the image is not on this site"
+        elif echo "$CACHE_CONTROL" | grep -i -q "private, max-age=0"; then
             echo "  ✗ Live Error: Response for '$REAL_IMG' returned 'private, max-age=0'!"
             echo "    $CACHE_CONTROL"
             FAILED=1
@@ -195,7 +203,7 @@ if [ $IS_RUNNING -eq 1 ] && [ -n "$SERVER_URL" ]; then
         echo "  Notice: No sample image found in public/files/ to test live thumbnail generation"
     fi
 else
-    echo "SKIPPED (Local server not running for project $BASE_DIR)"
+    echo "SKIPPED (BOLT_BASE_URL not set or not reachable, and no symfony serve running for $BASE_DIR)"
 fi
 
 # -------------------------------------------------------------
