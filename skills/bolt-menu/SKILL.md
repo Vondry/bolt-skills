@@ -694,7 +694,7 @@ bash skills/bolt-menu/scripts/verify.sh
 4. Checks multilingual parity: warns if a locale from `app_locales` in `config/services.yaml` is missing in a `label:` map (falls back to `locales:` in `config/bolt/config.yaml` on older projects).
 5. Checks anchor formatting: errors on bare `#section` and enforces `/#section`.
 6. Checks clean paths: warns if a link starts with a hardcoded prefix of one of the configured locales (`/cs/`, `/en/`, …).
-7. Theme integration check: verifies `menu_array('main')` is called in the active theme.
+7. Theme integration check: verifies `menu_array('main')` is called in the active theme, and warns when `js/src/menu.ts` has no Escape handling (an opened mobile menu or dropdown cannot be closed from the keyboard).
 8. Verifies all menu URLs are wrapped in `locale_link(...)`.
 
 ---
