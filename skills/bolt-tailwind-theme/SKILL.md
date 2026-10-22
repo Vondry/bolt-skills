@@ -181,6 +181,9 @@ Configure tokens in `@theme static inline`:
 }
 ```
 
+### Tokens over arbitrary values
+Templates use the token utilities (`rounded-card`, `text-meta`, `tracking-label`, `pt-page`), never the arbitrary form of the same value (`rounded-[var(--radius-card)]`, `text-[0.9375rem]`). When a value repeats in two or more templates with the same meaning, add it here as a token named by its role (`--tracking-label`, `--spacing-page`, `--text-page` with `--text-page--line-height`, `--breakpoint-3xs`) instead of repeating the arbitrary class. `bolt-theme-templates` checks it: the IDE's "can be written as" warning while editing, and `scripts/canonical-classes.mjs` (Tailwind's own `canonicalize`) in `verify.sh`, which also rewrites the templates with `--fix`. One-off design measurements stay arbitrary.
+
 ---
 
 ## 4. Self-Hosted Fonts with Czech Support (`unicode-range`)

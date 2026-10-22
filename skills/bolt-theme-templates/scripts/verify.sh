@@ -50,7 +50,7 @@ WARNINGS=0
 # -------------------------------------------------------------
 # 1. Detect Active Theme
 # -------------------------------------------------------------
-echo -n "[1/8] Detecting active theme... "
+echo -n "[1/9] Detecting active theme... "
 ACTIVE_THEME="default"
 if [ -f "$BOLT_CONFIG" ]; then
     FOUND_THEME=$(grep -E "^theme:" "$BOLT_CONFIG" | head -n 1 | awk '{print $2}' | tr -d '"' | tr -d "'")
@@ -69,7 +69,7 @@ echo "PASSED (Theme: '$ACTIVE_THEME')"
 # -------------------------------------------------------------
 # 2. Check Directory Structure & Layout Shell (Integration Contract)
 # -------------------------------------------------------------
-echo -n "[2/8] Checking architectural directories and partials/_master.twig... "
+echo -n "[2/9] Checking architectural directories and partials/_master.twig... "
 STRUCT_ERRORS=()
 for d in components containers pages; do
     [ -d "$THEME_DIR/$d" ] || STRUCT_ERRORS+=("Missing $d/ folder")
@@ -94,7 +94,7 @@ fi
 # -------------------------------------------------------------
 # 3. Strict Pure Component Audit: ZERO setcontent in components/
 # -------------------------------------------------------------
-echo -n "[3/8] Auditing pure components (ZERO setcontent rule)... "
+echo -n "[3/9] Auditing pure components (ZERO setcontent rule)... "
 SETCONTENT_VIOLATIONS=0
 
 # Find all components directories (both top-level and page-scoped)
@@ -124,7 +124,7 @@ fi
 # -------------------------------------------------------------
 # 4. Page Orchestrator Audit: every page extends a layout
 # -------------------------------------------------------------
-echo -n "[4/8] Auditing page orchestrators in pages/... "
+echo -n "[4/9] Auditing page orchestrators in pages/... "
 if [ -d "$THEME_DIR/pages" ]; then
     PAGE_FILES=$(find "$THEME_DIR/pages" -name "*.twig" ! -path "*/components/*" 2>/dev/null || true)
     PAGE_COUNT=0
@@ -153,7 +153,7 @@ fi
 # -------------------------------------------------------------
 # 5. Link Locale Safety Audit: locale_link usage
 # -------------------------------------------------------------
-echo -n "[5/8] Auditing URL localization safety (locale_link usage)... "
+echo -n "[5/9] Auditing URL localization safety (locale_link usage)... "
 LOCALE_LINKS=$(grep -rn "locale_link(" "$THEME_DIR" --include="*.twig" 2>/dev/null || true)
 if [ -n "$LOCALE_LINKS" ]; then
     echo "PASSED (Found locale_link calls wrapping template URLs)"
@@ -167,7 +167,7 @@ fi
 #    The translator returns the key itself for a missing translation, so the
 #    default never renders; every key must exist in every catalog instead.
 # -------------------------------------------------------------
-echo -n "[6/8] Checking for __('key')|default(...) fallbacks... "
+echo -n "[6/9] Checking for __('key')|default(...) fallbacks... "
 DEFAULT_TRAPS=$(grep -rnE "__\([^)]*\)\|default\(" "$THEME_DIR" --include="*.twig" --exclude-dir=node_modules 2>/dev/null || true)
 if [ -n "$DEFAULT_TRAPS" ]; then
     echo "WARNING"
@@ -181,7 +181,7 @@ fi
 # -------------------------------------------------------------
 # 7. Undefined Tailwind Classes (colour/token utilities missing from the build)
 # -------------------------------------------------------------
-echo -n "[7/8] Checking template classes against the compiled css/index.css... "
+echo -n "[7/9] Checking template classes against the compiled css/index.css... "
 CSS_OUT="$THEME_DIR/css/index.css"
 if [ ! -s "$CSS_OUT" ]; then
     echo "SKIPPED (css/index.css not built yet — run npm run prod in the theme)"
@@ -208,9 +208,33 @@ else
 fi
 
 # -------------------------------------------------------------
-# 8. Twig Syntax Linting
+# 8. Canonical Tailwind classes (the IDE's "can be written as" hint)
 # -------------------------------------------------------------
-echo -n "[8/8] Linting Twig syntax via bin/console lint:twig... "
+echo -n "[8/9] Checking that Tailwind classes use their canonical (token) form... "
+CANONICAL_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/canonical-classes.mjs"
+if ! command -v node > /dev/null 2>&1; then
+    echo "SKIPPED (node not available)"
+else
+    set +e
+    CANONICAL_OUT=$(node "$CANONICAL_SCRIPT" --theme "$THEME_DIR" 2>&1)
+    CANONICAL_STATUS=$?
+    set -e
+    if [ $CANONICAL_STATUS -eq 0 ]; then
+        echo "PASSED (no class has a shorter token form)"
+    elif [ $CANONICAL_STATUS -eq 2 ]; then
+        echo "$CANONICAL_OUT" | sed 's/^SKIPPED: /SKIPPED (/; s/$/)/'
+    else
+        echo "FAILED"
+        echo "$CANONICAL_OUT" | head -40 | sed 's/^/    /'
+        echo "  Fix: node $CANONICAL_SCRIPT --fix, review the diff (a value match is not always a meaning match), npm run prod."
+        FAILED=1
+    fi
+fi
+
+# -------------------------------------------------------------
+# 9. Twig Syntax Linting
+# -------------------------------------------------------------
+echo -n "[9/9] Linting Twig syntax via bin/console lint:twig... "
 if [ -f "bin/console" ]; then
     if php bin/console lint:twig "$THEME_DIR" > /dev/null 2>&1; then
         echo "PASSED (0 syntax errors in $THEME_DIR)"
