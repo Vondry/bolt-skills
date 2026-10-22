@@ -206,6 +206,31 @@ How the shipped partial builds the links:
 - The dropdown uses `data-dropdown-toggle` and a `.dropdown` panel, driven by `js/src/menu.ts`.
 - Record slugs are not translated by this path-based switch: when slugs differ per locale, link records with `record|link(true, code)` instead (see `bolt-extension-setup`'s sitemap for an example of per-locale record links).
 
+### hreflang alternates in `<head>`
+
+Search engines learn about the other language versions from `<link rel="alternate" hreflang>` in `<head>` — the `hreflang` attribute on the switcher links is not enough, and neither Bolt nor `appolodev/bolt-seo` prints these tags. The master layout of `bolt-theme-init` includes `partials/_hreflang.twig` in its `seo` block (`ignore missing`); copy it from this skill and add the new code to its `locales` list:
+
+```bash
+cp vendor/tomvondracek/bolt-skills/skills/bolt-add-language/examples/_hreflang.twig public/theme/<theme_name>/partials/
+```
+
+```twig
+{# public/theme/<theme_name>/partials/_hreflang.twig #}
+{% set locales = ['cs', 'en', 'de'] %}
+```
+
+An older master layout without the include gets it after `{{ seo.metatags() }}`:
+
+```twig
+{% block seo %}
+    <title>{{ seo.title() }}</title>
+    {{ seo.metatags() }}
+    {% include 'partials/_hreflang.twig' ignore missing %}
+{% endblock seo %}
+```
+
+The partial prints one `<link rel="alternate">` per locale plus `x-default` (the default locale), with the same paths as the switcher, on the host from `canonical` in `config/bolt/config.yaml` (`BOLT_CANONICAL`) and without the query string. The 404 / 403 helper pages override the `seo` block, so they carry no alternates. Check one page: `curl -s https://example.cz/en/<page> | grep hreflang` lists every locale and `x-default`.
+
 ## Step 7: Validate & Clear Cache
 
 Always run standard validation to ensure zero syntax or translation errors:
@@ -242,5 +267,6 @@ It parses the files instead of searching their text (`scripts/check-language.php
 | `config/bolt/menu.yaml` | a per-locale `label` map has no entry for the code (warns about plain-string labels) |
 | `bin/console lint:xliff translations` | any catalog is invalid |
 | `partials/_locale-switcher.twig` | — (warns when the code is not in the `locales` map) |
+| `partials/_hreflang.twig` and the master layout | no `rel="alternate" hreflang` output in the theme's layouts, or the code is not in the partial's `locales` list |
 
 To check the router by hand: `bin/console debug:router record_locale` shows the `_locale` requirement with the new code.

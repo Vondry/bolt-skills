@@ -168,6 +168,8 @@ The skills meet in a few shared places: the master layout, the theme folder stru
     {% block seo %}
         <title>{{ seo.title() }}</title>
         {{ seo.metatags() }}
+        {# bolt-add-language: hreflang alternates of this page in every locale #}
+        {% include 'partials/_hreflang.twig' ignore missing %}
     {% endblock seo %}
 
     {# bolt-cookie-consent: consent configuration (JSON) for js/src/cookie-consent.ts — no tracker loads before consent. #}
