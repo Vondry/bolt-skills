@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.6.3 — 2026-10-22
 
 Fixes to the audit tooling, found by auditing fmautoservis.cz (WEDOS, behind the WEDOS CDN) with `bolt-audit`.
 
@@ -13,6 +13,11 @@ Fixes to the audit tooling, found by auditing fmautoservis.cz (WEDOS, behind the
 - `bolt-htaccess` and `bolt-disable-api` `verify.sh`: their live `/index.php/…` probes caused the bug they look for. On a site without the Pitfall 10 rules, the request puts the hosting path into Bolt's cached canonical links and `llms.txt` for the cache lifetime (seen on fmautoservis.cz during the audit). The probes now run only when the project's `public/.htaccess` has the rules, and say why they were skipped. If the local file has the rules but the server's copy does not, the htaccess check says to upload it.
 - `bolt-asset-caching` `check-delivery.php`: names the crawled pages that did not answer 200 (status or „no response“). Before, it only counted them, so a timeout or a 5xx hid part of the site without saying which part.
 - `bolt-asset-caching` `verify.sh`: the live header check looked only for the project's `symfony serve` and skipped on staging / production. It now uses `BOLT_BASE_URL` when it answers, and reports a sample image the site does not have (HTTP 404) instead of „no cache-control“.
+
+### Migrating a project
+- Nothing changes in projects; the fixes are in the audit and verification scripts.
+- **Before checking a live site after adding the Pitfall 10 rules:** upload `public/.htaccess` first. The checks now request `/index.php/…` whenever the local file has the rules, and on a server without them that request poisons Bolt's cached links for the `caching: canonical` lifetime.
+- **Audits:** when `--base-url` is `symfony serve`, pass `--delivery-url=` with a staging or production URL to include the delivery check.
 
 ## 1.6.2 — 2026-10-22
 
