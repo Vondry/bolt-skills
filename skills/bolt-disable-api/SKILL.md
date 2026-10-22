@@ -203,7 +203,7 @@ Or verify manually via `curl` (every endpoint must be refused; `404` is acceptab
 - `curl -i http://127.0.0.1:8000/api/docs.jsonopenapi` -> Expect `401`, `403` or `404`
 - `curl -i http://127.0.0.1:8000/api/graphql/graphiql` -> Expect `401`, `403` or `404`
 - `curl -i -X POST http://127.0.0.1:8000/api/graphql -H "Content-Type: application/json" -d '{"query":"{ contents { edges { node { id } } } }"}'` -> Expect `401` or `403`
-- `curl -i http://127.0.0.1:8000/index.php/api/contents` -> Expect `401` or `403` (front-controller path), or on Apache with `bolt-htaccess` a `301` to `/api/contents`. A `200` HTML page is not the API but a front-controller path that is not redirected — fix it with `bolt-htaccess` Pitfall 10.
+- `curl -i http://127.0.0.1:8000/index.php/api/contents` -> Expect `401` or `403` (front-controller path), or on Apache with `bolt-htaccess` a `301` to `/api/contents`. A `200` HTML page is not the API but a front-controller path that is not redirected — fix it with `bolt-htaccess` Pitfall 10. `verify.sh` sends this request only when `public/.htaccess` has the Pitfall 10 rules; without them the request would put `/index.php` into Bolt's cached links. The API firewall matches the same path info as the router, so the path cannot bypass it.
 
 ### 4. Check the Backend
 Log in to `/bolt/` and open the dashboard and at least one content listing (`/bolt/content/<contenttype>`). Both must render. A 500 with "Unable to generate an IRI" means the API Platform routes were removed (Step 1). Clear the cache first (`bin/console cache:clear`): Bolt caches normalised records, so a warm cache can hide the error until the next deploy.

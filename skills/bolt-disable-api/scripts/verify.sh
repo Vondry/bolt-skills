@@ -140,9 +140,19 @@ if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     # Front-controller path: refused, or redirected to /api/contents (bolt-htaccess redirects
     # /index.php/… to the clean path, which is checked above). A 200 is a leak only when it
     # carries API data; an HTML page means /index.php/… is not redirected (bolt-htaccess Pitfall 10).
-    FC_RESULT=$(curl -s -o /dev/null -w "%{http_code}|%{content_type}|%{redirect_url}" "$BASE_URL/index.php/api/contents" || true)
+    # Requested only when public/.htaccess redirects /index.php/… (bolt-htaccess Pitfall 10):
+    # otherwise the request reaches Symfony, whose base URL then becomes the script path and lands
+    # in Bolt's cached links (canonical, llms.txt) for the cache lifetime. The API firewall matches
+    # the same path info as the router, so this path cannot bypass it.
+    if grep -qE '^\s*RewriteCond\s+%\{THE_REQUEST\}.*index\\\.php' public/.htaccess 2>/dev/null; then
+        FC_RESULT=$(curl -s -o /dev/null -w "%{http_code}|%{content_type}|%{redirect_url}" "$BASE_URL/index.php/api/contents" || true)
+    else
+        FC_RESULT="skip||"
+    fi
     IFS="|" read -r FC_STATUS FC_TYPE FC_LOCATION <<< "$FC_RESULT"
     case "$FC_STATUS" in
+        skip) echo "  /index.php/api/contents -> not requested (no /index.php/… redirect in public/.htaccess, so the"
+              echo "    request would poison Bolt's cached links — bolt-htaccess Pitfall 10)" ;;
         401|403) echo "  /index.php/api/contents -> HTTP $FC_STATUS (BLOCKED/PASSED)" ;;
         301|302|307|308)
             if [[ "$FC_LOCATION" == */api/contents && "$FC_LOCATION" != *index.php* ]]; then
