@@ -2,6 +2,27 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.6.0 — 2026-10-22
+
+`.env` holds everything production needs, including the secret; `.env.local` is local development only. On fmautoservis.cz the upload answered 500 until `.env.local` was uploaded too, and that file then ran production with debug on.
+
+### Changed
+- `bolt-security-hardening` Step 1: the committed `.env` carries every production value. That includes a fresh `APP_SECRET`, generated per project with a one-line command in the step, and passwords in `DATABASE_URL` / `MAILER_DSN`. An SFTP upload therefore runs on its own, with no server-side `.env.local`. The repository must stay private; rotate the secret when it is shared. `examples/env` was rewritten accordingly.
+- `.env.local` only switches a developer machine to `APP_ENV=dev`, `APP_DEBUG=1` and any host (new `examples/env.local`). It is never uploaded, because on the server it switches production into dev mode. Step 7, the pitfalls and "What each step stops" follow the change.
+- `check-config.php` (`verify.sh` section 1):
+  - fails on an empty or placeholder `APP_SECRET` in `.env` (the upload would answer 500), and prints the command to generate one;
+  - passes on a real secret;
+  - warns on one shorter than 32 characters;
+  - no longer fails on a committed secret or on a password in a connection string;
+  - warns when `.env.local` overrides `APP_SECRET`, or sets `APP_DEBUG=1` without `APP_ENV=dev`.
+- `WORKFLOWS.md` 1.5, 7.5, 8.3 and the troubleshooting row, the `bolt-build` setup notes and intake E11 / E13, and the `bolt-audit` checklist and example map follow the new convention.
+
+### Migrating a project on the 1.5 convention
+1. Copy `examples/env` over `.env` and keep the project's own values: domain, database, mailer.
+2. Generate a fresh secret into `.env` with the Step 1 command.
+3. Reduce the local `.env.local` to `examples/env.local`.
+4. Upload `.env`, then delete the server's `.env.local` and `var/cache/prod/`.
+
 ## 1.5.1 — 2026-10-22
 
 Compression is the host's job, not the `.htaccess`'s. The 1.5.0 finding was measured on a local Apache only. On the production hosts, every page, CSS and JS file is already gzip-compressed without any rule in `.htaccess`.

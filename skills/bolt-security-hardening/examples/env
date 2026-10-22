@@ -1,19 +1,16 @@
-# .env — committed, uploaded with the code (bolt-security-hardening)
+# .env — committed and uploaded with the code: everything production needs, including the secret.
 #
-# Production-safe defaults. If the server's .env.local is ever missing, the site runs in prod mode
-# without debug and refuses to start without a secret (HTTP 500, "A non-empty secret is required"
-# in var/log/prod.log) instead of running with a value from git.
+#   .env        — production values. Upload it; the site runs from it alone.
+#   .env.local  — local development only (APP_ENV=dev, APP_DEBUG=1, any host). Never upload it:
+#                 on the server it would switch production into dev mode.
 #
-#   .env.local on the server   — APP_SECRET (+ DATABASE_URL, MAILER_DSN when not the defaults).
-#                                Created once over SFTP, never uploaded from a local machine.
-#   .env.local on your machine — APP_ENV=dev, your own APP_SECRET, SYMFONY_TRUSTED_HOSTS=, BOLT_CANONICAL=
-#
-# DO NOT put secrets in this file. Real environment variables win over .env files.
+# Real environment variables win over .env files.
 
 ###> symfony/framework-bundle ###
 APP_ENV=prod
 APP_DEBUG=0
-# Set in .env.local (server and local). Generate: php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
+# Signs sessions, CSRF tokens and remember-me cookies. A new one logs everybody out.
+# Generate: php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
 APP_SECRET=
 # Hosts the site answers to (a regular expression). Any other Host header gets HTTP 400, so
 # password-reset links can never point to an attacker's domain.

@@ -79,8 +79,8 @@ user runs it themselves in their own terminal (in Claude Code: type the command 
 which runs it in the user's session): on a new project
 `php bin/console bolt:setup --no-fixtures` (migrations, `APP_SECRET`, first account — run it **once**:
 it resets `APP_SECRET` and writes a new migration every time); on an existing database
-`php bin/console bolt:add-user --admin`. `bolt:setup` writes `APP_SECRET` into the committed `.env`:
-move it to `.env.local` before the baseline commit (`bolt-security-hardening` Step 1).
+`php bin/console bolt:add-user --admin`. `bolt:setup` writes `APP_SECRET` into the committed `.env`,
+which is where it belongs (`bolt-security-hardening` Step 1); `.env.local` only switches the machine to dev.
 
 ## Step 4 — Site plan and Checkpoint 0
 
@@ -97,7 +97,7 @@ Where the design and the intake answers flow in:
 
 | Phase | Input from the intake / design | Concretely |
 | :--- | :--- | :--- |
-| 1 | E1, E3, E6, E7, E9, E11, E13, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` for the local build (no database configuration; the production database of E13 is set on the server in `.env.local`); the user runs `php bin/console bolt:setup --no-fixtures` in their terminal (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit (with `/var/bolt-build/` in `.gitignore`), `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI, `bolt-security-hardening` configuration (`.env` defaults, trusted hosts from E7) |
+| 1 | E1, E3, E6, E7, E9, E11, E13, O10, S1 | `composer create-project bolt/project <dir>` (new); SQLite from Bolt's default `.env` for the local build (no database configuration; the production database of E13 goes into `.env`, which is uploaded); the user runs `php bin/console bolt:setup --no-fixtures` in their terminal (it prompts for the first account; never Bolt's sample fixtures); admin user (Step 3 secrets rule), `git init` + baseline commit (with `/var/bolt-build/` in `.gitignore`), `composer require --dev tomvondracek/bolt-skills`; timezone, `app_locales`, API disable or lock-down, code quality for the chosen CI, `bolt-security-hardening` configuration (`.env` defaults, trusted hosts from E7) |
 | 2 | E5, E6, E12 | Apache vs. Nginx branch of `bolt-htaccess` / `bolt-asset-caching`; nelmio headers and baseline CSP; admin restriction if E12 asks for it |
 | 3 | S6 | keep / remove `ImageDimensionsExtension` (gallery), `FileSizeExtension` (downloads); note removals as expected warnings |
 | 4 | E8, D1–D5, O1, O9, L2, token table | `bolt-theme-init` scaffold `<theme>`; `theme.yaml` contact, socials, logo, `analytics:`; `bolt-menu --profile=<S4> --templates --force`; tokens and self-hosted fonts from `design-notes.md` into `css/tailwind/index.css`; JS imports per features |

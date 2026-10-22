@@ -2,7 +2,8 @@
 name: bolt-security-hardening
 description: >-
   Use this skill to secure or harden a Bolt CMS 6 website, or to check its security settings:
-  production-safe .env with secrets only on the server (SFTP deployments), trusted hosts against
+  a .env that holds every production value including the secret, so an SFTP upload runs on its
+  own, and a .env.local for local development only; trusted hosts against
   password-reset poisoning, trusted proxies, disabled /_fragment, isolated short-lived secure
   sessions, login throttling, password policy, Bolt config (upload whitelist, HTML cleaner,
   query search, version disclosure), admin file-editor permissions, security headers and
@@ -34,8 +35,8 @@ page renders, the admin works, and the probes in *Verification* give the expecte
 | Attack | Stopped by |
 | :--- | :--- |
 | Password-reset link pointing to the attacker's domain (forged `Host` header) | Step 1 `SYMFONY_TRUSTED_HOSTS` |
-| Debug toolbar / profiler on production, stack traces in error pages | Step 1 fail-safe `.env` |
-| Forged `/_fragment` requests or remember-me cookies with a leaked `APP_SECRET` | Step 1 secret only on the server; Step 2 fragments off |
+| Debug toolbar / profiler on production, stack traces in error pages | Step 1 `.env` with `APP_ENV=prod`, `APP_DEBUG=0`; `.env.local` never uploaded |
+| Forged `/_fragment` requests or remember-me cookies with a leaked `APP_SECRET` | Step 1 fresh secret per project, private repository, rotation; Step 2 fragments off |
 | Password guessing on `/bolt/login` | Step 3 throttling, password policy |
 | An editor storing scripts in content or uploads (stored XSS) | Step 4 upload whitelist and HTML cleaner, `bolt-contenttypes` rule 7, `bolt-htaccess` allowlist and sandbox |
 | A stolen admin password becoming code execution (editing Twig in the browser) | Step 5 permissions |
@@ -44,46 +45,54 @@ page renders, the admin works, and the probes in *Verification* give the expecte
 
 ---
 
-## Step 1: Environment Files and Secrets (Fail-Safe `.env`)
+## Step 1: Environment Files and Secrets (`.env` for production, `.env.local` for local dev)
 
-Sites deployed over SFTP upload the committed `.env` with the code. Make that file safe on its own:
-if the server's `.env.local` is ever missing, the site must not run in dev mode or with a secret
-from git.
+Sites deployed over SFTP upload the committed `.env` with the code, so that file holds **everything
+production needs, including the secret**. The site then runs from an upload alone: there is no
+server-side `.env.local` to create, forget or lose. `.env.local` exists only on developer machines
+and only switches them to dev mode.
 
-**`.env` (committed)** — production defaults, no secrets ([`examples/env`](examples/env)):
+**`.env` (committed, uploaded)** — production values ([`examples/env`](examples/env)):
 
 ```dotenv
 APP_ENV=prod
 APP_DEBUG=0
-APP_SECRET=
+# Signs sessions, CSRF tokens and remember-me cookies. A new one logs everybody out.
+# Generate: php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
+APP_SECRET=<64 hex characters>
 SYMFONY_TRUSTED_HOSTS='^(www\.)?example\.cz$'
 SYMFONY_TRUSTED_PROXIES=
+DATABASE_URL=sqlite:///%kernel.project_dir%/var/data/bolt.sqlite
+MAILER_DSN=smtp://localhost
 BOLT_CANONICAL=https://example.cz
 ```
 
-**`.env.local` on the server** — created once over SFTP, never uploaded from a local machine:
+Copy [`examples/env`](examples/env) to `.env`, replace `example` with the domain, then fill in a fresh secret:
 
-```dotenv
-APP_SECRET=<64 hex characters: php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'>
-# DATABASE_URL / MAILER_DSN only when they differ from .env
+```bash
+php -r '$f=".env"; file_put_contents($f, preg_replace("/^APP_SECRET=.*$/m", "APP_SECRET=".bin2hex(random_bytes(32)), file_get_contents($f), 1));'
 ```
 
-**`.env.local` on each developer machine** (git-ignored):
+**`.env.local` (git-ignored, never uploaded)** — local development only ([`examples/env.local`](examples/env.local)):
 
 ```dotenv
 APP_ENV=dev
-APP_SECRET=<any random value>
+APP_DEBUG=1
 SYMFONY_TRUSTED_HOSTS=
 BOLT_CANONICAL=
 ```
 
-* **`APP_SECRET` empty in `.env`.** With no secret Symfony refuses to start (HTTP 500, `A non-empty secret is required` in `var/log/prod.log`). That is the intended failure: the secret signs remember-me cookies, CSRF tokens and `/_fragment` URLs, so a value from git is a public value.
-* **Bolt writes the secret into `.env`.** `bin/console bolt:setup` and `bin/console bolt:reset-secret` put a new `APP_SECRET` into the committed `.env` — that is how every Bolt project ends up with its secret in git. Right after running either, move the line to `.env.local` and leave `APP_SECRET=` empty in `.env`. Generate later secrets with `php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'` instead.
-* **Rotate a secret that was ever committed.** Generate a new one into the server's `.env.local`, delete the old line from `.env`. Every editor is logged out once; nothing else changes. The old value stays in git history — that is why it must not be used any more.
+* **Nothing else in `.env.local`.** No `APP_SECRET` (the one in `.env` works locally too), no production values. Anything that differs only on your machine is fine (`DATABASE_URL` of a local MySQL, a local mail catcher). `verify.sh` warns when `.env.local` overrides `APP_SECRET`.
+* **`APP_ENV=dev` together with `APP_DEBUG=1`.** A `.env.local` with `APP_DEBUG=1` but no `APP_ENV=dev` runs prod mode with debug: stack traces for visitors, `X-Robots-Tag: noindex`. That goes unnoticed locally and public once the file is uploaded by mistake. `verify.sh` warns about it.
+* **Never upload `.env.local`.** On the server it switches production into dev mode (profiler, stack traces). Exclude it in the SFTP client (Step 7); the live checks (section 8) catch a debug token or a stack trace on production. If one was uploaded, delete it on the server and delete `var/cache/prod/`.
+* **`APP_SECRET` empty in `.env`.** Symfony and Bolt refuse to start: HTTP 500, with `A non-empty secret is required` or `The secret for signing cursors must not be empty` (Pagerfanta) in `var/log/prod.log`. `verify.sh` fails on an empty or placeholder secret, so this is caught before the upload.
+* **The secret is in git — keep the repository private.** Anyone with access to the repository can forge remember-me cookies and signed URLs (`/_fragment` stays off, Step 2). Generate a fresh secret per project (never copy one from another site or from Bolt's skeleton). Rotate it, by running the command above and committing, when the repository is shared, made public, or someone with access leaves. Every editor is logged out once; nothing else changes.
+* **Bolt writes the secret into `.env`.** `bin/console bolt:setup` and `bin/console bolt:reset-secret` put a new `APP_SECRET` into `.env`, which is where it belongs. Commit it; it is a rotation like the one above.
+* **Passwords in connection strings** (`MAILER_DSN=smtp://user:password@host`, a `DATABASE_URL` of the host's MySQL) belong in `.env` for the same reason as the secret: the upload must work on its own. The same rule applies: private repository, and change the password at the provider if the repository is ever shared.
 * **`SYMFONY_TRUSTED_HOSTS`** is a regular expression of every domain the site answers to (add the staging domain if staging runs with this `.env`). Any other `Host` gets HTTP 400. Without it, a request with `Host: evil.tld` to `/bolt/reset-password` makes Bolt mail a reset link to `https://evil.tld/…` — one click by the admin hands over the token. Bolt's `framework.yaml` already reads the variable (`trusted_hosts: ['%env(default::SYMFONY_TRUSTED_HOSTS)%']`); a project whose `framework.yaml` says `trusted_hosts: ~` must get that line back.
 * **Both hosts, one site.** `example.cz` and `www.example.cz` must both answer over valid HTTPS, but only one serves the site — the other redirects to it with 301 (`bolt-htaccess` Step 1, default: without www). `BOLT_CANONICAL` makes every canonical link name that host; empty, Bolt names whichever host was requested, so each page exists twice. Keep both hosts in `SYMFONY_TRUSTED_HOSTS`. The live checks (`verify.sh`, section 8) always test both.
 * **`TRUSTED_PROXIES`** (Bolt's sample `.env`) is read by nothing in Symfony 6.4; delete it. `SYMFONY_TRUSTED_PROXIES` is wired up in Step 2.
-* **Passwords in connection strings.** `MAILER_DSN=smtp://user:password@host` or a `DATABASE_URL` with a password are secrets like `APP_SECRET`: the real value goes to the server's `.env.local`, `.env` keeps a password-less default (`MAILER_DSN=smtp://localhost`), and a password that was ever committed is changed at the provider. `verify.sh` fails on any `scheme://user:password@` value in `.env`.
+* **`/.env` must never be downloadable** — it now holds the secret. The `bolt-htaccess` deny list answers 403 for `.env*` everywhere; `verify.sh` section 8 requests `/.env` on production.
 * **`.env.local.php`** (`composer dump-env prod`) overrides every `.env*` file. Do not upload one generated on a developer machine.
 
 ---
@@ -280,7 +289,7 @@ and Redactor's inline styles need.
 
 | Never upload | Why |
 | :--- | :--- |
-| `.env.local` | The server has its own (Step 1). |
+| `.env.local` | Local development only: on the server it switches production into dev mode (Step 1). |
 | `var/` | The live SQLite database (`var/data/`), sessions, logs and cache would be overwritten. |
 | `public/files/`, `public/thumbs/` | Editors' uploads live only on the server. |
 | `.git/`, `node_modules/`, `public/theme/*/node_modules/`, `.idea/`, `tests/`, `var/bolt-audit/`, `var/bolt-build/` | Not needed at runtime; `bolt-htaccess` blocks them, but they should not be there. |
@@ -331,7 +340,7 @@ Without a reachable `BOLT_BASE_URL` only the file checks run.
 
 | # | Checks | Fails when |
 | :- | :--- | :--- |
-| 1 | `.env`, `.env.local` in git, `.env.local.php` | committed `.env` says `APP_ENV=dev` / `APP_DEBUG=1`, a real `APP_SECRET` is committed, `.env.local` is tracked |
+| 1 | `.env`, `.env.local`, `.env.local.php` | `.env` says `APP_ENV=dev` / `APP_DEBUG=1`, `APP_SECRET` in `.env` is empty or a placeholder, `.env.local` is tracked (warnings: `.env.local` overrides `APP_SECRET`, or sets `APP_DEBUG=1` without `APP_ENV=dev`) |
 | 2 | Framework config (all `config/packages/*.yaml` merged for prod) | `trusted_hosts: ~`, fragments / ESI on, session cookie not secure |
 | 3 | `security.yaml`, remember-me lifetime, password policy | no `login_throttling` |
 | 4 | Bolt `config.yaml` | dangerous upload types (`html`, `js`, `twig`, `php`, …), `verify_peer: false` |
@@ -349,8 +358,9 @@ says the fix.
 
 * **Only one host checked.** `www.example.cz` is easily forgotten: no certificate, no redirect, or a second copy of the site. `verify.sh` derives the other host from `BOLT_BASE_URL` and checks both (a missing DNS record is a warning, an invalid certificate a failure).
 * **Trusted hosts in a second config file.** Merged into the env entry, which trusts everything when the variable is empty — use `SYMFONY_TRUSTED_HOSTS` (Step 1).
-* **`APP_SECRET` back in `.env` after `bolt:setup` / `bolt:reset-secret`.** Both commands write the secret there; move it to `.env.local` before committing (Step 1).
-* **Site answers 500 after deploying this skill.** `A non-empty secret is required` → the server's `.env.local` has no `APP_SECRET` (Step 1). `Untrusted Host` (400) → the domain is missing from `SYMFONY_TRUSTED_HOSTS`.
+* **`bolt:setup` / `bolt:reset-secret` changed `APP_SECRET` in `.env`.** That is a rotation: commit it, and everyone is logged out once (Step 1).
+* **Site answers 500 after an upload.** `A non-empty secret is required` / `The secret for signing cursors must not be empty` → `APP_SECRET` in `.env` is empty (Step 1). `Untrusted Host` (400) → the domain is missing from `SYMFONY_TRUSTED_HOSTS`.
+* **The site only works when `.env.local` is uploaded too.** Then `.env` is missing a production value (usually the secret) and the uploaded `.env.local` runs the server with debug on. Move the value into `.env`, delete `.env.local` on the server (Step 1).
 * **Everyone is locked out after a few failed logins.** The site is behind a proxy whose IP is not in `SYMFONY_TRUSTED_PROXIES`: all visitors share the proxy's IP. Check the user list in the admin — "last IP" shows the proxy.
 * **Never trust `REMOTE_ADDR` as a proxy** unless a proxy really is in front: every visitor could then set `X-Forwarded-For` and dodge the throttling.
 * **Configuration changes have no effect** on an SFTP host until `var/cache/prod/` is deleted.

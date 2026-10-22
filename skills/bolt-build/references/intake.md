@@ -30,9 +30,9 @@ phase and skill consume it.
 | E8 | Theme folder name | slug of the site name | 4.1 `bolt-theme-init` |
 | E9 | CI platform | GitLab (skill default) · GitHub Actions (adapt the job) · none | 1.4 `bolt-code-quality` |
 | E10 | Git: commit after every gate? Remote to push to? | commit locally after each gate, no push | all gates |
-| E11 | How is the site deployed? | upload over SFTP · git pull on the server · CI | 1.5, 7.5 `bolt-security-hardening` (fail-safe `.env`, excluded paths, cache) |
+| E11 | How is the site deployed? | upload over SFTP · git pull on the server · CI | 1.5, 7.5 `bolt-security-hardening` (`.env` with every production value, excluded paths, cache) |
 | E12 | Restrict the admin (`/bolt`)? | open (login throttling + password policy) · IP allowlist (give the IPs) · HTTP basic auth | `bolt-security-hardening` Step 9 |
-| E13 | Production database | SQLite in `var/data/` (uploaded once, never overwritten) · MySQL / MariaDB of the host (give host, name, user; the password goes only into the server's `.env.local`) | 1.5 `DATABASE_URL` default in `.env`, 7.5 deployment, `bolt-timezone` (`TZ` of a database container) |
+| E13 | Production database | SQLite in `var/data/` (uploaded once, never overwritten) · MySQL / MariaDB of the host (give host, name, user; the password goes into the committed `.env` — private repository) | 1.5 `DATABASE_URL` default in `.env`, 7.5 deployment, `bolt-timezone` (`TZ` of a database container) |
 
 ## Round 2 — Structure and content (confirm the design proposal)
 

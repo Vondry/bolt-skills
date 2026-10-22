@@ -116,9 +116,11 @@ if (is_file('.env')) {
     out('WARN', '.env not found — the committed defaults belong there (examples/env).');
 }
 
+// .env holds every production value, the secret included: an SFTP upload must run on its own.
+// .env.local is local development only (SKILL.md Step 1).
 $appEnv = $env['APP_ENV'] ?? '';
 if (in_array($appEnv, ['dev', 'test'], true)) {
-    out('FAIL', ".env sets APP_ENV={$appEnv}. It is uploaded with the code: if the server's .env.local is missing, the site runs in {$appEnv} mode (profiler, stack traces). Set APP_ENV=prod in .env and APP_ENV=dev in your local .env.local.");
+    out('FAIL', ".env sets APP_ENV={$appEnv}. It is uploaded with the code, so the site would run in {$appEnv} mode (profiler, stack traces). Set APP_ENV=prod in .env and APP_ENV=dev in your local .env.local.");
 } elseif ($appEnv !== '') {
     out('PASS', ".env: APP_ENV={$appEnv}");
 }
@@ -128,31 +130,33 @@ if (in_array($appDebug, ['1', 'true', 'on', 'yes'], true)) {
     out('FAIL', '.env sets APP_DEBUG=1 — set APP_DEBUG=0 in .env, enable debug only in your local .env.local.');
 }
 
+$generate = "php -r '\$f=\".env\"; file_put_contents(\$f, preg_replace(\"/^APP_SECRET=.*\$/m\", \"APP_SECRET=\".bin2hex(random_bytes(32)), file_get_contents(\$f), 1));'";
 $secret = (string) ($env['APP_SECRET'] ?? '');
-$placeholder = $secret === '' || preg_match('/^!?change.?me!?$/i', $secret) === 1;
-$envTracked = gitTracked('.env');
-if (! $placeholder && $envTracked === true) {
-    out('FAIL', '.env (tracked by git) contains a real APP_SECRET. Generate a new secret into the server\'s .env.local, empty the line in .env — the old value stays in git history, so it must not be used any more.');
-} elseif (! $placeholder && $envTracked === null) {
-    out('WARN', '.env contains an APP_SECRET; keep secrets in .env.local only (not a git repository, so tracking was not checked).');
+if ($secret === '' || preg_match('/^(!?change.?me!?|ThisTokenIsNotSoSecretChangeIt|<.*>)$/i', $secret) === 1) {
+    out('FAIL', ".env has no APP_SECRET (empty or a placeholder) — the uploaded site answers HTTP 500. Generate one into .env: {$generate}");
+} elseif (strlen($secret) < 32) {
+    out('WARN', '.env: APP_SECRET is shorter than 32 characters — generate a new one (64 hex characters, SKILL.md Step 1).');
 } else {
-    out('PASS', '.env contains no APP_SECRET (it lives in .env.local)');
+    out('PASS', '.env: APP_SECRET set (committed with the production values — keep the repository private)');
 }
 
-// Credentials inside connection strings (MAILER_DSN, DATABASE_URL, …): scheme://user:password@host.
-foreach ($env as $name => $value) {
-    if (! is_string($value) || preg_match('#^[a-z][a-z0-9+.-]*://[^/\s]*:[^/\s]*@#i', $value) !== 1) {
-        continue;
+if (is_file('.env.local')) {
+    if (gitTracked('.env.local') === true) {
+        out('FAIL', '.env.local is tracked by git — remove it from the repository (git rm --cached .env.local); it is local development only.');
     }
-    if (preg_match('#://[^:/]*:"?(|db_password|password|pass|secret|changeme|!changeme!)"?@#i', $value) === 1) {
-        continue;
+    $local = [];
+    try {
+        $local = (new Dotenv())->parse((string) file_get_contents('.env.local'), '.env.local');
+    } catch (Throwable $e) {
+        out('WARN', '.env.local cannot be parsed — ' . $e->getMessage());
     }
-    $tracked = $envTracked === true ? ' (tracked by git)' : '';
-    out('FAIL', ".env{$tracked} sets {$name} with a password in it. Move the line to the server's .env.local, keep a password-less default in .env (e.g. MAILER_DSN=smtp://localhost), and change the password at the provider — it stays in git history.");
-}
-
-if (is_file('.env.local') && gitTracked('.env.local') === true) {
-    out('FAIL', '.env.local is tracked by git — remove it from the repository (git rm --cached .env.local) and rotate its secrets.');
+    if (array_key_exists('APP_SECRET', $local)) {
+        out('WARN', '.env.local overrides APP_SECRET — remove the line: the secret lives in .env, .env.local holds only local dev overrides (examples/env.local).');
+    }
+    $localDebug = in_array(strtolower((string) ($local['APP_DEBUG'] ?? '')), ['1', 'true', 'on', 'yes'], true);
+    if ($localDebug && ($local['APP_ENV'] ?? '') !== 'dev') {
+        out('WARN', '.env.local sets APP_DEBUG=1 without APP_ENV=dev — prod mode with debug (stack traces, noindex). Add APP_ENV=dev (examples/env.local), and never upload the file.');
+    }
 }
 
 $hosts = (string) ($env['SYMFONY_TRUSTED_HOSTS'] ?? '');
