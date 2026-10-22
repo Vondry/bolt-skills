@@ -189,7 +189,9 @@ done
 # -------------------------------------------------------------
 echo "[7/7] Live website"
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"
-if curl -s --max-time 2 "$BASE_URL" > /dev/null 2>&1; then
+# 10 s: a production site on a cold cache (or behind a CDN) often needs more than 2 s; a closed
+# port still fails at once.
+if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     SITE_ARGS=("--url=$BASE_URL" "--pages=10")
     [ -n "$EXPECT_ICO" ] && SITE_ARGS+=("--ico=$EXPECT_ICO")
     [ -n "$EXPECT_NAME" ] && SITE_ARGS+=("--name=$EXPECT_NAME")
