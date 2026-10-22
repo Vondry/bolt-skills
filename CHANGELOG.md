@@ -2,6 +2,18 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.6.1 — 2026-10-22
+
+The www and HTTPS redirects work on hosts that serve the domain from a webroot subfolder. On fmautoservis.cz (WEDOS, `www/domains/fmautoservis.cz/`), `https://www.fmautoservis.cz/` redirected to `https://fmautoservis.cz/domains/fmautoservis.cz/` (404), and plain-HTTP links did the same.
+
+### Fixed
+- `bolt-htaccess` `examples/root.htaccess` and Step 1, including the variant for a document root on `public/`: the redirect targets use `/$1` instead of `%{REQUEST_URI}`. The host forwards the request into the subfolder with an internal rewrite, so `REQUEST_URI` carried the prefix. `$1` is relative to the `.htaccess` folder on every layout. New Pitfall 9.
+- `verify.sh` section 1 fails on `%{REQUEST_URI}` in a redirect target of the root or `public/` `.htaccess`.
+- With `BOLT_BASE_URL` set to a production `https://` address, `verify.sh` section 6 checks that `https://www.<host>/…?x=1` and `http://<host>/…?x=1` answer one `301` to `https://<host>/…?x=1`.
+
+### Migrating a project
+Replace the two redirect rules of the root `.htaccess` with the ones in `examples/root.htaccess` and upload it. Browsers cache the broken 301, so test in a private window.
+
 ## 1.6.0 — 2026-10-22
 
 `.env` holds everything production needs, including the secret; `.env.local` is local development only. On fmautoservis.cz the upload answered 500 until `.env.local` was uploaded too, and that file then ran production with debug on.

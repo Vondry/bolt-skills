@@ -11,9 +11,13 @@ RewriteEngine on
 # canonical host is www, replace the two lines with (it also redirects localhost and staging hosts —
 # add a RewriteCond %{HTTP_HOST} !^(localhost|staging\.) [NC] for those):
 #   RewriteCond %{HTTP_HOST} !^www\. [NC]
-#   RewriteRule (.*) https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+#   RewriteRule (.*) https://www.%{HTTP_HOST}/$1 [L,R=301]
+# The redirects use $1 (the path relative to this folder), not %{REQUEST_URI}: hosts that serve a
+# domain from a subfolder of the webroot (WEDOS: www/domains/<domain>/) forward it there with an
+# internal rewrite, so REQUEST_URI carries that prefix (www.example.cz/ →
+# https://example.cz/domains/example.cz/). Apache keeps the query string.
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-RewriteRule (.*) https://%1%{REQUEST_URI} [L,R=301]
+RewriteRule (.*) https://%1/$1 [L,R=301]
 
 # HTTPS redirect — works both on direct Apache TLS and behind a TLS-terminating proxy:
 # redirect when Apache itself did not receive HTTPS AND no proxy reported an HTTPS request.
@@ -21,7 +25,7 @@ RewriteRule (.*) https://%1%{REQUEST_URI} [L,R=301]
 # Behind a proxy, make sure the proxy sets (overwrites) the header.
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
-RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteRule (.*) https://%{HTTP_HOST}/$1 [L,R=301]
 
 # Redirect all traffic to ./public folder
 RewriteRule (.*) public/$1 [QSA,L]
