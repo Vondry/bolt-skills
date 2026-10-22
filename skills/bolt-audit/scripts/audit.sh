@@ -3,7 +3,8 @@ set -e
 
 # bolt-audit: read-only audit of an existing Bolt CMS 6 project against every skill.
 #
-#   bash audit.sh [--project=PATH] [--base-url=URL] [--out=DIR] [--skip=a,b] [--only=a,b] [--strict]
+#   bash audit.sh [--project=PATH] [--base-url=URL] [--delivery-url=URL] [--out=DIR] [--skip=a,b]
+#                 [--only=a,b] [--strict]
 #
 # Writes only to the report directory (default: <project>/var/bolt-audit/<timestamp>/). Bolt's
 # .gitignore covers only var/cache, var/log and var/data, so the default directory is added to the
@@ -22,14 +23,17 @@ set -e
 #   diffs/<skill>/    unified diffs for the files that differ
 #
 # Live HTTP checks run only with --base-url (never against a default port, which might be
-# another project). --strict exits 1 when a skill fails (for CI).
+# another project). The asset delivery check (bolt-asset-caching) needs the production web
+# server: it uses --delivery-url, else BOLT_DELIVERY_URL, else --base-url when Apache, Nginx or
+# LiteSpeed answers there (not `symfony serve`). --strict exits 1 when a skill fails (for CI).
 
 usage() {
-    sed -n '4,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '4,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 PROJECT=""
 BASE_URL=""
+DELIVERY_URL="${BOLT_DELIVERY_URL:-}"
 OUT=""
 SKIP_LIST=""
 ONLY_LIST=""
@@ -38,6 +42,7 @@ for arg in "$@"; do
     case "$arg" in
         --project=*) PROJECT="${arg#*=}" ;;
         --base-url=*) BASE_URL="${arg#*=}" ;;
+        --delivery-url=*) DELIVERY_URL="${arg#*=}" ;;
         --out=*) OUT="${arg#*=}" ;;
         --skip=*) SKIP_LIST="${arg#*=}" ;;
         --only=*) ONLY_LIST="${arg#*=}" ;;
@@ -75,10 +80,24 @@ OUT="$(cd "$OUT" && pwd)"
 if [ -n "$BASE_URL" ]; then
     export BOLT_BASE_URL="$BASE_URL"
     LIVE="on ($BASE_URL)"
+    # The delivery check judges the web server's own headers (ETag, 304s from disk); against
+    # `symfony serve` or PHP's built-in server it would report their behaviour, not the site's.
+    if [ -z "$DELIVERY_URL" ] && curl -sI --max-time 10 "$BASE_URL/" 2>/dev/null \
+        | grep -qiE '^server:.*(apache|nginx|litespeed)'; then
+        DELIVERY_URL="$BASE_URL"
+    fi
 else
     # A closed local port: every live check reports "not reachable" and is skipped.
     export BOLT_BASE_URL="http://127.0.0.1:9"
     LIVE="off (pass --base-url=… to enable)"
+fi
+
+if [ -n "$DELIVERY_URL" ]; then
+    export BOLT_DELIVERY_URL="$DELIVERY_URL"
+    DELIVERY="on ($DELIVERY_URL)"
+else
+    unset BOLT_DELIVERY_URL
+    DELIVERY="off (needs Apache / Nginx: --delivery-url=… or a --base-url they serve)"
 fi
 
 in_list() { case ",$2," in *",$1,"*) return 0 ;; esac; return 1; }
@@ -166,6 +185,7 @@ cat > "$OUT/profile.md" <<EOF
 | theme.yaml legal: block (bolt-legal-cz profile) | $LEGAL_BLOCK |
 | vendor/ installed | $([ -f vendor/autoload.php ] && echo yes || echo 'no — several checks need composer install') |
 | Live HTTP checks | $LIVE |
+| Asset delivery check | $DELIVERY |
 EOF
 
 # ---------------------------------------------------------------- run the skills
@@ -178,22 +198,28 @@ printf "skill\tstatus\tfailures\twarnings\tnote\n" > "$OUT/summary.tsv"
 
 record() { printf "%s\t%s\t%s\t%s\t%s\n" "$1" "$2" "$3" "$4" "$5" >> "$OUT/summary.tsv"; }
 
+# A line that only reports a pass, or a count of zero warnings.
+PASS_LINE='^[[:space:]]*(✓|PASSED|OK:)|(^|[^0-9])0 (advisory )?warning'
+
 run_skill() {
     local label="$1" script="$2" log="$3"
     shift 3
     local status=0
     ( cd "$PROJECT" && bash "$script" "$@" ) > "$log" 2>&1 || status=$?
-    # Lines that report a problem; formats differ between the skills' scripts.
-    local fails warns
-    fails=$(grep -ciE "(^|[^a-z])(failed|fail|error|missing)([^a-z]|$)" "$log" | tr -d ' ' || true)
-    warns=$(grep -ciE "(^|[^a-z])(warning|warn|notice)([^a-z]|$)" "$log" | tr -d ' ' || true)
+    # Lines that report a problem; formats differ between the skills' scripts. Pass lines
+    # ("✓ no warning or danger notice", "PASSED: …") and "0 warning(s)" never count, whatever
+    # words they contain — the same rule as verify-all.sh.
+    local fails warns problems
+    problems=$(grep -vE "$PASS_LINE" "$log" || true)
+    fails=$(printf '%s\n' "$problems" | grep -ciE "(^|[^a-z])(failed|fail|error|missing)([^a-z]|$)" | tr -d ' ' || true)
+    warns=$(printf '%s\n' "$problems" | grep -ciE "(^|[^a-z])(warning|warn|notice)([^a-z]|$)" | tr -d ' ' || true)
     # The final summary lines repeat the counts; do not count them twice.
     fails=$(( fails - $(grep -ciE "VERIFICATION (FAILED|PASSED)" "$log" || true) ))
     [ $fails -lt 0 ] && fails=0
     if [ $status -ne 0 ]; then
         record "$label" "FAIL" "$fails" "$warns" ""
-    # Same rule as verify-all.sh: lines like "PASSED (0 warning(s))" are not warnings.
-    elif grep -vE '(^|[^0-9])0 warning' "$log" | grep -qiE 'warn|notice|⚠|\[!\]'; then
+    # verify-all.sh's warning words, plus "Notice:" lines (soft findings of some scripts).
+    elif printf '%s\n' "$problems" | grep -qiE 'warn|notice:|⚠|\[!\]'; then
         record "$label" "WARN" 0 "$warns" ""
     else
         record "$label" "PASS" 0 0 ""
