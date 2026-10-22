@@ -264,6 +264,13 @@ $maxAge = static fn (array $headers): ?int => preg_match('/max-age=(\d+)/', $hea
 // ---------------------------------------------------------------------------------------------
 $nonOkPages = array_filter($pages, static fn (int $s): bool => $s !== 200);
 echo "Pages crawled: " . count($pages) . (count($pages) >= $maxPages ? " (limit --max-pages=$maxPages reached)" : '') . ', not 200: ' . count($nonOkPages) . "\n";
+// Their images were not collected, so name them: a timeout or a 5xx hides part of the site.
+foreach (array_slice($nonOkPages, 0, $details ? null : 10, true) as $path => $status) {
+    echo '               ' . ($status === 0 ? 'no response' : "HTTP $status") . "  $path\n";
+}
+if (! $details && count($nonOkPages) > 10) {
+    echo '               … ' . (count($nonOkPages) - 10) . " more (--details lists all)\n";
+}
 echo 'Image URLs:    ' . count($results) . "\n";
 echo 'PHP detection: ' . ($phpProbes !== null ? "PHP-FPM access log ($fpmLog)" : 'heuristic (no ETag and no Accept-Ranges = PHP); pass --fpm-log for an exact result') . "\n";
 
