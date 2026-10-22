@@ -2,6 +2,16 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Fixes to the audit tooling, found by auditing fmautoservis.cz (WEDOS, behind the WEDOS CDN) with `bolt-audit`.
+
+### Fixed
+- `bolt-audit`: `audit.sh --base-url` never ran the asset delivery check. `verify.sh` reads only `BOLT_DELIVERY_URL`, which the audit did not set. The audit now sets it from the new `--delivery-url=`, or from `--base-url` when the `Server` header names Apache, Nginx or LiteSpeed (`symfony serve` and PHP's built-in server keep it off), and `profile.md` has an *Asset delivery check* row.
+- `bolt-audit` and `verify-all.sh`: a pass line containing a warning word rated the skill `WARN` — `bolt-contenttypes` on „✓ no warning or danger notice“, `bolt-legal-cz` on „withdrawal notice“ in its manual checklist. Pass lines (`✓ …`, `PASSED: …`, `OK: …`) and zero counts („0 advisory warnings“) are ignored; `audit.sh` counts „Notice:“ lines, not every „notice“.
+- `bolt-cookie-consent`, `bolt-legal-cz`, `bolt-disable-api`, `bolt-htaccess` `verify.sh`: the reachability probe gave the site 2 s, so a production site on a cold cache reported „not reachable“ and its live checks were skipped. The probe now waits 10 s; a closed port still fails at once.
+- `bolt-asset-caching` `verify.sh`: the live header check looked only for the project's `symfony serve` and skipped on staging / production. It now uses `BOLT_BASE_URL` when it answers, and reports a sample image the site does not have (HTTP 404) instead of „no cache-control“.
+
 ## 1.6.2 — 2026-10-22
 
 Fixes found by auditing rockfest-kurim.cz (WEDOS) with `bolt-audit` and fixing the findings. They were checked on a local Apache with the project's `.htaccess` and in Bolt 6.1.9's own Twig environment.
