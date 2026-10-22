@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.4.1 — 2026-10-22
 
 Admin icons that render: ContentType icons only from the Font Awesome version Bolt bundles — from fmautoservis.cz, where two FA 6 names showed empty boxes in the sidebar.
 
