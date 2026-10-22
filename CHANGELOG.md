@@ -2,6 +2,16 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.5.1 — 2026-10-22
+
+Compression is the host's job, not the `.htaccess`'s. The 1.5.0 finding was measured on a local Apache only. On the production hosts, every page, CSS and JS file is already gzip-compressed without any rule in `.htaccess`.
+
+### Removed
+- `bolt-htaccess` Step 7 and the `mod_deflate` block in `examples/public.htaccess`, along with both checks in `verify.sh` (back to 6 sections): the static check and the live `Content-Encoding` probe. Also removed: the compression lines in the `bolt-audit` checklist and in `WORKFLOWS.md` 2.1.
+
+### Added
+- `bolt-htaccess` Pitfall 8: "Pages are sent uncompressed" on a local Apache. Neither Bolt nor Symfony compresses responses, and the hosts do it at server level, so the only check is a `curl` for `Content-Encoding` against production after the first deployment.
+
 ## 1.5.0 — 2026-10-22
 
 Compressed pages and a maintenance page that never touches the database. Both come from the second audit of fmautoservis.cz: 204 KB of uncompressed HTML, CSS and JS per page, and a 503 page that loaded its phone and e-mail from a settings record.
