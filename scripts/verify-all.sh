@@ -147,10 +147,12 @@ SKIPPED=0
 
 declare -a REPORT
 
-# A run counts as a warning when it exits 0 but reports warnings. Lines such as
-# "PASSED (0 warning(s))" are ignored so a clean run is not mistaken for a warning.
+# A run counts as a warning when it exits 0 but reports warnings. Pass lines ("✓ no warning or
+# danger notice", "PASSED: …") and "PASSED (0 warning(s))" are ignored so a clean run is not
+# mistaken for a warning (bolt-audit's audit.sh uses the same rule).
 has_warnings() {
-    printf '%s\n' "$1" | grep -vE '(^|[^0-9])0 warning' | grep -qiE 'warn|⚠|\[!\]'
+    printf '%s\n' "$1" | grep -vE '^[[:space:]]*(✓|PASSED|OK:)|(^|[^0-9])0 (advisory )?warning' \
+        | grep -qiE 'warn|⚠|\[!\]'
 }
 
 run_check() {

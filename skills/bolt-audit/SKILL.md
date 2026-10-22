@@ -51,6 +51,8 @@ From the project root:
 ```bash
 bash $SKILLS/bolt-audit/scripts/audit.sh --base-url=https://staging.example.cz   # or without --base-url
 #   --project=/path/to/project   audit another directory
+#   --delivery-url=https://…      site for the asset delivery check (default: --base-url when
+#                                 Apache / Nginx / LiteSpeed answers there; never symfony serve)
 #   --out=DIR                     report directory (default var/bolt-audit/<timestamp>/, kept out of git
 #                                 through the clone's local .git/info/exclude)
 #   --skip=bolt-htaccess          skills that do not apply on purpose
@@ -58,7 +60,7 @@ bash $SKILLS/bolt-audit/scripts/audit.sh --base-url=https://staging.example.cz  
 #   --strict                      exit 1 when a skill fails (CI)
 ```
 
-It writes `profile.md`, `summary.md` / `summary.tsv`, `logs/<skill>.log`, `examples.md` and `diffs/`. With `--base-url` it also requests every sitemap URL (with each secondary-locale prefix), the search page and a missing URL, and lists the status codes in `http.md` (`http-smoke` row: any 5xx is a failure, any other non-200 a warning, the missing URL must answer 404) — pages that crash are invisible to the file-based checks. Applicability is decided automatically where it can be: `bolt-htaccess` is N/A on Nginx-only sites, `bolt-add-language` runs once per secondary locale and is N/A on single-language sites. `bolt-cookie-consent` and `bolt-legal-cz` run without `--draft`: placeholders count as failures in an audit. For the register comparison run `bash $SKILLS/bolt-legal-cz/scripts/verify.sh --ares` once (it needs internet access).
+It writes `profile.md`, `summary.md` / `summary.tsv`, `logs/<skill>.log`, `examples.md` and `diffs/`. With `--base-url` it also requests every sitemap URL (with each secondary-locale prefix), the search page and a missing URL, and lists the status codes in `http.md` (`http-smoke` row: any 5xx is a failure, any other non-200 a warning, the missing URL must answer 404) — pages that crash are invisible to the file-based checks. The asset delivery check of `bolt-asset-caching` (where each thumbnail and upload comes from, `ETag`, 304s) runs against `--delivery-url`, or against `--base-url` when its `Server` header names Apache, Nginx or LiteSpeed; `profile.md` says which (*Asset delivery check*). Against `symfony serve` it is off — pass `--delivery-url` with a staging or production URL, or start `scripts/serve-apache.sh` in the project first. Applicability is decided automatically where it can be: `bolt-htaccess` is N/A on Nginx-only sites, `bolt-add-language` runs once per secondary locale and is N/A on single-language sites. `bolt-cookie-consent` and `bolt-legal-cz` run without `--draft`: placeholders count as failures in an audit. For the register comparison run `bash $SKILLS/bolt-legal-cz/scripts/verify.sh --ares` once (it needs internet access).
 
 ## Step 3 — Read the profile
 
