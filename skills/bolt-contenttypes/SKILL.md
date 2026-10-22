@@ -6,7 +6,8 @@ description: >-
   no raw html fields (use redactor or article), sanitise: true on every rich-text
   field and never allow_twig, mandatory order: -id on singletons, no reserved field
   names (icon, status, author, … — and label, value, name, type inside sets), an explicit
-  slug on every ContentType, all identifiers in English, viewless resource blocks, collection/set structuring,
+  slug on every ContentType, all identifiers in English, admin icons only from the Font Awesome
+  5.15.4 solid set Bolt bundles (no FA 6 names like sliders or screwdriver-wrench), viewless resource blocks, collection/set structuring,
   multilingual consistency, and a clean Bolt Configuration Notices check before content.
 ---
 
@@ -332,6 +333,53 @@ services_page:
 
 When a reserved name (rule 8) has to be avoided, pick a contextual English name (`icon_service`, `fact_label`), not the site-language word. The verification fails on identifiers with non-ASCII characters (diacritics); transliterated words (`ikona`, `poradi`) still need a review.
 
+### 11. Admin Icons: Only Font Awesome Solid Icons Bolt Bundles
+`icon_one` and `icon_many` are the only icons a ContentType configures in the admin. Bolt turns `fa:<name>` into `<i class="fas fa-<name>">`: always the **solid** style of the **Font Awesome Free** version bundled in `bolt/assets`, which is **5.15.4** in Bolt 6.1. The version is printed at the top of `public/assets/52.css`. Any other name renders as an empty box:
+
+* **Font Awesome 6 / 7 names** that the current docs and most examples use: `sliders` (5: `sliders-h`), `screwdriver-wrench` (5: `tools`), `house` (`home`), `gear` (`cog`), `pen-to-square` (`edit`), `file-lines` (`file-alt`), `xmark` (`times`), `magnifying-glass` (`search`), `gauge-high` (`tachometer-alt`). Since FA 6, 356 icons have a different name.
+* **Brand icons** (`facebook`, `whatsapp`, `google`) — `fab` only, so they have no solid glyph.
+* **Style prefixes or extra classes** in the value (`fas fa-home`, `fa:home fa-spin`) — Bolt adds `fas` itself and strips every `fa-`, so the class breaks.
+
+| Where it renders | Option |
+| :--- | :--- |
+| Sidebar and toolbar menu (`<admin-sidebar :menu>`, `<admin-toolbar :menu>`), dashboard rows | `icon_many` |
+| Listing heading, edit and new page headings (`icon(record)`), sidebar submenu items (recent records, "new") | `icon_one` (falls back to `icon_many`) |
+
+Without either option, Bolt shows `fa-file` / `fa-copy`, so every such type looks the same. Set both on every ContentType. Pick icons only from the bundled set:
+
+```bash
+# Icons that render in this project's admin, searchable by name, newer FA name or meaning
+php vendor/tomvondracek/bolt-skills/skills/bolt-contenttypes/scripts/admin-icons.php list car
+php vendor/tomvondracek/bolt-skills/skills/bolt-contenttypes/scripts/admin-icons.php list settings
+```
+
+```yaml
+# ❌ INCORRECT — Font Awesome 6 names, empty boxes in Bolt 6.1
+settings:
+  icon_one: "fa:sliders"
+  icon_many: "fa:sliders"
+services:
+  icon_one: "fa:screwdriver-wrench"
+
+# ✅ CORRECT — the Font Awesome 5.15.4 solid names
+settings:
+  icon_one: "fa:sliders-h"
+  icon_many: "fa:sliders-h"
+services:
+  icon_one: "fa:tools"
+  icon_many: "fa:tools"
+```
+
+The list comes from `references/fontawesome-5.15.4-solid.tsv`: 1,002 solid icons, each with its newer names and search terms, generated from Font Awesome's own `metadata/icons.yml`. Bolt's bundled `fa-solid-900` font is byte-identical to the one in `@fortawesome/fontawesome-free@5.15.4`. When a Bolt upgrade ships another Font Awesome version, the verification warns, and you generate the list for that version:
+
+```bash
+npm pack @fortawesome/fontawesome-free@<version> @fortawesome/fontawesome-free@6 @fortawesome/fontawesome-free@7
+# unpack each, then (from a Bolt project, for symfony/yaml):
+php …/admin-icons.php generate --version=<version> <version>/metadata/icons.yml 6.x/metadata/icons.yml 7.x/metadata/icons.yml
+```
+
+**Rendered check.** `verify.sh` checks the configuration. After content entry (or any change to `icon_one` / `icon_many` followed by `cache:clear`), confirm in the logged-in admin that every icon renders on every page. Run `scripts/admin-icons-browser.js` in the browser console, or in a browser automation tool's JavaScript runner, on any `/bolt/` page. It loads the dashboard and every content listing, edit and new page linked from the sidebar (GET only). It checks both the server-rendered icons and the icons that the Vue menus and listings receive as JSON. It returns `{ fontAwesome, pages, icons, missing, errors }`, and `missing` and `errors` must be empty. It catches icons from any source, also from extensions and from Bolt itself.
+
 ---
 
 ## Before Entering Content: Bolt Configuration Notices Must Be Clean
@@ -343,7 +391,7 @@ php vendor/tomvondracek/bolt-skills/skills/bolt-build/scripts/config-notices.php
 # exit 0: clean · exit 1: notices to resolve · exit 2: could not run
 ```
 
-`scripts/verify.sh` runs it as its third section. Renaming a field after content exists loses that field's values (Bolt stores fields by name), so this check belongs before content entry, not after.
+`scripts/verify.sh` runs it as its fourth section. Renaming a field after content exists loses that field's values (Bolt stores fields by name), so this check belongs before content entry, not after.
 
 ---
 
@@ -370,6 +418,7 @@ The rules are checked by `scripts/check-contenttypes.php` on the parsed YAML (me
 10. **Explicit Slug:** Fails when a ContentType has no `slug:` and the slug Bolt infers from `name` differs from its key (rule 9).
 11. **Bolt Configuration Notices:** Runs `bolt-build/scripts/config-notices.php` — the dashboard widget's checks — and fails on any warning or danger notice.
 12. **English Identifiers:** Fails on ContentType keys, field names and select values containing non-ASCII characters (rule 10).
+13. **Admin Icons:** `scripts/admin-icons.php check` reads the Font Awesome version and icon classes from Bolt's admin CSS (`public/assets/*.css`). It fails on an `icon_one` / `icon_many` that is not `fa:<name>`, that has no class (Font Awesome 6 / 7 names, typos), or that has no solid glyph (brand icons), and names the 5.15.4 replacement. It warns on a ContentType without icons, or when no list exists for the bundled version (rule 11).
 
 ---
 

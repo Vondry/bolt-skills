@@ -2,6 +2,19 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Admin icons that render: ContentType icons only from the Font Awesome version Bolt bundles — from fmautoservis.cz, where two FA 6 names showed empty boxes in the sidebar.
+
+### Added
+- `bolt-contenttypes` rule 11: `icon_one` / `icon_many` must be Font Awesome Free **solid** icons of the version in `bolt/assets` (5.15.4 in Bolt 6.1). Bolt prints `fas fa-<name>`, so FA 6 / 7 names (`sliders`, `screwdriver-wrench`, `house`, `gear`, …), brand icons and style prefixes render as empty boxes. The rule includes a table of where each option renders.
+- `bolt-contenttypes/references/fontawesome-5.15.4-solid.tsv`: the 1,002 solid icons, each with its FA 6 / 7 names and search terms, generated from Font Awesome's `metadata/icons.yml`.
+- `bolt-contenttypes/scripts/admin-icons.php`: `check` (in `verify.sh`, now 4 sections) reads the version and icon classes from Bolt's admin CSS, fails on unknown, newer-version, brand and malformed icons, names the 5.15.4 replacement, and warns on ContentTypes without icons. `list <word>` finds renderable icons by name, newer name or meaning. `generate` builds the list for another Font Awesome version.
+- `bolt-contenttypes/scripts/admin-icons-browser.js`: render check in the logged-in admin. It loads the dashboard and every listing, edit and new page, and reports every icon without a CSS rule. That covers the server-rendered headings and the JSON the Vue sidebar, toolbar and dashboard listing render from. It is part of `WORKFLOWS.md` 7.1 and the `bolt-build` Phase 7 row, and Checkpoint 5's gate names rule 11.
+
+### Fixed
+- `bolt-theme-init/examples/contenttypes_snippet.yaml`: `fa:boxes-stacked` (FA 6) → `fa:boxes`.
+
 ## 1.4.0 — 2026-10-22
 
 Every photo gallery opens in the PhotoSwipe lightbox, and template classes use their canonical token form — both from building fmautoservis.cz.

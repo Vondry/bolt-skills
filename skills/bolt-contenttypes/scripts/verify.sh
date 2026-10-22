@@ -2,7 +2,8 @@
 set -e
 
 # bolt-contenttypes verification: YAML syntax, then the rules of SKILL.md checked by
-# scripts/check-contenttypes.php on the parsed config/bolt/contenttypes.yaml.
+# scripts/check-contenttypes.php on the parsed config/bolt/contenttypes.yaml, and the admin
+# icons (rule 11) checked by scripts/admin-icons.php against Bolt's bundled Font Awesome.
 
 # Detect Bolt CMS project root
 if [ -f "./config/services.yaml" ]; then
@@ -41,7 +42,7 @@ echo "=========================================================="
 FAILED=0
 WARNINGS=0
 SECTION=0
-TOTAL_SECTIONS=3
+TOTAL_SECTIONS=4
 
 section() { SECTION=$((SECTION + 1)); echo ""; echo "[$SECTION/$TOTAL_SECTIONS] $1"; }
 pass() { echo "  ✓ $1"; }
@@ -66,7 +67,7 @@ while IFS= read -r line; do
         FAIL) fail "$message" ;;
         *) [ -n "$line" ] && echo "  $line" ;;
     esac
-done < <(php "$SCRIPT_DIR/check-contenttypes.php" "$BASE_DIR" 2>&1)
+done < <(php "$SCRIPT_DIR/check-contenttypes.php" "$BASE_DIR" 2>&1; php "$SCRIPT_DIR/admin-icons.php" check "$BASE_DIR" 2>&1)
 
 # The same checks Bolt shows in the "Bolt Configuration Notices" box of the admin dashboard
 # (reserved field names, ambiguous slugs, slug `uses`, unknown field types, cache not cleared
