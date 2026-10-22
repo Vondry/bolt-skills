@@ -536,7 +536,7 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 ### 6.4 Error & Maintenance Pages (`bolt-helper-pages`)
 - Copy the examples into `helper-pages/`: `_helper_template_with_master.twig`, `_helper_template_without_master.twig`, `_helper_scene.twig`, `_helper_scene_styles.twig`, `notfound.404.twig`, `forbidden.403.twig`, `internal-server-error.500.twig`, `maintenance.503.twig`.
 - Map `notfound`, `forbidden`, `internal_server_error`, `maintenance` in `config/bolt/config.yaml` (`examples/config_snippet.yaml`); the 500 and 503 entries name one-line root entrypoints without `/` (`examples/root-*.twig`), so Bolt does not query the database before rendering them.
-- 404 and 403 extend the with-master layout (header and footer stay for navigation); 500 and 503 extend the standalone layout, so they render without the header, footer or any database access.
+- 404 and 403 extend the with-master layout (header and footer stay for navigation); 500 and 503 extend the standalone layout, so they render without the header, footer or any database access — no `setcontent`, no settings record. The 503 page shows no phone, e-mail, times or status code: it only says the site is being worked on, because it can be on without anyone noticing.
 - Design the scene from the site plan's error-page metaphor; keep the styles in `_helper_scene_styles.twig`; helper templates use no one-off Tailwind classes (`@source not "../../helper-pages"`).
 - Write the texts in the default locale (single-locale limitation until bolt/core#3726).
 - *Verify:* `bash $SKILLS/bolt-helper-pages/scripts/verify.sh`

@@ -96,9 +96,9 @@ never "keep, record as deviation".
 - **Severity hints:** a page answering 500 (see `http.md`) → High; classes not in the CSS → High (unstyled UI); originals served instead of thumbnails → Medium (performance); literal strings on a multilingual site → Medium.
 
 ## 15. bolt-helper-pages
-- **Script:** error page mappings in `config/bolt/config.yaml`, helper templates, SEO / robustness (noindex, no DB on 500), Tailwind bundle isolation, `lint:twig`.
-- **Review:** the 500 and 503 templates query nothing (no `setcontent`, no menu) — they must render with the database down; 404 offers a way back (home, search); texts in the site's tone (Appendix B.5: default locale only).
-- **Severity hints:** 500 page querying the database → High; default Bolt error pages in production → Medium.
+- **Script:** error page mappings in `config/bolt/config.yaml`, helper templates, SEO / robustness (noindex; no `setcontent` / `menu_array()` in the 500 and 503 pages, the standalone layout or the scene; no `tel:` / `mailto:` on the 503 page), Tailwind bundle isolation, `lint:twig`.
+- **Review:** the 500 and 503 templates query nothing (no `setcontent`, no menu) — they must render with the database down; the 503 page shows no contact details, numbers or time promises (it can be on without anyone noticing); 404 offers a way back (home, search); texts in the site's tone (Appendix B.5: default locale only).
+- **Severity hints:** 500 or 503 page querying the database → High; contact details or time promises on the 503 page → Low; default Bolt error pages in production → Medium.
 
 ## 16. bolt-cookie-consent
 - **Script:** the `theme.yaml` `privacy:` data model, banner wiring and compliance, wording, hard-coded trackers, footer, privacy page and route, translations, live HTML.

@@ -1,12 +1,18 @@
 {#
-  503 — Planned Maintenance.
-  Uses the standalone layout (_helper_template_without_master.twig): while the site
-  is under maintenance, navigation links and public forms may fail, so the page
-  presents direct contact channels instead.
+  503 — Maintenance.
+  Uses the standalone layout (_helper_template_without_master.twig) and, like the 500 page,
+  queries nothing: no {% setcontent %}, no menu, no contact details from a settings record.
+  Maintenance mode is switched on while the database is migrated or restored, so the page has to
+  render with the database down.
+
+  No phone numbers, e-mail addresses, times or durations: the page can be on without anyone
+  noticing (left on after a deployment, shown during an outage), and a promise such as "back in
+  a few minutes" or a number nobody answers would then be wrong. It only says that the site is
+  being worked on.
 #}
 {% extends 'helper-pages/_helper_template_without_master.twig' %}
 
-{% set title = 'Probíhá údržba webu' %}
+{% set title = 'Na webu se pracuje' %}
 
 {% block head %}
     {{ include('helper-pages/_helper_scene_styles.twig') }}
@@ -14,15 +20,12 @@
 
 {% block mainHelper %}
     {{ include('helper-pages/_helper_scene.twig', {
-        code: '503',
-        eyebrow: 'Odstávka · Plánovaná údržba',
-        heading: 'Právě provádíme údržbu webu',
-        lead: 'Omlouváme se za dočasné omezení. Web brzy opět poběží na plný výkon. Děkujeme za vaši trpělivost.',
+        eyebrow: 'Údržba webu',
+        heading: 'Na webu právě pracujeme',
+        lead: 'Web je dočasně nedostupný, protože na něm probíhají úpravy. Zkuste to prosím znovu o něco později. Děkujeme za trpělivost.',
         progress: true,
         buttons: [
-            { label: 'info@example.com', href: 'mailto:info@example.com', variant: 'primary' },
-            { label: '+420 123 456 789', href: 'tel:+420123456789', variant: 'secondary' }
-        ],
-        note: 'V případě naléhavých dotazů nás prosím kontaktujte telefonicky nebo e-mailem.'
+            { label: 'Zkusit znovu', href: app.request.uri, variant: 'primary' }
+        ]
     }) }}
 {% endblock mainHelper %}
