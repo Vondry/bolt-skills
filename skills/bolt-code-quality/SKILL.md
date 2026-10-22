@@ -443,7 +443,7 @@ skills/bolt-code-quality/scripts/verify.sh
 ```
 
 The script verifies:
-1. `ecs.php` existence, PHP syntax validity, and paths configuration.
+1. `ecs.php` existence, PHP syntax validity, and paths configuration; warns on the deprecated `BracesFixer` / `NewWithBracesFixer` (older copies of the example — take the current `examples/ecs.php`).
 2. `phpstan.dist.neon` existence, Level 8 verification, and paths configuration.
 3. `composer.json` scripts (`lint`, `lint:fix`, `phpstan`) and dev dependencies.
 4. `Makefile` targets (`cscheck`, `csfix`, `stancheck`, `csclear`, `db-update`; `db-migrate` recommended for production).
