@@ -94,6 +94,23 @@ AddDefaultCharset UTF-8
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Front controller or hosting folder in the requested URL (Pitfall 10). Symfony takes the
+    # script path as the base URL whenever the path contains "index.php", and the folder prefix
+    # when the site is requested under it (WEDOS: /domains/<domain>/public/); Bolt then caches that
+    # base into canonical links, and the sitemap and llms.txt print it. The conditions read the
+    # request line as the visitor sent it (THE_REQUEST), which internal rewrites — the root
+    # .htaccess, the host's own forwarding, the front controller below — never change. The
+    # redirects go straight to https:// (behind a TLS proxy Apache itself sees http).
+    # /index.php, /index.php/page, /sub/index.php/page → the same path without /index.php:
+    RewriteCond %{THE_REQUEST} ^\S+\s([^?\s]*?)/index\.php(?:/([^?\s]*))?(?:\?\S*)?\s
+    RewriteRule ^ https://%{HTTP_HOST}%1/%2 [R=301,L,NE]
+    # Any other path naming index.php (/page/index.phpx) — no page has such a URL:
+    RewriteCond %{THE_REQUEST} ^\S+\s[^?\s]*index\.php
+    RewriteRule ^ - [R=404,L]
+    # /domains/<this host>/public/page → /page (only the requested host's own folder):
+    RewriteCond %{HTTP_HOST}::%{THE_REQUEST} ^([^:]+)::\S+\s/domains/\1(?:/public)?(?:/([^?\s]*))?(?:\?\S*)?\s [NC]
+    RewriteRule ^ https://%1/%2 [R=301,L,NE]
+
     # Theme build folders: node_modules/ (created by npm inside public/theme/<theme>/) exposes
     # every dependency's sources and versions; .git/ exposes the repository. Deny both.
     RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
