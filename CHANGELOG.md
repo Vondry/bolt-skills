@@ -11,6 +11,10 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 - `bolt-contenttypes/scripts/verify.sh`: third section runs `config-notices.php`.
 - `bolt-contenttypes` rule 10: all configuration in English (ContentType keys, field names, select values, template paths); only names, labels and public URL slugs use the site language. A reserved name is replaced by a contextual English name (`icon_service`, `fact_label`), not a translation. The verification fails on non-ASCII identifiers.
 
+### Fixed
+- `bolt-theme-init`: the `collapse` mobile menu closes on Escape and returns focus to the menu button, as the drawer and the dropdowns already did (`examples/js/src/menu.ts`).
+- `bolt-theme-templates/scripts/verify.sh` [7/8]: a utility must start a token, so ids and slugs such as `jak-to-funguje` are no longer reported as missing `to-*` gradient classes.
+
 ## 1.2.0 — 2026-10-19
 
 New skill `bolt-legal-cz`, and fixes from a review of every skill against bolt/core 6.1.9 and four production sites.

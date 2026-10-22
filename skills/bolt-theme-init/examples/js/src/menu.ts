@@ -158,6 +158,12 @@ if (opener && mobileMenu) {
         opener.addEventListener('click', () => setOpen(mobileMenu.clientHeight === 0));
         closers.forEach((el) => el.addEventListener('click', () => setOpen(false)));
         mobileMenu.querySelectorAll('a[href]').forEach((link) => link.addEventListener('click', () => setOpen(false)));
+        // Escape closes the open panel and returns focus to the menu button.
+        document.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key !== 'Escape' || mobileMenu.clientHeight === 0) return;
+            setOpen(false);
+            opener.focus();
+        });
 
         window.addEventListener('resize', () => {
             if (mobileMenu.clientHeight !== 0) {
