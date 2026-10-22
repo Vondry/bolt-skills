@@ -8,6 +8,12 @@
     <unit id="a11y_pagination" name="a11y.pagination"><segment><source>a11y.pagination</source><target>Pagination</target></segment></unit>
     <unit id="pager_previous" name="pager.previous"><segment><source>pager.previous</source><target>Previous page</target></segment></unit>
     <unit id="pager_next" name="pager.next"><segment><source>pager.next</source><target>Next page</target></segment></unit>
+    <unit id="gallery_open_photo" name="gallery.open_photo"><segment><source>gallery.open_photo</source><target>Enlarge photo %index%</target></segment></unit>
+    <unit id="gallery_close" name="gallery.close"><segment><source>gallery.close</source><target>Close (Esc)</target></segment></unit>
+    <unit id="gallery_zoom" name="gallery.zoom"><segment><source>gallery.zoom</source><target>Zoom</target></segment></unit>
+    <unit id="gallery_previous" name="gallery.previous"><segment><source>gallery.previous</source><target>Previous photo</target></segment></unit>
+    <unit id="gallery_next" name="gallery.next"><segment><source>gallery.next</source><target>Next photo</target></segment></unit>
+    <unit id="gallery_error" name="gallery.error"><segment><source>gallery.error</source><target>The photo could not be loaded.</target></segment></unit>
     <unit id="card_read_more" name="card.read_more"><segment><source>card.read_more</source><target>Details</target></segment></unit>
     <unit id="card_edit" name="card.edit"><segment><source>card.edit</source><target>Edit</target></segment></unit>
     <unit id="section_show_all" name="section.show_all"><segment><source>section.show_all</source><target>Show all</target></segment></unit>

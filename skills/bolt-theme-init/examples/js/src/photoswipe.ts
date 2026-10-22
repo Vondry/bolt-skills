@@ -9,11 +9,17 @@ import PhotoSwipeLightbox from 'photoswipe/lightbox';
  *     a.photoswipe-gallery__link        one per slide, href = full-size image,
  *                                       carrying data-pswp-width and data-pswp-height
  *       .photoswipe-gallery__caption    optional; innerHTML shown as lightbox caption
+ *
+ * UI labels (PhotoSwipe defaults to English) come from the first gallery's data attributes,
+ * rendered from the translation catalog: data-pswp-close-title, data-pswp-zoom-title,
+ * data-pswp-arrow-prev-title, data-pswp-arrow-next-title, data-pswp-error-msg.
  */
 const GALLERY_SELECTOR = '.photoswipe-gallery';
 const LINK_SELECTOR = '.photoswipe-gallery__link';
 const CAPTION_SELECTOR = '.photoswipe-gallery__caption';
 const HISTORY_STATE_KEY = 'photoswipe';
+const MAX_CONTENT_CACHE_ITEMS = 12;
+const UI_LABELS = ['closeTitle', 'zoomTitle', 'arrowPrevTitle', 'arrowNextTitle', 'errorMsg'] as const;
 
 interface PhotoSwipeHash {
     gid: number;
@@ -136,10 +142,19 @@ if (galleries.length > 0) {
         pswp.on('openingAnimationEnd', closeAfterOpening);
     };
 
+    const labels: Partial<Record<typeof UI_LABELS[number], string>> = {};
+    UI_LABELS.forEach((option) => {
+        const value = galleries[0].dataset[`pswp${option[0].toUpperCase()}${option.slice(1)}`];
+        if (value) {
+            labels[option] = value;
+        }
+    });
+
     const lightbox = new PhotoSwipeLightbox({
         gallery: GALLERY_SELECTOR,
         children: LINK_SELECTOR,
         pswpModule: PhotoSwipe,
+        ...labels,
     });
 
     lightbox.on('gettingData', (event) => {
@@ -219,6 +234,15 @@ if (galleries.length > 0) {
         }
 
         session.hashInitialized = true;
+    });
+
+    lightbox.on('afterInit', () => {
+        const pswp = lightbox.pswp;
+        if (pswp) {
+            // Keep a wider navigation window than PhotoSwipe's five-item default,
+            // but do not retain every decoded image in very large galleries.
+            pswp.contentLoader.limit = Math.min(pswp.getNumItems(), MAX_CONTENT_CACHE_ITEMS);
+        }
     });
 
     lightbox.on('destroy', () => {

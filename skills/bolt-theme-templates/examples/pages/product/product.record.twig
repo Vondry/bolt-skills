@@ -26,7 +26,12 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
 
             {# Left: Media. One PhotoSwipe gallery for the main image and the thumbnails. #}
-            <div class="photoswipe-gallery flex flex-col gap-4">
+            <div data-pswp-close-title="{{ __('gallery.close') }}"
+                 data-pswp-zoom-title="{{ __('gallery.zoom') }}"
+                 data-pswp-arrow-prev-title="{{ __('gallery.previous') }}"
+                 data-pswp-arrow-next-title="{{ __('gallery.next') }}"
+                 data-pswp-error-msg="{{ __('gallery.error') }}"
+                 class="photoswipe-gallery flex flex-col gap-4">
                 {% if record.image is defined and record.image is not empty %}
                     <div class="rounded-md overflow-hidden border border-stroke aspect-4/3 bg-surface">
                         {% include 'components/ui/picture.twig' with {

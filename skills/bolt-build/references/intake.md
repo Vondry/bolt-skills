@@ -43,7 +43,7 @@ phase and skill consume it.
 | S3 | **Proposal:** pages and URLs per locale, homepage anchor sections | from the design | 0.1, 5.3, 5.4 |
 | S4 | **Proposal:** menu profile | landing (one page, `/#anchors`) · catalog (multi-page, submenus) · conditional (event site) | 4.3, 5.4 `bolt-menu` |
 | S5 | **Proposal:** ContentTypes — singleton or listing, routable or not, fields | from repeated design blocks | 5.1 `bolt-contenttypes` |
-| S6 | **Proposal:** features — gallery/lightbox, downloads, carousel, product catalog, articles/blog | from the design | 0.2 decision matrix, 3.2, 4.5, 6.1 |
+| S6 | **Proposal:** features — gallery (always with the PhotoSwipe lightbox, also when the design shows none), downloads, carousel, product catalog, articles/blog | from the design | 0.2 decision matrix, 3.2, 4.5, 6.1 |
 | S7 | Forms (contact, enquiry, newsletter): how are they delivered? | none · `mailto:` link · form extension or external service (outside the skills — the agent proposes one and records it) | 6.1, privacy purposes |
 | S8 | Content source | copy from the design · documents the user supplies (path) · agent writes draft copy marked for review | 7.1 seed content |
 | S9 | Images | exported from the design · supplied folder (path) · placeholders | 4.2 logo, 7.1 media library |

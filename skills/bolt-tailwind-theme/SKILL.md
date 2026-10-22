@@ -469,6 +469,21 @@ button[aria-expanded="true"] .rotate-svg {
 }
 ```
 
+### H. Gallery Lightbox Caption (`.pswp__custom-caption`)
+Every photo gallery opens in the PhotoSwipe 5 lightbox (`js/src/photoswipe.ts` of `bolt-theme-init`). Keep `@import '../../node_modules/photoswipe/dist/photoswipe.css';` right after `@import 'tailwindcss';`. The module registers a caption element filled from the slide's `.photoswipe-gallery__caption` (the image alt); style it with the night tokens so it stays readable over any photo:
+```css
+.pswp__custom-caption {
+    position: absolute;
+    z-index: 10;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(transparent, color-mix(in srgb, var(--color-night) 85%, transparent));
+    @apply font-body text-sm text-night-ink text-center text-pretty pointer-events-none;
+}
+```
+
 ---
 
 ## 6. Extracting Tokens from a Design (Figma / Penpot / Pencil)

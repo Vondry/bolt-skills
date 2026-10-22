@@ -379,8 +379,11 @@ Every theme initialized with this skill automatically receives a production-test
 4. **`js/src/photoswipe.ts`**:
    - Full PhotoSwipe v5 lightbox wiring for `.photoswipe-gallery` containers with `a.photoswipe-gallery__link` slides (`href` = full-size image, `data-pswp-width`, `data-pswp-height`; optional `.photoswipe-gallery__caption`).
    - Deep-linking URL hash sync (`#&gid=1&pid=2`) with browser history integration (closing on Back button).
-   - Custom caption registration (`.pswp__custom-caption`) and intrinsic aspect-ratio fallbacks.
-5. **`js/src/index.ts`**: imports the modules above; remove the ones the site does not need (e.g. `photoswipe` together with its npm dependency and CSS `@import`). `bolt-cookie-consent` adds `import './cookie-consent';`.
+   - Custom caption registration (`.pswp__custom-caption`, styled by `bolt-tailwind-theme` 5.H) and intrinsic aspect-ratio fallbacks.
+   - Localised UI: PhotoSwipe's English button titles and error message are replaced by the first gallery's `data-pswp-close-title`, `data-pswp-zoom-title`, `data-pswp-arrow-prev-title`, `data-pswp-arrow-next-title` and `data-pswp-error-msg` (rendered from the `gallery.*` translation keys of `bolt-theme-templates`).
+   - Keeps up to 12 slides decoded (`contentLoader.limit`) instead of PhotoSwipe's default 5.
+   - **Every photo gallery gets this lightbox**, even when the design does not show one (a static design cannot show a click state) — same as the reference sites. Remove the module only when the site has no gallery at all.
+5. **`js/src/index.ts`**: imports the modules above; remove the ones the site does not need (e.g. `photoswipe` together with its npm dependency and CSS `@import` when the site has no gallery). `verify.sh` fails when templates use `.photoswipe-gallery` without the import, the dependency or the CSS. `bolt-cookie-consent` adds `import './cookie-consent';`.
 6. **`js/splide_4.1.2.min.js` & `css/splide_4.1.2.min.css`**:
    - Standard carousel library and styles ready for immediate use (load them in `{% block head %}` of the pages that use a carousel).
 7. **`css/article/grid.css` & `css/article/utils.css`**:
