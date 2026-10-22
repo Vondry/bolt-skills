@@ -374,7 +374,7 @@ Verifications 1.1, 1.3 (configuration part), 1.4 and 1.5 (file sections) pass. C
 **Goal:** the web server serves only what it should and caches static files and thumbnails correctly.
 
 ### 2.1 Apache `.htaccess` Shielding (`bolt-htaccess`) **[if Apache]**
-- `public/.htaccess` from the skill's template: `AddDefaultCharset UTF-8`, the allowlist for `theme/`, `files/` and `thumbs/` (only built assets and accepted upload types are served), the safety-net `FilesMatch` deny list, the security headers for static files (HSTS, nosniff, sandboxed uploads), the Symfony front-controller rules.
+- `public/.htaccess` from the skill's template: `AddDefaultCharset UTF-8`, the allowlist for `theme/`, `files/` and `thumbs/` (only built assets and accepted upload types are served), the safety-net `FilesMatch` deny list, the security headers for static files (HSTS, nosniff, sandboxed uploads), gzip compression of pages, CSS and JS (`mod_deflate`), the Symfony front-controller rules.
 - Root `/.htaccess` with the HTTPS redirect and the rewrite into `public/` **only** when the domain's document root is the project root.
 - The templates redirect plain HTTP both with and without a TLS proxy (`%{HTTPS} off` + `X-Forwarded-Proto !https`) and deny `node_modules/`, `.git/` and `.env*` in addition to the source-file patterns.
 - *Verify:* `bash $SKILLS/bolt-htaccess/scripts/verify.sh` (the live part is repeated in Phase 8, once the theme exists).
