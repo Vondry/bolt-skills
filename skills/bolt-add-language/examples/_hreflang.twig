@@ -18,7 +18,8 @@
 
 {% if locales|length > 1 %}
     {% set default_locale = app.request.defaultLocale %}
-    {% set origin = config.get('general/canonical')|default(app.request.host) %}
+    {# Without a canonical host (local development) the request's own scheme, host and port. #}
+    {% set origin = config.get('general/canonical')|default(app.request.schemeAndHttpHost) %}
     {% if not (origin matches '#^https?://#') %}
         {% set origin = app.request.scheme ~ '://' ~ origin %}
     {% endif %}
