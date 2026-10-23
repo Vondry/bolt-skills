@@ -1,0 +1,29 @@
+{#
+  Page-Scoped Component: One search result
+  Rules: Zero setcontent. All data passed via parameters.
+
+  Props:
+    - title (string): Record title (record|title)
+    - href (string): Record URL (record|link — already in the current locale; passed through locale_link)
+    - type (string|optional): ContentType label, e.g. record.definition.singular_name
+    - excerpt (string|optional): record|excerpt(220, false, term) — Bolt strips the HTML and wraps
+        the matched term in <mark>. Printed with |raw: Bolt registers its excerpt filter as HTML-safe,
+        but that only holds when it is printed directly — passed in here it is a plain string
+
+  The whole row is clickable through a stretched link on the title (`after:absolute after:inset-0`),
+  which needs the `relative` on <article>.
+#}
+
+<article class="group relative py-6">
+    {% if type is defined and type is not empty %}
+        <p class="eyebrow">{{ type }}</p>
+    {% endif %}
+
+    <h2 class="mt-1 text-card font-semibold text-ink">
+        <a href="{{ locale_link(href) }}" class="after:absolute after:inset-0 group-hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">{{ title }}</a>
+    </h2>
+
+    {% if excerpt is defined and excerpt is not empty %}
+        <p class="mt-2 max-w-3xl text-body text-ink-2 [&_mark]:rounded-sm [&_mark]:bg-accent-soft [&_mark]:px-0.5 [&_mark]:text-ink">{{ excerpt|raw }}</p>
+    {% endif %}
+</article>

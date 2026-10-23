@@ -133,6 +133,24 @@ if [ ! -f "$THEME_DIR/index.twig" ]; then
     echo "  [create]  $THEME_DIR/index.twig"
 fi
 
+# Search: Bolt serves /search and /{_locale}/search on every site, so every theme gets the page.
+echo "4. Scaffolding the search results page (pages/search/)..."
+copy_file "$EXAMPLES_DIR/pages/search/search.twig" "$THEME_DIR/pages/search/search.twig"
+copy_file "$EXAMPLES_DIR/pages/search/components/search-form.twig" "$THEME_DIR/pages/search/components/search-form.twig"
+copy_file "$EXAMPLES_DIR/pages/search/components/search-result.twig" "$THEME_DIR/pages/search/components/search-result.twig"
+# Thin root entrypoint matching Bolt's default `search_results_template: search.twig`
+if [ ! -f "$THEME_DIR/search.twig" ] || [ $FORCE -eq 1 ]; then
+    printf "{%% extends 'pages/search/search.twig' %%}\n" > "$THEME_DIR/search.twig"
+    echo "  [create]  $THEME_DIR/search.twig"
+else
+    echo "  [skip]    $THEME_DIR/search.twig already exists."
+fi
+SEARCH_TEMPLATE=$(grep -E "^search_results_template:" "$BOLT_CONFIG" 2>/dev/null | head -n 1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+if [ -n "$SEARCH_TEMPLATE" ] && [ "$SEARCH_TEMPLATE" != "search.twig" ] && [ ! -f "$THEME_DIR/$SEARCH_TEMPLATE" ]; then
+    echo "  [warn]    $BOLT_CONFIG sets search_results_template: $SEARCH_TEMPLATE, which does not exist —"
+    echo "            set it to search.twig."
+fi
+
 echo "=========================================================="
 echo " Done! Next:"
 echo "  - Merge the translation units into every catalog:"
