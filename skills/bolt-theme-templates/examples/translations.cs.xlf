@@ -48,5 +48,15 @@
     <unit id="products_inquire_cta" name="products.inquire_cta"><segment><source>products.inquire_cta</source><target>Nezávazně poptat</target></segment></unit>
     <unit id="products_in_stock" name="products.in_stock"><segment><source>products.in_stock</source><target>Skladem (%count% ks)</target></segment></unit>
     <unit id="products_on_request" name="products.on_request"><segment><source>products.on_request</source><target>Na dotaz</target></segment></unit>
+    <!-- Search results page (pages/search/) -->
+    <unit id="search_title" name="search.title"><segment><source>search.title</source><target>Vyhledávání</target></segment></unit>
+    <unit id="search_title_for" name="search.title_for"><segment><source>search.title_for</source><target>Hledání: %term%</target></segment></unit>
+    <unit id="search_results_for" name="search.results_for"><segment><source>search.results_for</source><target>Výsledky pro „%term%“</target></segment></unit>
+    <unit id="search_label" name="search.label"><segment><source>search.label</source><target>Hledaný výraz</target></segment></unit>
+    <unit id="search_placeholder" name="search.placeholder"><segment><source>search.placeholder</source><target>Co hledáte?</target></segment></unit>
+    <unit id="search_submit" name="search.submit"><segment><source>search.submit</source><target>Hledat</target></segment></unit>
+    <unit id="search_count" name="search.count"><segment><source>search.count</source><target>{1} Nalezen 1 výsledek|[2,4] Nalezeny %count% výsledky|[5,Inf] Nalezeno %count% výsledků</target></segment></unit>
+    <unit id="search_empty_title" name="search.empty_title"><segment><source>search.empty_title</source><target>Nic jsme nenašli</target></segment></unit>
+    <unit id="search_empty_message" name="search.empty_message"><segment><source>search.empty_message</source><target>Pro „%term%“ jsme nic nenašli. Zkuste jiné nebo obecnější slovo.</target></segment></unit>
   </file>
 </xliff>

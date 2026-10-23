@@ -1,0 +1,37 @@
+{#
+  Page-Scoped Component: Search form
+  Rules: Zero setcontent. All data passed via parameters.
+
+  Props:
+    - term (string|optional): The current search term, shown in the field
+    - action (string|optional): Form target. Default: the current route with its parameters —
+        /search on the default locale, /{_locale}/search on the others. Never path('search'):
+        that is always the default locale, so an English visitor would land on Czech results.
+        A header search box outside the search page passes
+        action: path('search_locale', { _locale: app.request.locale }) on secondary locales.
+
+  Translation keys: search.label, search.placeholder, search.submit
+#}
+
+{% set route = app.request.attributes.get('_route') %}
+{% set action = action|default(route in ['search', 'search_locale']
+    ? path(route, app.request.attributes.get('_route_params')|default({}))
+    : path('search')) %}
+
+<form role="search" method="get" action="{{ action }}" class="mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row">
+    <label for="search-term" class="sr-only">{{ __('search.label') }}</label>
+    <input id="search-term"
+           type="search"
+           name="searchTerm"
+           value="{{ term|default('') }}"
+           placeholder="{{ __('search.placeholder') }}"
+           required
+           maxlength="100"
+           enterkeyhint="search"
+           class="min-h-11 flex-1 rounded-sm border border-stroke bg-canvas px-4 py-2.5 text-body text-ink placeholder:text-ink-3 focus:border-ink focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+    {% include 'components/ui/button.twig' with {
+        label: __('search.submit'),
+        type: 'submit',
+        variant: 'primary'
+    } %}
+</form>

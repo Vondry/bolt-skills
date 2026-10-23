@@ -48,5 +48,15 @@
     <unit id="products_inquire_cta" name="products.inquire_cta"><segment><source>products.inquire_cta</source><target>Send an inquiry</target></segment></unit>
     <unit id="products_in_stock" name="products.in_stock"><segment><source>products.in_stock</source><target>In stock (%count% pcs)</target></segment></unit>
     <unit id="products_on_request" name="products.on_request"><segment><source>products.on_request</source><target>On request</target></segment></unit>
+    <!-- Search results page (pages/search/) -->
+    <unit id="search_title" name="search.title"><segment><source>search.title</source><target>Search</target></segment></unit>
+    <unit id="search_title_for" name="search.title_for"><segment><source>search.title_for</source><target>Search: %term%</target></segment></unit>
+    <unit id="search_results_for" name="search.results_for"><segment><source>search.results_for</source><target>Results for “%term%”</target></segment></unit>
+    <unit id="search_label" name="search.label"><segment><source>search.label</source><target>Search term</target></segment></unit>
+    <unit id="search_placeholder" name="search.placeholder"><segment><source>search.placeholder</source><target>What are you looking for?</target></segment></unit>
+    <unit id="search_submit" name="search.submit"><segment><source>search.submit</source><target>Search</target></segment></unit>
+    <unit id="search_count" name="search.count"><segment><source>search.count</source><target>{1} 1 result|]1,Inf] %count% results</target></segment></unit>
+    <unit id="search_empty_title" name="search.empty_title"><segment><source>search.empty_title</source><target>No results</target></segment></unit>
+    <unit id="search_empty_message" name="search.empty_message"><segment><source>search.empty_message</source><target>Nothing matches “%term%”. Try a different or more general word.</target></segment></unit>
   </file>
 </xliff>
