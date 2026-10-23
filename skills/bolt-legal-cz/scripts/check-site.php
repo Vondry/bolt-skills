@@ -241,6 +241,11 @@ if ($ares !== null && $ares['vat']) {
 $privacyLink = false;
 $cookieLink = false;
 foreach ($links($homeHtml, $finalUrl) as $link) {
+    // Only the site's own policy counts: a cookie banner linking policies.google.com/privacy is
+    // not the operator's privacy policy.
+    if (! $sameHost($link['url'])) {
+        continue;
+    }
     $privacyLink = $privacyLink || preg_match('~osobních\s+údaj|osobnich-udaj|gdpr|soukrom|privacy~iu', $link['text'] . ' ' . $link['url']) === 1;
     $cookieLink = $cookieLink || preg_match('~cookie~i', $link['text'] . ' ' . $link['url']) === 1;
 }
