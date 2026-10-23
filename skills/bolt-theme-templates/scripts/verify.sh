@@ -50,7 +50,7 @@ WARNINGS=0
 # -------------------------------------------------------------
 # 1. Detect Active Theme
 # -------------------------------------------------------------
-echo -n "[1/9] Detecting active theme... "
+echo -n "[1/10] Detecting active theme... "
 ACTIVE_THEME="default"
 if [ -f "$BOLT_CONFIG" ]; then
     FOUND_THEME=$(grep -E "^theme:" "$BOLT_CONFIG" | head -n 1 | awk '{print $2}' | tr -d '"' | tr -d "'")
@@ -69,7 +69,7 @@ echo "PASSED (Theme: '$ACTIVE_THEME')"
 # -------------------------------------------------------------
 # 2. Check Directory Structure & Layout Shell (Integration Contract)
 # -------------------------------------------------------------
-echo -n "[2/9] Checking architectural directories and partials/_master.twig... "
+echo -n "[2/10] Checking architectural directories and partials/_master.twig... "
 STRUCT_ERRORS=()
 for d in components containers pages; do
     [ -d "$THEME_DIR/$d" ] || STRUCT_ERRORS+=("Missing $d/ folder")
@@ -94,7 +94,7 @@ fi
 # -------------------------------------------------------------
 # 3. Strict Pure Component Audit: ZERO setcontent in components/
 # -------------------------------------------------------------
-echo -n "[3/9] Auditing pure components (ZERO setcontent rule)... "
+echo -n "[3/10] Auditing pure components (ZERO setcontent rule)... "
 SETCONTENT_VIOLATIONS=0
 
 # Find all components directories (both top-level and page-scoped)
@@ -124,7 +124,7 @@ fi
 # -------------------------------------------------------------
 # 4. Page Orchestrator Audit: every page extends a layout
 # -------------------------------------------------------------
-echo -n "[4/9] Auditing page orchestrators in pages/... "
+echo -n "[4/10] Auditing page orchestrators in pages/... "
 if [ -d "$THEME_DIR/pages" ]; then
     PAGE_FILES=$(find "$THEME_DIR/pages" -name "*.twig" ! -path "*/components/*" 2>/dev/null || true)
     PAGE_COUNT=0
@@ -153,7 +153,7 @@ fi
 # -------------------------------------------------------------
 # 5. Link Locale Safety Audit: locale_link usage
 # -------------------------------------------------------------
-echo -n "[5/9] Auditing URL localization safety (locale_link usage)... "
+echo -n "[5/10] Auditing URL localization safety (locale_link usage)... "
 LOCALE_LINKS=$(grep -rn "locale_link(" "$THEME_DIR" --include="*.twig" 2>/dev/null || true)
 if [ -n "$LOCALE_LINKS" ]; then
     echo "PASSED (Found locale_link calls wrapping template URLs)"
@@ -167,7 +167,7 @@ fi
 #    The translator returns the key itself for a missing translation, so the
 #    default never renders; every key must exist in every catalog instead.
 # -------------------------------------------------------------
-echo -n "[6/9] Checking for __('key')|default(...) fallbacks... "
+echo -n "[6/10] Checking for __('key')|default(...) fallbacks... "
 DEFAULT_TRAPS=$(grep -rnE "__\([^)]*\)\|default\(" "$THEME_DIR" --include="*.twig" --exclude-dir=node_modules 2>/dev/null || true)
 if [ -n "$DEFAULT_TRAPS" ]; then
     echo "WARNING"
@@ -181,7 +181,7 @@ fi
 # -------------------------------------------------------------
 # 7. Undefined Tailwind Classes (colour/token utilities missing from the build)
 # -------------------------------------------------------------
-echo -n "[7/9] Checking template classes against the compiled css/index.css... "
+echo -n "[7/10] Checking template classes against the compiled css/index.css... "
 CSS_OUT="$THEME_DIR/css/index.css"
 if [ ! -s "$CSS_OUT" ]; then
     echo "SKIPPED (css/index.css not built yet — run npm run prod in the theme)"
@@ -223,7 +223,7 @@ fi
 # -------------------------------------------------------------
 # 8. Canonical Tailwind classes (the IDE's "can be written as" hint)
 # -------------------------------------------------------------
-echo -n "[8/9] Checking that Tailwind classes use their canonical (token) form... "
+echo -n "[8/10] Checking that Tailwind classes use their canonical (token) form... "
 CANONICAL_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/canonical-classes.mjs"
 if ! command -v node > /dev/null 2>&1; then
     echo "SKIPPED (node not available)"
@@ -247,7 +247,7 @@ fi
 # -------------------------------------------------------------
 # 9. Twig Syntax Linting
 # -------------------------------------------------------------
-echo -n "[9/9] Linting Twig syntax via bin/console lint:twig... "
+echo -n "[9/10] Linting Twig syntax via bin/console lint:twig... "
 if [ -f "bin/console" ]; then
     if php bin/console lint:twig "$THEME_DIR" > /dev/null 2>&1; then
         echo "PASSED (0 syntax errors in $THEME_DIR)"
@@ -259,6 +259,74 @@ if [ -f "bin/console" ]; then
 else
     echo "SKIPPED (bin/console not available)"
 fi
+
+# -------------------------------------------------------------
+# 10. Search page: Bolt serves /search and /{_locale}/search on every site
+# -------------------------------------------------------------
+echo "[10/10] Checking the search page (template, locale, escaping, live results)..."
+yaml_value() { grep -E "^$1:" "$2" 2>/dev/null | head -n 1 | sed -E "s/^$1:[[:space:]]*//; s/[[:space:]]+#.*$//" | tr -d "\"'"; }
+SEARCH_TEMPLATE=$(yaml_value search_results_template "$THEME_DIR/theme.yaml")
+[ -z "$SEARCH_TEMPLATE" ] && SEARCH_TEMPLATE=$(yaml_value search_results_template "$BOLT_CONFIG")
+[ -z "$SEARCH_TEMPLATE" ] && SEARCH_TEMPLATE=$(yaml_value listing_template "$BOLT_CONFIG")
+if [ -z "$SEARCH_TEMPLATE" ] || [ ! -f "$THEME_DIR/$SEARCH_TEMPLATE" ]; then
+    echo "  ✗ FAILED: the search template '${SEARCH_TEMPLATE:-(none)}' does not exist in $THEME_DIR — run scaffold.sh (search.twig → pages/search/search.twig)"
+    FAILED=$((FAILED + 1))
+else
+    echo "  ✓ search_results_template: $SEARCH_TEMPLATE exists"
+    # The search template and everything under its folder (page-scoped components, the extended page)
+    SEARCH_FILES=$( { echo "$THEME_DIR/$SEARCH_TEMPLATE"; perl -ne "print \"$THEME_DIR/\$1\n\" if /\{%-?\s*extends\s+'([^']+)'/" "$THEME_DIR/$SEARCH_TEMPLATE"; } | sort -u)
+    SEARCH_DIRS=$(for f in $SEARCH_FILES; do [ -f "$f" ] && dirname "$f"; done | sort -u | grep -vx "$THEME_DIR" || true)
+    SEARCH_SCOPE=$( { echo "$SEARCH_FILES"; for d in $SEARCH_DIRS; do find "$d" -name '*.twig'; done; } | sort -u | while read -r f; do [ -f "$f" ] && echo "$f"; done)
+    # path('search') is always the default locale: a form posting there sends /en/search visitors to Czech results.
+    LOCALE_LOST=$(grep -rnE "action=\"\{\{ *path\('search'\) *\}\}\"" "$THEME_DIR" --include='*.twig' 2>/dev/null | grep -v node_modules || true)
+    if [ -n "$LOCALE_LOST" ]; then
+        echo "  ✗ FAILED: a search form posts to path('search'), the default locale only — use the current route (see pages/search/components/search-form.twig):"
+        echo "$LOCALE_LOST" | sed 's/^/      /'
+        FAILED=$((FAILED + 1))
+    fi
+    # __() output is printed unescaped and the term keeps the HTML cleaner's allowed tags.
+    UNESCAPED=$(echo "$SEARCH_SCOPE" | xargs perl -0777 -ne 's/\{#.*?#\}//gs; while (/(__\([^)]*?:\s*(?:searchTerm|search|term)\s*[,}])/g) { print "$ARGV: $1\n" }' 2>/dev/null || true)
+    if [ -n "$UNESCAPED" ]; then
+        echo "  ✗ FAILED: the search term goes into __() unescaped — write searchTerm|e (Bolt's cleaner keeps tags like <img> and <a>):"
+        echo "$UNESCAPED" | sed 's/^/      /'
+        FAILED=$((FAILED + 1))
+    fi
+    [ -z "$LOCALE_LOST" ] && [ -z "$UNESCAPED" ] && echo "  ✓ the form keeps the locale and the term is escaped"
+fi
+
+# Live: against BOLT_BASE_URL, else PHP's built-in server started for this check.
+LOCALES=$(grep -E "^\s*app_locales:" config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/.*app_locales:[[:space:]]*//" | tr -d "\"'" | tr '|' ',')
+DEFAULT_LOCALE=$(grep -E "^\s*locale:" config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/.*locale:[[:space:]]*//" | tr -d "\"'")
+if [ -n "$DEFAULT_LOCALE" ] && [ -n "$LOCALES" ]; then
+    LOCALES=$( { echo "$DEFAULT_LOCALE"; echo "$LOCALES" | tr ',' '\n'; } | awk 'NF && !seen[$0]++' | paste -sd, - )
+fi
+SEARCH_BASE=""
+SERVER_PID=""
+if [ -n "${BOLT_BASE_URL:-}" ] && curl -s --max-time 10 -o /dev/null "$BOLT_BASE_URL"; then
+    SEARCH_BASE="${BOLT_BASE_URL%/}"
+elif command -v php > /dev/null 2>&1 && [ -f public/index.php ]; then
+    PORT=$((18000 + RANDOM % 1000))
+    # The project's .env may limit trusted hosts to the production domain; 127.0.0.1 must pass here.
+    SYMFONY_TRUSTED_HOSTS= php -S "127.0.0.1:$PORT" -t public "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/php-server-router.php" > /dev/null 2>&1 &
+    SERVER_PID=$!
+    trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null' EXIT
+    for _ in $(seq 1 30); do
+        curl -s --max-time 2 -o /dev/null "http://127.0.0.1:$PORT/" && { SEARCH_BASE="http://127.0.0.1:$PORT"; break; }
+        sleep 0.5
+    done
+fi
+if [ -z "$SEARCH_BASE" ]; then
+    echo "  ✗ FAILED: no site to test against — set BOLT_BASE_URL, or make PHP's built-in server start (php -S, database reachable)"
+    FAILED=$((FAILED + 1))
+else
+    echo "  (live check against $SEARCH_BASE${SERVER_PID:+, PHP built-in server}; locales: ${LOCALES:-default only})"
+    if php "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/check-search.php" --base-url="$SEARCH_BASE" --locales="$LOCALES" ${BOLT_SEARCH_TERM:+--term="$BOLT_SEARCH_TERM"}; then
+        :
+    else
+        FAILED=$((FAILED + $?))
+    fi
+fi
+[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null && SERVER_PID=""
 
 echo "=========================================================="
 if [ $FAILED -ne 0 ]; then
