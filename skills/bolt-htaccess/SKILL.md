@@ -269,6 +269,10 @@ In high-performance production projects, static media assets in `public/` are se
     ExpiresByType image/png "access plus 2 months"
     ExpiresByType image/svg+xml "access plus 2 months"
     ExpiresByType image/webp "access plus 2 months"
+    # Favicons keep a fixed URL (no ?v=), so a shorter lifetime. Apache names .ico
+    # image/vnd.microsoft.icon (current mime.types) or image/x-icon (older).
+    ExpiresByType image/vnd.microsoft.icon "access plus 1 week"
+    ExpiresByType image/x-icon "access plus 1 week"
 
     # Documents
     ExpiresByType application/pdf "access plus 2 months"
