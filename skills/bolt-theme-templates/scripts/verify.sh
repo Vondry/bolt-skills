@@ -284,10 +284,12 @@ else
         echo "$LOCALE_LOST" | sed 's/^/      /'
         FAILED=$((FAILED + 1))
     fi
-    # __() output is printed unescaped and the term keeps the HTML cleaner's allowed tags.
-    UNESCAPED=$(echo "$SEARCH_SCOPE" | xargs perl -0777 -ne 's/\{#.*?#\}//gs; while (/(__\([^)]*?:\s*(?:searchTerm|search|term)\s*[,}])/g) { print "$ARGV: $1\n" }' 2>/dev/null || true)
+    # {{ __() }} printed directly is not escaped, and the term keeps the HTML cleaner's allowed tags.
+    # Only direct prints: a __() result passed to a component — {% include … with %} or {{ include(…) }} —
+    # is escaped there (|e would double it); the live check catches a component that prints it raw.
+    UNESCAPED=$(echo "$SEARCH_SCOPE" | xargs perl -0777 -ne 's/\{#.*?#\}//gs; while (/\{\{(.*?)\}\}/gs) { my $e = $1; next if $e =~ /^\s*-?\s*(?:include|source)\s*\(/; print "$ARGV: {{$e}}\n" if $e =~ /__\([^)]*?:\s*(?:searchTerm|search|term)\s*[,}]/ }' 2>/dev/null || true)
     if [ -n "$UNESCAPED" ]; then
-        echo "  ✗ FAILED: the search term goes into __() unescaped — write searchTerm|e (Bolt's cleaner keeps tags like <img> and <a>):"
+        echo "  ✗ FAILED: {{ __() }} prints the search term unescaped — write searchTerm|e (Bolt's cleaner keeps tags like <img> and <a>):"
         echo "$UNESCAPED" | sed 's/^/      /'
         FAILED=$((FAILED + 1))
     fi
@@ -295,8 +297,9 @@ else
 fi
 
 # Live: against BOLT_BASE_URL, else PHP's built-in server started for this check.
-LOCALES=$(grep -E "^\s*app_locales:" config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/.*app_locales:[[:space:]]*//" | tr -d "\"'" | tr '|' ',')
-DEFAULT_LOCALE=$(grep -E "^\s*locale:" config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/.*locale:[[:space:]]*//" | tr -d "\"'")
+# The value only: services.yaml may carry a comment after it (app_locales: cs|en # app_locales: en|nl|…).
+LOCALES=$(grep -E "^\s*app_locales:" config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/[[:space:]]+#.*$//; s/^[[:space:]]*app_locales:[[:space:]]*//" | tr -d "\"'" | tr '|' ',')
+DEFAULT_LOCALE=$(grep -E "^\s*locale:" config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/[[:space:]]+#.*$//; s/^[[:space:]]*locale:[[:space:]]*//" | tr -d "\"'")
 if [ -n "$DEFAULT_LOCALE" ] && [ -n "$LOCALES" ]; then
     LOCALES=$( { echo "$DEFAULT_LOCALE"; echo "$LOCALES" | tr ',' '\n'; } | awk 'NF && !seen[$0]++' | paste -sd, - )
 fi
