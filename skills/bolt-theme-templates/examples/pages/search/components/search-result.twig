@@ -24,6 +24,6 @@
     </h2>
 
     {% if excerpt is defined and excerpt is not empty %}
-        <p class="mt-2 max-w-3xl text-body text-ink-2 [&_mark]:rounded-sm [&_mark]:bg-accent-soft [&_mark]:px-0.5 [&_mark]:text-ink">{{ excerpt|raw }}</p>
+        <p class="mt-2 max-w-3xl text-body text-ink-2 wrap-break-word [&_mark]:rounded-sm [&_mark]:bg-accent-soft [&_mark]:px-0.5 [&_mark]:text-ink">{{ excerpt|raw }}</p>
     {% endif %}
 </article>
