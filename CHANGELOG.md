@@ -2,6 +2,23 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Fixes found by auditing a site with `bolt-audit` and fixing the findings.
+
+### Added
+- `bolt-cookie-consent`: a private person who runs no business can be the controller. With `business: false`, `check-privacy.php` requires only `name` and `privacy_email`; `address`, `ico` and `registry` may be `~`, and `gdpr.twig` leaves those rows out. The intake (question 5) says to ask before publishing a home address.
+
+### Fixed
+- `bolt-cookie-consent` `scaffold.sh`: `privacy-config.php` failed on a `config/services.yaml` with Symfony tags (`!tagged_iterator`, `!service` …). It now parses them as custom tags.
+- `bolt-cookie-consent` examples: `_cookie-table.twig` and `gdpr.twig` used arbitrary `min-w-[…rem]` widths, which `canonical-classes.mjs --fix` rewrites in every project. They use the canonical `min-w-xl`, `min-w-176` and `min-w-160` now.
+- `bolt-legal-cz` `check-site.php`: GDPR-01 counted a link to another site's policy (a cookie banner's `policies.google.com/privacy`) as the operator's privacy policy. Only links on the site's own host count.
+- `bolt-htaccess` and `bolt-asset-caching`: the `mod_expires` block had no rule for `favicon.ico`, so it was served without `Cache-Control` (the delivery check's „no max-age“ warning). It gets one week for `image/vnd.microsoft.icon` and `image/x-icon`, which is shorter than the other images because favicons keep a fixed URL.
+
+### Migrating a project
+- Add the two `ExpiresByType … icon` lines to `public/.htaccess` (see `bolt-htaccess/examples/public.htaccess`).
+- Projects that copied `gdpr.twig` or `_cookie-table.twig` need no change; `canonical-classes.mjs --fix` already rewrote the widths.
+
 ## 1.6.3 — 2026-10-22
 
 Fixes to the audit tooling, found by auditing fmautoservis.cz (WEDOS, behind the WEDOS CDN) with `bolt-audit`.
