@@ -196,6 +196,19 @@ else
         | sort -u | while read -r cls; do
             grep -qE -- "${cls}([^a-zA-Z0-9-]|\$)" "$CSS_OUT" || echo "$cls"
         done)
+    # Integration Contract utilities (bolt-tailwind-theme) used in class="…" or in a {% set … = '…' %}
+    # class variable. The skills' shared partials rely on them; in a theme that never defined one,
+    # Tailwind generates nothing (a page without section padding, a button that looks like text).
+    CONTRACT_UTILITIES="wrapper px-edge py-section no-scrollbar btn btn-primary btn-secondary btn-outline btn-ghost btn-on-accent btn-on-accent-outline card link-arrow cms-redactor"
+    USED_TOKENS=$(find "$THEME_DIR" -name "*.twig" -not -path "*/node_modules/*" -print0 2>/dev/null \
+        | xargs -0 perl -0777 -ne 's/\{#.*?#\}//gs; print' 2>/dev/null \
+        | perl -ne 'while (/class="([^"]*)"|\{%-?\s*set\s+\w+\s*=\s*\x27([^\x27]*)\x27/g) { print "$_\n" for split /\s+/, ($1 // $2) }' \
+        | sort -u)
+    for cls in $CONTRACT_UTILITIES; do
+        if grep -qxF -- "$cls" <<< "$USED_TOKENS" && ! grep -qE -- "\.${cls}([^a-zA-Z0-9_-]|\$)" "$CSS_OUT"; then
+            MISSING_CLASSES=$(printf '%s\n%s' "$MISSING_CLASSES" "$cls (Integration Contract utility — define it in css/tailwind/index.css, see bolt-tailwind-theme)" | sed '/^$/d')
+        fi
+    done
     if [ -n "$MISSING_CLASSES" ]; then
         echo "WARNING"
         echo "  Classes used in templates but not generated (undefined token names?):"
@@ -203,7 +216,7 @@ else
         echo "  Rebuild with npm run prod first; prose words in templates can appear as false positives."
         WARNINGS=$((WARNINGS + 1))
     else
-        echo "PASSED (every colour/token utility used in templates exists in the build)"
+        echo "PASSED (every colour/token and Integration Contract utility used in templates exists in the build)"
     fi
 fi
 
