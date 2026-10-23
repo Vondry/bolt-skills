@@ -2,6 +2,22 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Fixes found by comparing a site's pages before and after its audit fixes, screenshot by screenshot.
+
+### Fixed
+- `bolt-theme-templates` `verify.sh` step 7: the class check looked only at colour and token utilities (`bg-*`, `text-*` …). The Integration Contract utilities the skills' shared partials use (`py-section`, `btn-primary`, `card` …) went unchecked, so in a theme that never defined them the privacy page had no section padding and its „Nastavení cookies“ button looked like plain text. The step now warns about every contract utility used in a `class="…"` or a `{% set … = '…' %}` class variable that the build does not contain.
+- `bolt-cookie-consent` `gdpr.twig`: the page had no `{% block seo %}`, so `seo.title()` gave only the site name in the browser tab. It sets „Ochrana osobních údajů | <site name>“ (or the English title) and keeps the hreflang alternates.
+- `bolt-cookie-consent` `gdpr.twig` and catalogs: the Consent Mode paragraph always named „Google Analytics, Google Ads“. It names only the tools the site loads (`analytics.ga4_id`, `analytics.google_ads_id`), through a new `%tools%` parameter.
+- `bolt-cookie-consent` `_cookie-banner.twig`: the layer-1 heading had no colour of its own, so a theme whose base styles colour `h2` with the ink colour showed it dark on the dark bar, invisible. It uses `text-night-ink`.
+- `bolt-cookie-consent` `_cookie-table.twig`: cookie names broke mid-word (`break-all`, „bolt-cookie-c / onsent“). They stay on one line; the table scrolls sideways on narrow screens as before.
+
+### Migrating a project
+- Copy `gdpr.twig`, `_cookie-table.twig` and the heading class of `_cookie-banner.twig` from the examples (keep your own design hooks).
+- `merge-xliff.php` never overwrites existing units: in `translations/messages.cs.xlf` and `messages.en.xlf`, replace „(Google Analytics, Google Ads)“ with „(%tools%)“ in `privacy.cookies.consent_mode_basic` and `privacy.cookies.consent_mode_advanced`.
+- If `bolt-theme-templates` now warns about `py-section` or `btn-primary`, define them in `css/tailwind/index.css` in the theme's own style (see `bolt-tailwind-theme`).
+
 ## 1.7.0 — 2026-10-23
 
 Fixes found by auditing a site with `bolt-audit` and fixing the findings.
