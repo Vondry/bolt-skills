@@ -5,8 +5,10 @@ description: >-
   Tailwind CSS v4 under the Component / Container / Page architecture: the pure UI component
   library (button, badge, card, picture with PhotoSwipe, breadcrumbs, pagination for pager(),
   empty state, section header), smart containers (contact section/banner, featured products),
-  page orchestrators per ContentType with page-scoped components, their translation catalogs,
-  and automated verification (layout contract, purity, translation traps, undefined classes, lint).
+  page orchestrators per ContentType with page-scoped components, the search results page every
+  Bolt site serves at /search (in the theme's design, verified live: results with HTTP 200 and the
+  locale kept), their translation catalogs, and automated verification (layout contract, purity,
+  translation traps, undefined classes, lint, search).
 ---
 
 # Bolt CMS Theme Templates (`bolt-theme-templates`)
@@ -125,12 +127,17 @@ public/theme/<theme_name>/
 │   │   │   ├── hero.twig             # Page-scoped component
 │   │   │   └── hero-metrics.twig     # Page-scoped component
 │   │   └── homepage.twig
-│   └── product/                      # catalog sites
+│   ├── product/                      # catalog sites
+│   │   ├── components/
+│   │   │   ├── spec-table.twig       # Page-scoped component
+│   │   │   └── stock-badge.twig      # Page-scoped component
+│   │   ├── product.record.twig       # Record detail orchestrator
+│   │   └── product.twig              # Listing orchestrator
+│   └── search/                       # every site: Bolt serves /search and /{_locale}/search
 │       ├── components/
-│       │   ├── spec-table.twig       # Page-scoped component
-│       │   └── stock-badge.twig      # Page-scoped component
-│       ├── product.record.twig       # Record detail orchestrator
-│       └── product.twig              # Listing orchestrator
+│       │   ├── search-form.twig      # Page-scoped component (submits to the current locale)
+│       │   └── search-result.twig    # Page-scoped component
+│       └── search.twig               # Search results orchestrator (root search.twig extends it)
 ├── partials/                         # Layout shell and shared partials
 │   ├── _master.twig                  # bolt-theme-init: blocks seo, head, header, main, footer, scripts
 │   ├── _cookie-banner.twig           # bolt-cookie-consent
@@ -1213,6 +1220,165 @@ The homepage stays free of `setcontent`: the query lives in this container.
 
 ---
 
+### M. Search Results Page (`pages/search/`) — every site
+
+Bolt registers `/search` and `/{_locale}/search` on **every** site (GET and POST; the term comes from `searchTerm`, `search` or `q`) and searches every ContentType with `searchable: true`. The design does not have to show a search box for visitors, bots and scanners to reach it, so every theme ships a search page built from the `bolt-tailwind-theme` tokens, and `verify.sh` proves it returns results.
+
+Bolt picks the template in this order: `search_results_template` in `theme.yaml`, then in `config/bolt/config.yaml` (default `search.twig`), then `listing_template`. When none fits, the page answers 500 or renders the listing template without a form. `scaffold.sh` installs the three files below and the root entrypoint `search.twig` (`{% extends 'pages/search/search.twig' %}`), which matches Bolt's default.
+
+Rules the example follows (and `verify.sh` step 10 checks):
+- **Results stay in the visitor's locale.** The form submits to the current route (`search` or `search_locale` with its `_locale`), never to `path('search')`, which is always the default locale. A header search box outside the search page passes `action: path('search_locale', { _locale: app.request.locale })` on secondary locales.
+- **The term is escaped before it goes into `__()`.** Bolt runs the term through its HTML cleaner, which keeps the allowed tags (`<b>`, `<img>`, `<a>` …), and `__()` prints its result unescaped. Write `searchTerm|e` (here `term|e`) in every translation parameter.
+- **Result pages are `noindex, follow`** and have their own `<title>`.
+- **Counts use plural rules**, not „Nalezeno: %count%“: with a `%count%` parameter, Symfony reads a leading `Word:` as a plural-form label and prints only the number.
+
+```twig
+{% extends 'partials/_master.twig' %}
+
+{#
+  Page Orchestrator: Search Results
+  Bolt registers /search and /{_locale}/search on every site (GET and POST; the term comes from
+  `searchTerm`, `search` or `q`) and renders search_results_template — so every site gets this page,
+  linked from the design or not. The root entrypoint search.twig extends this file and matches
+  Bolt's default `search_results_template: search.twig`.
+
+  Receives:
+    - searchTerm (string): the term, already passed through Bolt's HTML cleaner. The cleaner keeps
+      its allowed tags (<b>, <img>, <a> …), so the term is markup from a visitor: escape it with |e
+      before it goes into __() (whose output is printed unescaped).
+    - records (Pagerfanta): published records of every ContentType with `searchable: true`.
+
+  Rules: Near-zero raw HTML — layout wrappers only; everything else is components.
+  Translation keys: search.*, nav.home
+#}
+
+{% set term = searchTerm|default('') %}
+
+{# Search has no record, so seo.title() would give only the site name #}
+{% block seo %}
+    <title>{{ term is not empty ? __('search.title_for', { '%term%': term|e }) : __('search.title') }} | {{ config.get('general/sitename') }}</title>
+    {# Result pages are thin and endless: keep them out of the index, follow the links #}
+    <meta name="robots" content="noindex, follow">
+{% endblock seo %}
+
+{% block main %}
+    <section aria-labelledby="search-title" class="wrapper px-edge py-section">
+        {% include 'components/ui/section-header.twig' with {
+            title: term is not empty ? __('search.results_for', { '%term%': term|e }) : __('search.title'),
+            title_id: 'search-title',
+            eyebrow: term is not empty ? __('search.title') : null,
+            heading_level: 1
+        } %}
+
+        {# The form submits to the current route, so /en/search stays /en/search #}
+        {% include 'pages/search/components/search-form.twig' with { term: term } %}
+
+        {% if term is not empty and records|length > 0 %}
+            <p class="mt-10 text-meta text-ink-3" role="status">{{ __('search.count', { '%count%': records.nbResults }) }}</p>
+
+            <ol role="list" class="mt-4 border-y border-stroke divide-y divide-stroke">
+                {% for record in records %}
+                    <li>
+                        {% include 'pages/search/components/search-result.twig' with {
+                            title: record|title,
+                            href: record|link,
+                            type: record.definition.singular_name|default(null),
+                            excerpt: record|excerpt(220, false, term)
+                        } %}
+                    </li>
+                {% endfor %}
+            </ol>
+
+            {# Bolt's pager() keeps the route, its _locale and the query string (searchTerm) #}
+            {{ pager(records, template = 'components/ui/pagination.twig') }}
+        {% elseif term is not empty %}
+            <div role="status">
+                {% include 'components/ui/empty-state.twig' with {
+                    title: __('search.empty_title'),
+                    message: __('search.empty_message', { '%term%': term|e }),
+                    action_label: __('nav.home'),
+                    action_href: '/'
+                } %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock main %}
+```
+
+```twig
+{#
+  Page-Scoped Component: Search form
+  Rules: Zero setcontent. All data passed via parameters.
+
+  Props:
+    - term (string|optional): The current search term, shown in the field
+    - action (string|optional): Form target. Default: the current route with its parameters —
+        /search on the default locale, /{_locale}/search on the others. Never path('search'):
+        that is always the default locale, so an English visitor would land on Czech results.
+        A header search box outside the search page passes
+        action: path('search_locale', { _locale: app.request.locale }) on secondary locales.
+
+  Translation keys: search.label, search.placeholder, search.submit
+#}
+
+{% set route = app.request.attributes.get('_route') %}
+{% set action = action|default(route in ['search', 'search_locale']
+    ? path(route, app.request.attributes.get('_route_params')|default({}))
+    : path('search')) %}
+
+<form role="search" method="get" action="{{ action }}" class="mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row">
+    <label for="search-term" class="sr-only">{{ __('search.label') }}</label>
+    <input id="search-term"
+           type="search"
+           name="searchTerm"
+           value="{{ term|default('') }}"
+           placeholder="{{ __('search.placeholder') }}"
+           required
+           maxlength="100"
+           enterkeyhint="search"
+           class="min-h-11 flex-1 rounded-sm border border-stroke bg-canvas px-4 py-2.5 text-body text-ink placeholder:text-ink-3 focus:border-ink focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+    {% include 'components/ui/button.twig' with {
+        label: __('search.submit'),
+        type: 'submit',
+        variant: 'primary'
+    } %}
+</form>
+```
+
+```twig
+{#
+  Page-Scoped Component: One search result
+  Rules: Zero setcontent. All data passed via parameters.
+
+  Props:
+    - title (string): Record title (record|title)
+    - href (string): Record URL (record|link — already in the current locale; passed through locale_link)
+    - type (string|optional): ContentType label, e.g. record.definition.singular_name
+    - excerpt (string|optional): record|excerpt(220, false, term) — Bolt strips the HTML and wraps
+        the matched term in <mark>. Printed with |raw: Bolt registers its excerpt filter as HTML-safe,
+        but that only holds when it is printed directly — passed in here it is a plain string
+
+  The whole row is clickable through a stretched link on the title (`after:absolute after:inset-0`),
+  which needs the `relative` on <article>.
+#}
+
+<article class="group relative py-6">
+    {% if type is defined and type is not empty %}
+        <p class="eyebrow">{{ type }}</p>
+    {% endif %}
+
+    <h2 class="mt-1 text-card font-semibold text-ink">
+        <a href="{{ locale_link(href) }}" class="after:absolute after:inset-0 group-hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">{{ title }}</a>
+    </h2>
+
+    {% if excerpt is defined and excerpt is not empty %}
+        <p class="mt-2 max-w-3xl text-body text-ink-2 [&_mark]:rounded-sm [&_mark]:bg-accent-soft [&_mark]:px-0.5 [&_mark]:text-ink">{{ excerpt|raw }}</p>
+    {% endif %}
+</article>
+```
+
+---
+
 ## 4. Translations
 
 Every visible string is a dotted translation key (`products.title`, `card.read_more`, `contact.title`, `a11y.breadcrumbs`, …). `examples/translations.cs.xlf` and `examples/translations.en.xlf` contain all units these templates use (XLIFF 2.0, Czech defaults and English). Merge them into each catalog of the project:
@@ -1242,6 +1408,7 @@ bash skills/bolt-theme-templates/scripts/scaffold.sh [--force] [--products=auto|
 
 - Existing files are kept; files still carrying `bolt-theme-init`'s `{# bolt-theme-init:placeholder #}` marker (the placeholder homepage) are replaced. `--force` replaces everything.
 - `--products=auto` (default) adds `pages/product/`, `containers/products/_featured-products.twig` and the root entrypoints `product.twig` / `product.record.twig` only when `contenttypes.yaml` defines a top-level `products:` ContentType.
+- The search page (`pages/search/` and the root entrypoint `search.twig`) is always installed; it warns when `search_results_template` names a file that does not exist.
 
 ### Verification Command (`scripts/verify.sh`)
 Audits theme architecture compliance:
@@ -1260,6 +1427,12 @@ bash skills/bolt-theme-templates/scripts/verify.sh
 7. **Undefined classes**: colour/token utilities used in templates but missing from the compiled `css/index.css` (e.g. a token name that `bolt-tailwind-theme` does not define).
 8. **Canonical classes**: fails when a class has a shorter canonical form (`scripts/canonical-classes.mjs`, see below).
 9. **Twig Syntax Linting**: Runs `bin/console lint:twig public/theme/<active_theme>` to catch any syntax bugs.
+10. **Search page**: the template Bolt will render exists; no form posts to `path('search')`; the term is escaped before `__()`. Then live, against `BOLT_BASE_URL` or — when it is not set — PHP's built-in server started for the check (`scripts/php-server-router.php`, trusted hosts lifted for `127.0.0.1`), `scripts/check-search.php`:
+    - `/search` answers 200 with a `searchTerm` form;
+    - a real term returns results with HTTP 200: the longest word of a page's `<h1>` (from `sitemap.xml`), and the results must link to that page — more often than the page for a term without matches does, so menu links do not count. `BOLT_SEARCH_TERM=word` skips the guess;
+    - a term without matches answers 200; markup in the term is not printed as markup;
+    - every secondary locale from `app_locales`: `/<locale>/search` answers 200, its form submits to `/<locale>/search`, and the results link to `/<locale>/` pages.
+    The step fails when no site can be reached: the search page is always verified.
 
 Raw HTML in page orchestrators is a judgement call and is not checked automatically; review pages against the rule in section 1.
 
@@ -1306,3 +1479,9 @@ Name tokens by role, not by position: `--spacing-page` / `--spacing-page-end` re
 | **Bolt 3 pager API** (`records.pager`, `pager.totalpages`, `makelink`) | Pagination never renders on Bolt 6. | `{{ pager(records, template = 'components/ui/pagination.twig') }}` (Pagerfanta). |
 | **PhotoSwipe attributes on `<img>`** | The lightbox never opens. | `a.photoswipe-gallery__link` inside `.photoswipe-gallery` (`picture.twig` with `pswp: true`). |
 | **`__('key')\|default('…')`** | The key is shown instead of the text. | Add the key to every catalog. |
+| **No search template** (`search_results_template: search.twig`, file missing) | `/search` answers 500 or renders the listing template without a form — on every site, linked or not. | `scaffold.sh` (section 3 M); `verify.sh` step 10. |
+| **Search form posting to `path('search')`** | On `/en/search`, pressing Search shows the Czech results. | Submit to the current route (`search-form.twig`). |
+| **Search term unescaped in `__()`** | `<img>` or `<a>` from the URL appears in the heading (Bolt's cleaner keeps allowed tags, `__()` prints unescaped). | `searchTerm\|e` in every translation parameter. |
+| **„Nalezeno: %count%“** | Only the number is shown: Symfony reads a leading `Word:` as a plural label when `%count%` is passed. | Plural rules: `{1} …\|[2,4] …\|[5,Inf] …`. |
+| **Excerpt passed into a component** | `<mark>` shows as text. | `{{ excerpt\|raw }}` in the component: Bolt's `excerpt` filter is HTML-safe only when printed directly. |
+| **SEO JSON in excerpts** (`{"title":…}`) | Search results and teasers show the SEO field's JSON (AppoloDev/bolt-seo ≤ 2.2.0 marks it as excerpt text). | Fixed upstream in AppoloDev/bolt-seo#61; until it is released, set `excerpt_format` on ContentTypes with a `seo` field. |

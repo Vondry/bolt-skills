@@ -217,7 +217,7 @@ The skills meet in a few shared places: the master layout, the theme folder stru
 - Token names are defined by `bolt-tailwind-theme` in `css/tailwind/index.css`: surfaces `canvas`, `surface`, `surface-2`; text `ink`, `ink-2`, `ink-3`; `stroke`; brand `accent`, `accent-hover`, `accent-soft`, `accent-ink`, `accent-ink-2`; dark zone `night`, `night-deep`, `night-stroke`, `night-ink`, `night-ink-2`, `night-ink-3`; fonts `display`, `body`, `mono`; text sizes `hero`, `section`, `card`, `micro`, `meta`, `body`, `lead`; spacing `header`; breakpoint `menu`.
 - `bolt-theme-init`'s baseline `css/tailwind/index.css` uses the same names with neutral values, so templates render before the design tokens exist; `bolt-tailwind-theme` replaces the **values**, never the names.
 - All template examples (`bolt-menu`, `bolt-theme-templates`, `bolt-cookie-consent`, `bolt-add-language`, `bolt-theme-init`) use only these tokens, plus Tailwind defaults used on purpose (layout, spacing, `white`, the `emerald` / `amber` status colours).
-- `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` (check [7/8]) lists classes used in templates that the compiled `css/index.css` does not contain — the symptom of an undefined token name.
+- `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` (check [7/10]) lists classes used in templates that the compiled `css/index.css` does not contain — the symptom of an undefined token name.
 
 ### JavaScript Hooks
 
@@ -518,11 +518,12 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 
 ### 6.1 Pages & Components (`bolt-theme-templates`)
 - `bash $SKILLS/bolt-theme-templates/scripts/scaffold.sh` copies `components/ui/` (button, badge, picture, card, breadcrumbs, pagination for `pager()`, empty-state, section-header), `containers/contact/` (`_contact-section.twig`, `_contact-banner.twig`) and `pages/homepage/` (homepage, `hero.twig`, `hero-metrics.twig`), replacing the placeholder homepage from 4.1. With `--products=auto` (default) it adds `pages/product/` (listing, detail, `spec-table.twig`, `stock-badge.twig`), `containers/products/_featured-products.twig` and the root entrypoints `product.twig` / `product.record.twig` only when `contenttypes.yaml` defines `products`.
+- **Search page, on every site.** Bolt serves `/search` and `/{_locale}/search` whether the design shows a search box or not, so the scaffold always adds `pages/search/` (orchestrator, `search-form.twig`, `search-result.twig`) and the root `search.twig` that Bolt's default `search_results_template: search.twig` renders. Style it with the contract tokens like any other page; keep the form submitting to the current route (results in the visitor's locale) and the term escaped before `__()` (`bolt-theme-templates` section 3 M).
 - Merge `$SKILLS/bolt-theme-templates/examples/translations.<locale>.xlf`.
 - Build one page orchestrator per routable ContentType and singleton (`pages/<name>/<name>.twig`, `pages/<name>/<name>.record.twig`), extending `partials/_master.twig` and filling `{% block main %}`. Keep one-off pieces in `pages/<name>/components/` and queries in `containers/` — a container that queries an optional ContentType guards it with `config.get('contenttypes/<slug>')` (`setcontent` throws for unknown ContentTypes).
 - Rules for every template: classes only from the contract tokens, in their canonical form (`rounded-card`, not `rounded-[var(--radius-card)]`; repeated arbitrary values become tokens) — the IDE's "can be written as" diagnostics while editing, `bolt-theme-templates/scripts/canonical-classes.mjs --fix` before the gate; links through `locale_link()`; visible strings through translation keys present in every catalog.
 - **[if gallery]** every photo gallery opens in the PhotoSwipe lightbox, also when the design shows none: `picture.twig` with `pswp: true` (or own tiles with `a.photoswipe-gallery__link`) inside `<div class="photoswipe-gallery">` — dimensions from the media library first, `image_dimensions()` as fallback; the alt text as `.photoswipe-gallery__caption`; the lightbox labels from the `gallery.*` keys as `data-pswp-close-title` / `-zoom-title` / `-arrow-prev-title` / `-arrow-next-title` / `-error-msg` on the gallery; **[if downloads]** `field.path|file_size|format_file_size`.
-- *Verify:* `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` (layout contract, component purity, pages extend a layout, `locale_link`, the `__()|default()` trap, undefined classes, Twig lint). Raw HTML in page orchestrators is a judgement call — review it against the contract.
+- *Verify:* `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` (layout contract, component purity, pages extend a layout, `locale_link`, the `__()|default()` trap, undefined classes, Twig lint, and the search page: a real term returns results with HTTP 200 in every locale and the form keeps the locale — live against `BOLT_BASE_URL`, or PHP's built-in server it starts itself). Raw HTML in page orchestrators is a judgement call — review it against the contract.
 
 ### 6.2 Extension Theme Integration (`bolt-extension-setup`, Part B)
 - The `seo` block is already in the master layout. Static and helper pages without a record override `{% block seo %}` (the skill's `@seo/_metatags.html.twig` example).
@@ -572,8 +573,9 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 
 ### Gate 6
 - `cd public/theme/<theme> && npm run prod && cd -`
-- `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` passes, including the undefined-class check [7/8] against the fresh build.
+- `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` passes, including the undefined-class check [7/10] against the fresh build and the search check [10/10].
 - Every URL from the site plan renders with HTTP 200 in every locale; unknown URLs render the 404 helper page.
+- `/search?searchTerm=<a word from a page>` and `/<locale>/search?searchTerm=…` show results in the site's design (HTTP 200), and pressing Search on `/<locale>/search` stays in that locale.
 - Commit.
 
 ---
@@ -671,7 +673,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 - `bolt-security-hardening/scripts/verify.sh` with `BOLT_BASE_URL` pointing at **production** after the first deployment: zero FAIL (the live section confirms that no `.env.local` switched the server into dev or debug mode).
 - `make cscheck` and all linters from 8.1 pass.
 - Every row of the smoke-check table matches.
-- `bolt-theme-templates/scripts/verify.sh` reports no undefined classes (check [7/8]).
+- `bolt-theme-templates/scripts/verify.sh` reports no undefined classes (check [7/10]) and its search check [10/10] passes — with `BOLT_BASE_URL` pointing at production after the first deployment, too.
 - Every translation key exists in every catalog.
 - Lighthouse (mobile) on the homepage and one record page: Performance, Accessibility, Best Practices and SEO at 90 or above.
 - `assets_version` bumped and production cache cleared.
@@ -684,7 +686,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | Symptom | Cause and action |
 | :--- | :--- |
 | `Unable to find template "partials/_master.twig"` | `bolt-theme-init` not run (4.1), or the theme was started from another layout — the contract layout is `partials/_master.twig` with `{% block main %}` |
-| Header, footer or buttons unstyled | A class uses a name that is not a token, or CSS was not rebuilt (`npm run prod`); `bolt-theme-templates/scripts/verify.sh` [7/8] lists the undefined classes |
+| Header, footer or buttons unstyled | A class uses a name that is not a token, or CSS was not rebuilt (`npm run prod`); `bolt-theme-templates/scripts/verify.sh` [7/10] lists the undefined classes |
 | Content edited in the admin does not appear on a page | A fragment cache without the `twig.runtime.cache` override, or a ContentType missing from its `tags` (`bolt-performance` Steps 2, 4) |
 | Mobile menu or dropdowns do nothing | `js/app.js` not rebuilt or `menu` not imported in `js/src/index.ts`; the markup needs the hooks from [JavaScript Hooks](#javascript-hooks) (`bolt-menu` templates have them) |
 | Page returns 500 "Tried to get content from ContentType '…'" | A template queries a ContentType the site does not define; guard with `{% if config.get('contenttypes/<slug>') %}` or remove the include |
