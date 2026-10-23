@@ -2,6 +2,28 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+A search page on every site. Bolt serves `/search` and `/{_locale}/search` whether the design shows a search box or not, and on sites without a fitting template it answered 500 or rendered the listing template.
+
+### Added
+- `bolt-theme-templates`: the search results page — `pages/search/search.twig` with the page-scoped `search-form.twig` and `search-result.twig`, built from the Integration Contract tokens, plus the root entrypoint `search.twig` that Bolt's default `search_results_template: search.twig` renders. `scaffold.sh` always installs them. The page has its own `<title>` and `noindex, follow`, highlights the term in the excerpts, counts results with Czech and English plural rules, and shows an empty state.
+- `bolt-theme-templates` `verify.sh` step 10 checks the search page on every run:
+  - The template Bolt will render exists, no form posts to `path('search')`, and the term is escaped before `__()`.
+  - Live (`scripts/check-search.php`): `/search` answers 200 with a search form; a real term returns results with HTTP 200; a term without matches answers 200; markup in the term is not reflected; on every secondary locale, `/<locale>/search` answers 200, its form submits to `/<locale>/search` and the results link to `/<locale>/` pages.
+  - The term is the longest word of a page's `<h1>` from `sitemap.xml`, and the results must link to that page more often than a page without matches does, so menu links don't count. `BOLT_SEARCH_TERM` overrides the guess.
+  - The live part runs against `BOLT_BASE_URL`, or against PHP's built-in server that the step starts itself (`scripts/php-server-router.php`). It fails when no site can be reached.
+- `WORKFLOWS.md`: the search page in 6.1, Gate 6 and the Definition of Done.
+
+### Fixed
+- Search forms copied from older themes posted to `path('search')`, which is always the default locale: on `/en/search`, pressing Search showed the Czech results. The example submits to the current route, and step 10 fails on `action="{{ path('search') }}"`.
+- The term went into `__()` unescaped. Bolt's HTML cleaner keeps its allowed tags (`<b>`, `<img>`, `<a>` …) and `__()` prints unescaped, so markup from the URL appeared in the results heading. The example writes `term|e`; step 10 fails on an unescaped parameter and checks the live page.
+
+### Migrating a project
+- Run `scaffold.sh` (existing files are kept) and merge `examples/translations.<locale>.xlf` (the new `search.*` units). If `config/bolt/config.yaml` names a `search_results_template` that does not exist, set it to `search.twig`.
+- A theme with its own search page keeps it. Fix what step 10 reports: submit the form to the current route, `path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params'))`, and pass the term to `__()` as `searchTerm|e`.
+- Step 10 needs a reachable site: the project's database for the built-in server, or `BOLT_BASE_URL`.
+
 ## 1.7.1 — 2026-10-23
 
 Fixes found by comparing a site's pages before and after its audit fixes, screenshot by screenshot.
