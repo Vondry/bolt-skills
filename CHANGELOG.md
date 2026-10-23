@@ -21,13 +21,13 @@ Fixes found by auditing a site with `bolt-audit` and fixing the findings.
 
 ## 1.6.3 — 2026-10-22
 
-Fixes to the audit tooling, found by auditing fmautoservis.cz (WEDOS, behind the WEDOS CDN) with `bolt-audit`.
+Fixes to the audit tooling, found by auditing a site behind a CDN with `bolt-audit`.
 
 ### Fixed
 - `bolt-audit`: `audit.sh --base-url` never ran the asset delivery check. `verify.sh` reads only `BOLT_DELIVERY_URL`, which the audit did not set. The audit now sets it from the new `--delivery-url=`, or from `--base-url` when the `Server` header names Apache, Nginx or LiteSpeed (`symfony serve` and PHP's built-in server keep it off), and `profile.md` has an *Asset delivery check* row.
 - `bolt-audit` and `verify-all.sh`: a pass line containing a warning word rated the skill `WARN` — `bolt-contenttypes` on „✓ no warning or danger notice“, `bolt-legal-cz` on „withdrawal notice“ in its manual checklist. Pass lines (`✓ …`, `PASSED: …`, `OK: …`) and zero counts („0 advisory warnings“) are ignored; `audit.sh` counts „Notice:“ lines, not every „notice“.
 - `bolt-cookie-consent`, `bolt-legal-cz`, `bolt-disable-api`, `bolt-htaccess` `verify.sh`: the reachability probe gave the site 2 s, so a production site on a cold cache reported „not reachable“ and its live checks were skipped. The probe now waits 10 s; a closed port still fails at once.
-- `bolt-htaccess` and `bolt-disable-api` `verify.sh`: their live `/index.php/…` probes caused the bug they look for. On a site without the Pitfall 10 rules, the request puts the hosting path into Bolt's cached canonical links and `llms.txt` for the cache lifetime (seen on fmautoservis.cz during the audit). The probes now run only when the project's `public/.htaccess` has the rules, and say why they were skipped. If the local file has the rules but the server's copy does not, the htaccess check says to upload it.
+- `bolt-htaccess` and `bolt-disable-api` `verify.sh`: their live `/index.php/…` probes caused the bug they look for. On a site without the Pitfall 10 rules, the request puts the hosting path into Bolt's cached canonical links and `llms.txt` for the cache lifetime (seen during an audit). The probes now run only when the project's `public/.htaccess` has the rules, and say why they were skipped. If the local file has the rules but the server's copy does not, the htaccess check says to upload it.
 - `bolt-asset-caching` `check-delivery.php`: names the crawled pages that did not answer 200 (status or „no response“). Before, it only counted them, so a timeout or a 5xx hid part of the site without saying which part.
 - `bolt-asset-caching` `verify.sh`: the live header check looked only for the project's `symfony serve` and skipped on staging / production. It now uses `BOLT_BASE_URL` when it answers, and reports a sample image the site does not have (HTTP 404) instead of „no cache-control“.
 
@@ -38,10 +38,10 @@ Fixes to the audit tooling, found by auditing fmautoservis.cz (WEDOS, behind the
 
 ## 1.6.2 — 2026-10-22
 
-Fixes found by auditing rockfest-kurim.cz (WEDOS) with `bolt-audit` and fixing the findings. They were checked on a local Apache with the project's `.htaccess` and in Bolt 6.1.9's own Twig environment.
+Fixes found by auditing a site with `bolt-audit` and fixing the findings. They were checked on a local Apache with the project's `.htaccess` and in Bolt 6.1.9's own Twig environment.
 
 ### Fixed
-- `bolt-htaccess`: `/index.php/<page>` answered 200 with the homepage. Symfony then took the hosting path as its base URL, and Bolt cached it into the canonical links, `/sitemap.xml` and `/llms.txt` (`https://example.cz/domains/example.cz/public/index.php/…`). Any visitor could trigger this. `examples/public.htaccess` now redirects `/…/index.php/page` to `/…/page` and `/domains/<host>[/public]/page` to `/page`, and answers 404 to any other path naming `index.php`. All three rules match `%{THE_REQUEST}`, so internal rewrites never trigger them. New Pitfall 10. `verify.sh` section 2 fails without the rules; section 6 expects `/index.php/bolt-htaccess-probe?x=1` → 301. Pitfall 9 no longer claims rockfest-kurim.cz sits directly in `www/`.
+- `bolt-htaccess`: `/index.php/<page>` answered 200 with the homepage. Symfony then took the hosting path as its base URL, and Bolt cached it into the canonical links, `/sitemap.xml` and `/llms.txt` (`https://example.cz/domains/example.cz/public/index.php/…`). Any visitor could trigger this. `examples/public.htaccess` now redirects `/…/index.php/page` to `/…/page` and `/domains/<host>[/public]/page` to `/page`, and answers 404 to any other path naming `index.php`. All three rules match `%{THE_REQUEST}`, so internal rewrites never trigger them. New Pitfall 10. `verify.sh` section 2 fails without the rules; section 6 expects `/index.php/bolt-htaccess-probe?x=1` → 301. Pitfall 9 no longer claims a site on the same host sits directly in `www/`.
 - `bolt-legal-cz`: with `dic: ~` (the scaffold default) or any other `~` value, `_legal-identity.twig` made every page answer 500 (`Method Bolt\Collection\DeepCollection::dic does not exist`). The partial now converts `contact:` and `legal:` with `toArray()`, and `verify.sh` step 3 fails on a copy without it.
 - `bolt-legal-cz`: ARES reports every public register as one source (VR). `check-site.php` and `check-legal.php` therefore treated a spolek, nadace, ústav, o.p.s. or SVJ as a Commercial Register company and asked for „Zapsáno v obchodním rejstříku“. The register is now derived from the section of the spisová značka (L = spolkový rejstřík, …), such operators are `other`, and the scripts print the sentence to use and compare `registry.text` with ARES. The scaffold's placeholder for `other` is an association example, not an attorney's.
 - `bolt-cookie-consent`: in Bolt, `theme.yaml` blocks are collections. `|column('category')` found no consent categories in them, so `_consent-mode.twig` and `_cookie-banner.twig` rendered nothing. `gdpr.twig` threw on `summary: ~`. Every template now converts `privacy:` / `analytics:` with `toArray()`, and `verify.sh` step 3 fails on a copy without it.
@@ -65,7 +65,7 @@ Fixes found by auditing rockfest-kurim.cz (WEDOS) with `bolt-audit` and fixing t
 
 ## 1.6.1 — 2026-10-22
 
-The www and HTTPS redirects work on hosts that serve the domain from a webroot subfolder. On fmautoservis.cz (WEDOS, `www/domains/fmautoservis.cz/`), `https://www.fmautoservis.cz/` redirected to `https://fmautoservis.cz/domains/fmautoservis.cz/` (404), and plain-HTTP links did the same.
+The www and HTTPS redirects work on hosts that serve the domain from a webroot subfolder. On a host serving from `www/domains/example.cz/` (WEDOS), `https://www.example.cz/` redirected to `https://example.cz/domains/example.cz/` (404), and plain-HTTP links did the same.
 
 ### Fixed
 - `bolt-htaccess` `examples/root.htaccess` and Step 1, including the variant for a document root on `public/`: the redirect targets use `/$1` instead of `%{REQUEST_URI}`. The host forwards the request into the subfolder with an internal rewrite, so `REQUEST_URI` carried the prefix. `$1` is relative to the `.htaccess` folder on every layout. New Pitfall 9.
@@ -77,7 +77,7 @@ Replace the two redirect rules of the root `.htaccess` with the ones in `example
 
 ## 1.6.0 — 2026-10-22
 
-`.env` holds everything production needs, including the secret; `.env.local` is local development only. On fmautoservis.cz the upload answered 500 until `.env.local` was uploaded too, and that file then ran production with debug on.
+`.env` holds everything production needs, including the secret; `.env.local` is local development only. On an SFTP deployment the upload answered 500 until `.env.local` was uploaded too, and that file then ran production with debug on.
 
 ### Changed
 - `bolt-security-hardening` Step 1: the committed `.env` carries every production value. That includes a fresh `APP_SECRET`, generated per project with a one-line command in the step, and passwords in `DATABASE_URL` / `MAILER_DSN`. An SFTP upload therefore runs on its own, with no server-side `.env.local`. The repository must stay private; rotate the secret when it is shared. `examples/env` was rewritten accordingly.
@@ -108,7 +108,7 @@ Compression is the host's job, not the `.htaccess`'s. The 1.5.0 finding was meas
 
 ## 1.5.0 — 2026-10-22
 
-Compressed pages and a maintenance page that never touches the database. Both come from the second audit of fmautoservis.cz: 204 KB of uncompressed HTML, CSS and JS per page, and a 503 page that loaded its phone and e-mail from a settings record.
+Compressed pages and a maintenance page that never touches the database. Both come from a site audit: 204 KB of uncompressed HTML, CSS and JS per page, and a 503 page that loaded its phone and e-mail from a settings record.
 
 ### Added
 - `bolt-htaccess` Step 7: a `mod_deflate` block in `examples/public.htaccess` that compresses the text responses. That covers pages rendered by Symfony and the CSS, JS, SVG, XML and JSON files Apache serves; images, WOFF2 fonts and PDFs stay out. Brotli is left to the host, and the step includes an Nginx line. `verify.sh` gets a static check (section 6, now 7 sections) and a live `Content-Encoding` probe of the homepage and `css/index.css`.
@@ -121,7 +121,7 @@ Compressed pages and a maintenance page that never touches the database. Both co
 
 ## 1.4.1 — 2026-10-22
 
-Admin icons that render: ContentType icons only from the Font Awesome version Bolt bundles — from fmautoservis.cz, where two FA 6 names showed empty boxes in the sidebar.
+Admin icons that render: ContentType icons only from the Font Awesome version Bolt bundles: FA 6 names show empty boxes in the sidebar.
 
 ### Added
 - `bolt-contenttypes` rule 11: `icon_one` / `icon_many` must be Font Awesome Free **solid** icons of the version in `bolt/assets` (5.15.4 in Bolt 6.1). Bolt prints `fas fa-<name>`, so FA 6 / 7 names (`sliders`, `screwdriver-wrench`, `house`, `gear`, …), brand icons and style prefixes render as empty boxes. The rule includes a table of where each option renders.
@@ -134,7 +134,7 @@ Admin icons that render: ContentType icons only from the Font Awesome version Bo
 
 ## 1.4.0 — 2026-10-22
 
-Every photo gallery opens in the PhotoSwipe lightbox, and template classes use their canonical token form — both from building fmautoservis.cz.
+Every photo gallery opens in the PhotoSwipe lightbox, and template classes use their canonical token form — both from building a site with the skills.
 
 ### Added
 - `bolt-theme-templates/scripts/canonical-classes.mjs`: reports every template class that has a shorter canonical form — the IDE's "The class `rounded-[var(--radius-card)]` can be written as `rounded-card`" hint — using the theme's own design system (`tailwindcss canonicalize`, Tailwind CSS v4.3+). Unlike the IDE inspection it also sees classes inside Twig strings and interpolated attributes; `--fix` rewrites the templates. `verify.sh` runs it as step 8 (now 9 steps) and fails until the templates are canonical.
@@ -148,7 +148,7 @@ Every photo gallery opens in the PhotoSwipe lightbox, and template classes use t
 
 ## 1.3.0 — 2026-10-22
 
-ContentType safety (reserved field names, explicit slugs, English configuration) with a config-notices gate before content, and fixes from the fmautoservis.cz audit.
+ContentType safety (reserved field names, explicit slugs, English configuration) with a config-notices gate before content, and fixes from a site audit.
 
 ### Added
 - `bolt-build`: `scripts/config-notices.php` runs the checks of the admin dashboard's **Bolt Configuration Notices** box (bolt/configuration-notices-widget) from the command line. It must exit 0 before any content is entered — a new gate in `WORKFLOWS.md` (Checkpoint 5, step 7.1) and in the `bolt-build` phase table and pitfalls.

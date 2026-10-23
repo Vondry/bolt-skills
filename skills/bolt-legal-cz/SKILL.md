@@ -177,7 +177,7 @@ What a script cannot judge — the content of the terms, whether discounts state
 
 ## 7. Pitfalls
 
-- **Every page answers 500 after the scaffold (`Method Bolt\Collection\DeepCollection::dic does not exist`).** An older `_legal-identity.twig` read `legal.dic|default(false)` straight from Bolt's config collection; with `dic: ~` (or any `~` value) the access throws, `|default` does not catch it, and the error page fails too. The current partial converts `contact:` and `legal:` with `toArray()` first; `verify.sh` step 3 fails on a copy without it. Seen on rockfest-kurim (2026-10-22, caught on a local Apache before deployment).
+- **Every page answers 500 after the scaffold (`Method Bolt\Collection\DeepCollection::dic does not exist`).** An older `_legal-identity.twig` read `legal.dic|default(false)` straight from Bolt's config collection; with `dic: ~` (or any `~` value) the access throws, `|default` does not catch it, and the error page fails too. The current partial converts `contact:` and `legal:` with `toArray()` first; `verify.sh` step 3 fails on a copy without it. Caught on a local Apache before deployment.
 - **A spolek, nadace or ústav told to show the Commercial Register.** ARES reports every public register as one source; the section of the spisová značka decides (L = spolkový rejstřík). The scripts derive it and treat such an operator as `other` with `registry.text`.
 - **A workshop or office address instead of the registered seat.** § 435 asks for the seat as registered; add a "provozovna" separately and label it.
 - **Old data after a move or a change of legal form.** Re-run `verify.sh --ares` when the operator moves or converts from OSVČ to s.r.o.; ID-06 and ID-09 fail on the old identity.
