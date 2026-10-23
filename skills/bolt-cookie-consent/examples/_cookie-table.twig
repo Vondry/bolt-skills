@@ -21,7 +21,7 @@
         <tbody>
             {% for item in items %}
                 <tr class="border-b border-stroke align-top last:border-b-0">
-                    <th scope="row" class="py-2 pr-3 font-mono font-normal break-all">
+                    <th scope="row" class="py-2 pr-3 font-mono font-normal whitespace-nowrap">
                         {{ item.name }}
                         <span class="block font-body text-ink-3">{{ __('cookie.technology.' ~ item.technology|default('cookie')) }}</span>
                     </th>
