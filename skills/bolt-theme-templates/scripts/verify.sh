@@ -307,7 +307,7 @@ if [ -n "${BOLT_BASE_URL:-}" ] && curl -s --max-time 10 -o /dev/null "$BOLT_BASE
 elif command -v php > /dev/null 2>&1 && [ -f public/index.php ]; then
     PORT=$((18000 + RANDOM % 1000))
     # The project's .env may limit trusted hosts to the production domain; 127.0.0.1 must pass here.
-    SYMFONY_TRUSTED_HOSTS= php -S "127.0.0.1:$PORT" -t public "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/php-server-router.php" > /dev/null 2>&1 &
+    SYMFONY_TRUSTED_HOSTS='' php -S "127.0.0.1:$PORT" -t public "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/php-server-router.php" > /dev/null 2>&1 &
     SERVER_PID=$!
     trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null' EXIT
     for _ in $(seq 1 30); do
