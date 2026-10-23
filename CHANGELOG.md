@@ -2,6 +2,20 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Fixes found by rolling the 1.8.0 search page out to existing sites with their own design systems.
+
+### Fixed
+- `bolt-theme-templates` search example: the term was escaped twice. `term|e` went into `__()` results that `section-header` (`typo()` escapes) and `empty-state` escape again, so a term like `<b>x</b>` showed as `&lt;b&gt;…` and `&` as `&amp;amp;`. The term is now escaped once, where it is printed: `|e` only for `{{ __() }}` printed directly (the `<title>`), the plain term for components that escape. Section 3 M and the pitfall describe the rule, including components that print a parameter with `|raw` (those need `|e` again).
+- `verify.sh` step 10 checks only direct prints for an unescaped term: `{{ __(…) }}`, not `{{ include(…, { title: __(…) }) }}`, whose result the component escapes. The live check still catches a term reflected as markup on any path.
+- `verify.sh` step 10 read the locales from the end of the line, so `app_locales: cs|en # app_locales: en|nl|…` tested the 18 locales in the comment. Comments after the value are stripped first.
+- Search results: long words without spaces (URLs, a JSON string) overflowed the result on phones. The excerpt wraps them (`wrap-break-word`).
+
+### Migrating a project
+- If you copied the 1.8.0 search page, drop `|e` from the `'%term%'` parameters passed to `section-header` and `empty-state` (keep it in the `<title>`).
+- **Twig cache warm-up and `node_modules`:** Symfony's warm-up compiles every file in the theme folder, `node_modules` included (`typescript.js` alone is 18 MB). On themes close to PHP's 128 MB limit, a few new templates make `bin/console cache:clear` run out of memory in development. `file_name_pattern: '*.twig'` under `twig:` in `config/packages/twig.yaml` limits it to templates. Production is not affected because `node_modules` is never uploaded.
+
 ## 1.8.0 — 2026-10-23
 
 A search page on every site. Bolt serves `/search` and `/{_locale}/search` whether the design shows a search box or not, and on sites without a fitting template it answered 500 or rendered the listing template.
