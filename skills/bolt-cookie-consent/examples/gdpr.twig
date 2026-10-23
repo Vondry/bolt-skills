@@ -72,9 +72,10 @@
                             <p class="font-semibold">{{ controller.name }}</p>
                             <dl class="mt-2 space-y-1 text-sm">
                                 {% if controller.legal_form|default(null) %}<div><dt class="inline text-ink-3">{{ __('privacy.controller.legal_form') }}:</dt> <dd class="inline">{{ controller.legal_form }}</dd></div>{% endif %}
-                                <div><dt class="inline text-ink-3">{{ __('privacy.controller.address') }}:</dt> <dd class="inline">{{ controller.address }}</dd></div>
-                                <div><dt class="inline text-ink-3">{{ __('privacy.controller.ico') }}:</dt> <dd class="inline">{{ controller.ico }}</dd></div>
-                                <div><dt class="inline text-ink-3">{{ __('privacy.controller.registry') }}:</dt> <dd class="inline">{{ privacy_ui.t(controller.registry) }}</dd></div>
+                                {# A controller with business: false (private person) may have no address, IČO or register entry. #}
+                                {% if controller.address|default(null) %}<div><dt class="inline text-ink-3">{{ __('privacy.controller.address') }}:</dt> <dd class="inline">{{ controller.address }}</dd></div>{% endif %}
+                                {% if controller.ico|default(null) %}<div><dt class="inline text-ink-3">{{ __('privacy.controller.ico') }}:</dt> <dd class="inline">{{ controller.ico }}</dd></div>{% endif %}
+                                {% if controller.registry|default(null) %}<div><dt class="inline text-ink-3">{{ __('privacy.controller.registry') }}:</dt> <dd class="inline">{{ privacy_ui.t(controller.registry) }}</dd></div>{% endif %}
                                 <div><dt class="inline text-ink-3">{{ __('privacy.controller.email') }}:</dt> <dd class="inline"><a href="mailto:{{ controller.privacy_email }}" class="{{ link }}">{{ controller.privacy_email }}</a></dd></div>
                                 <div>
                                     <dt class="inline text-ink-3">{{ __('privacy.controller.dpo') }}:</dt>
@@ -121,7 +122,7 @@
                     {% if rows|length > 0 %}
                         {% if section.title %}<h3 class="mt-6 font-semibold">{{ __('privacy.purposes.of_controller', { '%controller%': section.title }) }}</h3>{% endif %}
                         <div class="mt-4 overflow-x-auto">
-                            <table class="w-full min-w-[44rem] border-collapse text-sm">
+                            <table class="w-full min-w-176 border-collapse text-sm">
                                 <thead>
                                     <tr>
                                         <th scope="col" class="{{ head_cell }}">{{ __('privacy.purposes.purpose') }}</th>
@@ -173,7 +174,7 @@
                 {% if recipients is not empty %}
                     <p class="mt-2">{{ __('privacy.recipients.intro') }}</p>
                     <div class="mt-4 overflow-x-auto">
-                        <table class="w-full min-w-[40rem] border-collapse text-sm">
+                        <table class="w-full min-w-160 border-collapse text-sm">
                             <thead>
                                 <tr>
                                     <th scope="col" class="{{ head_cell }}">{{ __('privacy.recipients.name') }}</th>

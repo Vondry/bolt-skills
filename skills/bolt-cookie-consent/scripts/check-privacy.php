@@ -67,7 +67,12 @@ if (! in_array($model, ['single', 'joint', 'separate', 'hybrid'], true)) {
     $fail("controller_model $model needs two or more controllers");
 }
 foreach ($controllers as $index => $controller) {
-    foreach (['id', 'name', 'address', 'ico', 'registry', 'privacy_email'] as $field) {
+    // A private person who does not run a business (business: false) has no IČO or register
+    // entry; name and an e-mail are the identity and contact details of čl. 13/1 a.
+    $fields = ($controller['business'] ?? true) === false
+        ? ['id', 'name', 'privacy_email']
+        : ['id', 'name', 'address', 'ico', 'registry', 'privacy_email'];
+    foreach ($fields as $field) {
         if (empty($controller[$field])) {
             $fail("privacy.controllers.$index.$field is empty (§ 435 OZ, VAR-30)");
         }
