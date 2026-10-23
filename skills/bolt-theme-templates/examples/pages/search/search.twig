@@ -9,8 +9,10 @@
 
   Receives:
     - searchTerm (string): the term, already passed through Bolt's HTML cleaner. The cleaner keeps
-      its allowed tags (<b>, <img>, <a> …), so the term is markup from a visitor: escape it with |e
-      before it goes into __() (whose output is printed unescaped).
+      its allowed tags (<b>, <img>, <a> …), so the term is markup from a visitor. Escape it exactly
+      once, where it is printed: `{{ __(…, { '%term%': term|e }) }}` printed directly (__() output
+      is not escaped), but the plain term when the result goes to a component that escapes it
+      (section-header's typo(), empty-state) — |e there would show &lt;b&gt; and &amp;amp;.
     - records (Pagerfanta): published records of every ContentType with `searchable: true`.
 
   Rules: Near-zero raw HTML — layout wrappers only; everything else is components.
@@ -29,7 +31,7 @@
 {% block main %}
     <section aria-labelledby="search-title" class="wrapper px-edge py-section">
         {% include 'components/ui/section-header.twig' with {
-            title: term is not empty ? __('search.results_for', { '%term%': term|e }) : __('search.title'),
+            title: term is not empty ? __('search.results_for', { '%term%': term }) : __('search.title'),
             title_id: 'search-title',
             eyebrow: term is not empty ? __('search.title') : null,
             heading_level: 1
@@ -60,7 +62,7 @@
             <div role="status">
                 {% include 'components/ui/empty-state.twig' with {
                     title: __('search.empty_title'),
-                    message: __('search.empty_message', { '%term%': term|e }),
+                    message: __('search.empty_message', { '%term%': term }),
                     action_label: __('nav.home'),
                     action_href: '/'
                 } %}

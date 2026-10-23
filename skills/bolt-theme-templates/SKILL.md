@@ -1228,7 +1228,7 @@ Bolt picks the template in this order: `search_results_template` in `theme.yaml`
 
 Rules the example follows (and `verify.sh` step 10 checks):
 - **Results stay in the visitor's locale.** The form submits to the current route (`search` or `search_locale` with its `_locale`), never to `path('search')`, which is always the default locale. A header search box outside the search page passes `action: path('search_locale', { _locale: app.request.locale })` on secondary locales.
-- **The term is escaped before it goes into `__()`.** Bolt runs the term through its HTML cleaner, which keeps the allowed tags (`<b>`, `<img>`, `<a>` …), and `__()` prints its result unescaped. Write `searchTerm|e` (here `term|e`) in every translation parameter.
+- **The term is escaped exactly once, where it is printed.** Bolt runs the term through its HTML cleaner, which keeps the allowed tags (`<b>`, `<img>`, `<a>` …). `{{ __(…) }}` printed directly is not escaped, so there the parameter is `searchTerm|e` (the `<title>`). A `__()` result passed to a component is a plain string that the component escapes (`section-header`'s `typo()`, `empty-state`), so there the parameter is the plain term — `|e` would show `&lt;b&gt;` and `&amp;amp;`. A component that prints a parameter with `|raw` needs the `|e` again.
 - **Result pages are `noindex, follow`** and have their own `<title>`.
 - **Counts use plural rules**, not „Nalezeno: %count%“: with a `%count%` parameter, Symfony reads a leading `Word:` as a plural-form label and prints only the number.
 
@@ -1244,8 +1244,10 @@ Rules the example follows (and `verify.sh` step 10 checks):
 
   Receives:
     - searchTerm (string): the term, already passed through Bolt's HTML cleaner. The cleaner keeps
-      its allowed tags (<b>, <img>, <a> …), so the term is markup from a visitor: escape it with |e
-      before it goes into __() (whose output is printed unescaped).
+      its allowed tags (<b>, <img>, <a> …), so the term is markup from a visitor. Escape it exactly
+      once, where it is printed: `{{ __(…, { '%term%': term|e }) }}` printed directly (__() output
+      is not escaped), but the plain term when the result goes to a component that escapes it
+      (section-header's typo(), empty-state) — |e there would show &lt;b&gt; and &amp;amp;.
     - records (Pagerfanta): published records of every ContentType with `searchable: true`.
 
   Rules: Near-zero raw HTML — layout wrappers only; everything else is components.
@@ -1264,7 +1266,7 @@ Rules the example follows (and `verify.sh` step 10 checks):
 {% block main %}
     <section aria-labelledby="search-title" class="wrapper px-edge py-section">
         {% include 'components/ui/section-header.twig' with {
-            title: term is not empty ? __('search.results_for', { '%term%': term|e }) : __('search.title'),
+            title: term is not empty ? __('search.results_for', { '%term%': term }) : __('search.title'),
             title_id: 'search-title',
             eyebrow: term is not empty ? __('search.title') : null,
             heading_level: 1
@@ -1295,7 +1297,7 @@ Rules the example follows (and `verify.sh` step 10 checks):
             <div role="status">
                 {% include 'components/ui/empty-state.twig' with {
                     title: __('search.empty_title'),
-                    message: __('search.empty_message', { '%term%': term|e }),
+                    message: __('search.empty_message', { '%term%': term }),
                     action_label: __('nav.home'),
                     action_href: '/'
                 } %}
@@ -1427,10 +1429,10 @@ bash skills/bolt-theme-templates/scripts/verify.sh
 7. **Undefined classes**: colour/token utilities used in templates but missing from the compiled `css/index.css` (e.g. a token name that `bolt-tailwind-theme` does not define).
 8. **Canonical classes**: fails when a class has a shorter canonical form (`scripts/canonical-classes.mjs`, see below).
 9. **Twig Syntax Linting**: Runs `bin/console lint:twig public/theme/<active_theme>` to catch any syntax bugs.
-10. **Search page**: the template Bolt will render exists; no form posts to `path('search')`; the term is escaped before `__()`. Then live, against `BOLT_BASE_URL` or — when it is not set — PHP's built-in server started for the check (`scripts/php-server-router.php`, trusted hosts lifted for `127.0.0.1`), `scripts/check-search.php`:
+10. **Search page**: the template Bolt will render exists; no form posts to `path('search')`; no `{{ __(…) }}` printed directly carries the term without `|e`. Then live, against `BOLT_BASE_URL` or — when it is not set — PHP's built-in server started for the check (`scripts/php-server-router.php`, trusted hosts lifted for `127.0.0.1`), `scripts/check-search.php`:
     - `/search` answers 200 with a `searchTerm` form;
     - a real term returns results with HTTP 200: the longest word of a page's `<h1>` (from `sitemap.xml`), and the results must link to that page — more often than the page for a term without matches does, so menu links do not count. `BOLT_SEARCH_TERM=word` skips the guess;
-    - a term without matches answers 200; markup in the term is not printed as markup;
+    - a term without matches answers 200; markup in the term is not printed as markup (this catches every path, including components that print with `|raw`);
     - every secondary locale from `app_locales`: `/<locale>/search` answers 200, its form submits to `/<locale>/search`, and the results link to `/<locale>/` pages.
     The step fails when no site can be reached: the search page is always verified.
 
@@ -1481,7 +1483,7 @@ Name tokens by role, not by position: `--spacing-page` / `--spacing-page-end` re
 | **`__('key')\|default('…')`** | The key is shown instead of the text. | Add the key to every catalog. |
 | **No search template** (`search_results_template: search.twig`, file missing) | `/search` answers 500 or renders the listing template without a form — on every site, linked or not. | `scaffold.sh` (section 3 M); `verify.sh` step 10. |
 | **Search form posting to `path('search')`** | On `/en/search`, pressing Search shows the Czech results. | Submit to the current route (`search-form.twig`). |
-| **Search term unescaped in `__()`** | `<img>` or `<a>` from the URL appears in the heading (Bolt's cleaner keeps allowed tags, `__()` prints unescaped). | `searchTerm\|e` in every translation parameter. |
+| **Search term unescaped in `{{ __() }}`** | `<img>` or `<a>` from the URL appears in the heading (Bolt's cleaner keeps allowed tags, `__()` printed directly is not escaped). | `searchTerm\|e` where `__()` is printed directly; the plain term where its result goes to a component that escapes — `\|e` there shows `&lt;b&gt;` and `&amp;amp;`. |
 | **„Nalezeno: %count%“** | Only the number is shown: Symfony reads a leading `Word:` as a plural label when `%count%` is passed. | Plural rules: `{1} …\|[2,4] …\|[5,Inf] …`. |
 | **Excerpt passed into a component** | `<mark>` shows as text. | `{{ excerpt\|raw }}` in the component: Bolt's `excerpt` filter is HTML-safe only when printed directly. |
 | **SEO JSON in excerpts** (`{"title":…}`) | Search results and teasers show the SEO field's JSON (AppoloDev/bolt-seo ≤ 2.2.0 marks it as excerpt text). | Fixed upstream in AppoloDev/bolt-seo#61; until it is released, set `excerpt_format` on ContentTypes with a `seo` field. |
