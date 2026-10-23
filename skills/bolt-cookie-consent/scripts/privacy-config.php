@@ -75,7 +75,8 @@ foreach ([['trackers', $trackers], ['embeds', $embeds], ['purposes', $purposeKey
 // Locales: --locales, else app_locales from config/services.yaml, else cs.
 $locales = $list('locales');
 if (! $locales && is_file('config/services.yaml')) {
-    $services = Yaml::parseFile('config/services.yaml');
+    // services.yaml may use Symfony tags (!tagged_iterator, !service …).
+    $services = Yaml::parseFile('config/services.yaml', Yaml::PARSE_CUSTOM_TAGS);
     $locales = array_values(array_filter(explode('|', (string) ($services['parameters']['app_locales'] ?? ''))));
 }
 if (! in_array('cs', $locales, true)) {
