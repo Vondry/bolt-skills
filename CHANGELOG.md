@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.7.1 — 2026-10-23
 
 Fixes found by comparing a site's pages before and after its audit fixes, screenshot by screenshot.
 
