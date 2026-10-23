@@ -15,6 +15,18 @@
 
 {% import 'partials/_privacy-macros.twig' as privacy_ui %}
 
+{# A static page has no record, so seo.title() would give only the site name. #}
+{% block seo %}
+    {% set page_title = __('privacy.title') ~ ' | ' ~ config.get('general/sitename') %}
+    <title>{{ page_title }}</title>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ page_title }}">
+    <meta property="og:url" content="{{ app.request.schemeAndHttpHost ~ app.request.pathInfo }}">
+    <meta name="robots" content="index, follow">
+    {# bolt-add-language: hreflang alternates of this page in every locale #}
+    {% include 'partials/_hreflang.twig' ignore missing %}
+{% endblock seo %}
+
 {% block main %}
     {# Plain arrays: theme.yaml blocks come as Bolt collections — |column() finds nothing in them and a key
        set to ~ throws on access. toArray() converts recursively. #}
@@ -33,7 +45,11 @@
     {% set contact = controllers|filter(controller => controller.id == contact_id)|first %}
     {% set analytics = config.get('theme/analytics') %}
     {% set analytics = analytics.toArray is defined ? analytics.toArray() : analytics|default({}) %}
-    {% set google = ('analytics' in consent_categories and analytics.ga4_id|default(null)) or ('marketing' in consent_categories and analytics.google_ads_id|default(null)) %}
+    {# The Google tools this site really loads — the policy names only those #}
+    {% set google_tools = [] %}
+    {% if 'analytics' in consent_categories and analytics.ga4_id|default(null) %}{% set google_tools = google_tools|merge(['Google Analytics']) %}{% endif %}
+    {% if 'marketing' in consent_categories and analytics.google_ads_id|default(null) %}{% set google_tools = google_tools|merge(['Google Ads']) %}{% endif %}
+    {% set google = google_tools is not empty %}
 
     {% set h2 = 'font-display text-card font-semibold text-ink scroll-mt-24' %}
     {% set cell = 'border-b border-stroke py-3 pr-4 align-top' %}
@@ -236,7 +252,7 @@
                 <h2 id="cookies-title" class="{{ h2 }}">{{ __('privacy.cookies.title') }}</h2>
                 <p class="mt-2">{{ __(consent_categories is not empty ? 'privacy.cookies.intro' : (cookies is empty ? 'privacy.cookies.none' : 'privacy.cookies.intro_necessary_only')) }}</p>
                 {% if google %}
-                    <p class="mt-2">{{ __(analytics.consent_mode|default('basic') == 'advanced' ? 'privacy.cookies.consent_mode_advanced' : 'privacy.cookies.consent_mode_basic') }}</p>
+                    <p class="mt-2">{{ __(analytics.consent_mode|default('basic') == 'advanced' ? 'privacy.cookies.consent_mode_advanced' : 'privacy.cookies.consent_mode_basic', { '%tools%': google_tools|join(', ') }) }}</p>
                 {% endif %}
 
                 {% for category in ['necessary']|merge(consent_categories) %}
