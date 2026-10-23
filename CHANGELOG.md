@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.8.0 — 2026-10-23
 
 A search page on every site. Bolt serves `/search` and `/{_locale}/search` whether the design shows a search box or not, and on sites without a fitting template it answered 500 or rendered the listing template.
 
