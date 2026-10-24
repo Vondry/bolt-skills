@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.8.2 — 2026-10-24
 
 ### Fixed
 - `bolt-runtime-extensions` `scaffold.sh` no longer appends an `App\LocaleLinkExtension` definition to `config/services.yaml`. The class gets its arguments from `#[Autowire]` attributes, so the definition only duplicated them; projects that were scaffolded earlier and then had the class replaced by an audit carried both.
