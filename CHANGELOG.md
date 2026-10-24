@@ -2,6 +2,15 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+- `bolt-runtime-extensions` `scaffold.sh` no longer appends an `App\LocaleLinkExtension` definition to `config/services.yaml`. The class gets its arguments from `#[Autowire]` attributes, so the definition only duplicated them; projects that were scaffolded earlier and then had the class replaced by an audit carried both.
+- `verify.sh` step 4 warns when the class has the attributes and `services.yaml` still defines the service. SKILL.md (description, sections 3 and 5, pitfall table) and WORKFLOWS 3.2 no longer describe the definition as required.
+
+### Migrating a project
+- If `src/LocaleLinkExtension.php` has `#[Autowire('%app_locales%')]`, delete the `App\LocaleLinkExtension:` block (its `arguments` and `twig.extension` tag) from `config/services.yaml`. `bin/console lint:container` must still pass.
+
 ## 1.8.1 — 2026-10-23
 
 Fixes found by rolling the 1.8.0 search page out to existing sites with their own design systems.

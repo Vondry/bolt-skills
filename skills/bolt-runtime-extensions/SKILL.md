@@ -5,8 +5,8 @@ description: >-
   Twig extensions under src/ in Bolt CMS. Deploys App\LocaleLinkExtension for automatic
   multi-language URL prefixing (locale_link), App\ImageDimensionsExtension for cached
   disk image resolution needed by PhotoSwipe (image_dimensions), and App\FileSizeExtension
-  for human-readable download sizes (file_size, format_file_size), along with required
-  bindings in config/services.yaml.
+  for human-readable download sizes (file_size, format_file_size), wired through
+  #[Autowire] attributes with no service definitions in config/services.yaml.
 ---
 
 # Bolt CMS Runtime PHP Twig Extensions
@@ -386,7 +386,7 @@ class FileSizeExtension extends AbstractExtension
 
 Nothing to add. Bolt's stock `config/services.yaml` registers every class in `src/` with autowiring and autoconfiguration (`App\: resource: '../src/*'`), which tags the three classes as Twig extensions. Their scalar arguments come from `#[Autowire]` attributes in the constructors (`%app_locales%`, `%locale%`, `%kernel.project_dir%`), so the classes work in any project without bindings — see [`examples/services_snippet.yaml`](examples/services_snippet.yaml).
 
-Older projects define `App\LocaleLinkExtension` explicitly with `arguments` and a `twig.extension` tag. That still works; it can be removed.
+Older projects define `App\LocaleLinkExtension` explicitly with `arguments` and a `twig.extension` tag. Once the class has the `#[Autowire]` attributes (an audit or `scaffold.sh --force` copies `examples/LocaleLinkExtension.php` over it), that definition only duplicates them: remove it. `verify.sh` warns while both are present.
 
 **PHP version:** the classes use `mb_ltrim()` (PHP 8.4). On PHP 8.2 and 8.3 it comes from `symfony/polyfill-php84`, which `bolt/core` requires — nothing to install.
 
@@ -442,7 +442,7 @@ Pass the field's `path` (the public URL such as `/files/2026-01/catalog.pdf`); t
 ## 5. Automated Scaffolding & Verification Runbook
 
 ### Automatic Installation
-To deploy all three extensions and configure `config/services.yaml` in one command:
+To deploy all three extensions in one command (it adds the `app_locales` parameter to `config/services.yaml` when missing, and no service definitions):
 ```bash
 ./skills/bolt-runtime-extensions/scripts/scaffold.sh [project-root] [--force]
 ```
@@ -458,7 +458,7 @@ The script verifies:
 1. `src/LocaleLinkExtension.php` exists, passes PHP syntax check (`php -l`), and provides `locale_link` — and, with `vendor/` installed, behaves safely: `javascript:` / `data:` URLs (also mixed case or with a tab inside the scheme) become `#`, and `/page?a=1#x` keeps its query string and hash under the `/en` prefix. An older copy without the safe-scheme filter fails here; replace it with `examples/LocaleLinkExtension.php`.
 2. `src/ImageDimensionsExtension.php` exists, provides `image_dimensions`, and integrates with `CacheInterface`.
 3. `src/FileSizeExtension.php` exists and provides `file_size` and `format_file_size`.
-4. `config/services.yaml` has `App\LocaleLinkExtension` registered with `$appLocales` and `$defaultLocale`.
+4. `LocaleLinkExtension` gets `$appLocales` (from its `#[Autowire]` attributes, or in older projects from an explicit definition in `config/services.yaml`) and the `app_locales` parameter exists. Warns when the class has the attributes and `services.yaml` still defines the service.
 5. Symfony container compiles (`bin/console lint:container`) and all functions/filters appear in `bin/console debug:twig`.
 
 ---
@@ -475,7 +475,7 @@ Bolt core already registers `format_bytes` (`Bolt\Twig\TextExtension`: binary un
 | :--- | :--- | :--- |
 | **Path Traversal in `ImageDimensionsExtension`** | Malicious users input `../../../../etc/passwd`. | `realpath()` check enforces `$imagePath` starts with `$publicDir . DIRECTORY_SEPARATOR`. |
 | **Bypassing Symfony Cache** | Calling `getimagesize()` on every request hits disk I/O and degrades TTFB. | Cached for 1 week using `xxh128` hash key combining image path and `filemtime`. |
-| **Mismatched constructor args in `services.yaml`** | Container compilation fails with `Cannot autowire service App\LocaleLinkExtension`. | Explicitly configure `$appLocales: '%app_locales%'` and `$defaultLocale: '%locale%'`. |
+| **Constructor without `#[Autowire]`** | Container compilation fails with `Cannot autowire service "App\LocaleLinkExtension": argument "$appLocales"` (an older copy of the class and no explicit definition). | Copy `examples/LocaleLinkExtension.php`; its attributes inject `%app_locales%` and `%locale%`. Do not add a `services.yaml` definition next to them. |
 | **Fragment jumping across locales** | `locale_link('#kontakt')` prepending `/` forces home reload. | Explicit check for `$path[0] === '#'` leaves local page anchors untouched. |
 | **`image_dimensions()` for every image** | A disk read per image although the media library already stored the size. | `{% set media = image\|media %}` first; `image_dimensions(image.path)` only without a media entry. |
 | **`record.file\|file_size`** | Always `0 B`: the field value is relative to `files/`. | `record.file.path\|file_size`. |

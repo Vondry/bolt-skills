@@ -133,11 +133,17 @@ if [ ! -f "$SERVICES_FILE" ]; then
     FAILED=1
 else
     CONFIG_ERRORS=()
+    CONFIG_WARNINGS=()
     # The arguments come from #[Autowire] attributes in the class, or (older projects) from an
     # explicit service definition / binding in services.yaml.
     if [ -f "$LOCALE_EXT" ] && ! grep -q "#\[Autowire('%app_locales%')\]" "$LOCALE_EXT" \
         && ! grep -q "App\\\\LocaleLinkExtension:" "$SERVICES_FILE" && ! grep -q "appLocales" "$SERVICES_FILE"; then
         CONFIG_ERRORS+=("LocaleLinkExtension gets no \$appLocales: use the #[Autowire] attributes of examples/LocaleLinkExtension.php")
+    fi
+    # Both at once: the explicit definition wins and duplicates the attributes.
+    if [ -f "$LOCALE_EXT" ] && grep -q "#\[Autowire('%app_locales%')\]" "$LOCALE_EXT" \
+        && grep -q "App\\\\LocaleLinkExtension:" "$SERVICES_FILE"; then
+        CONFIG_WARNINGS+=("App\\LocaleLinkExtension is defined in $SERVICES_FILE although the class has #[Autowire] attributes: remove the definition (SKILL.md section 3)")
     fi
     if ! grep -q "app_locales:" "$SERVICES_FILE" && ! grep -q "locales:" "$SERVICES_FILE"; then
         CONFIG_ERRORS+=("Missing app_locales parameter in services.yaml")
@@ -149,6 +155,12 @@ else
             echo "  - $err"
         done
         FAILED=1
+    elif [ ${#CONFIG_WARNINGS[@]} -gt 0 ]; then
+        echo "WARNING"
+        for warn in "${CONFIG_WARNINGS[@]}"; do
+            echo "  - $warn"
+        done
+        WARNINGS=$((WARNINGS + ${#CONFIG_WARNINGS[@]}))
     else
         echo "PASSED"
     fi

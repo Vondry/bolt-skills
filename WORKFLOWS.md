@@ -414,7 +414,7 @@ Verifications 2.1 and 2.2 pass; `bolt-security-hardening` reports the baseline C
 - *Verify (partial):* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` — checks [1/6] to [3/6] pass now; [4/6] to [6/6] pass after 5.1 and 6.2.
 
 ### 3.2 Runtime Twig Extensions (`bolt-runtime-extensions`)
-- `bash $SKILLS/bolt-runtime-extensions/scripts/scaffold.sh` installs into `src/` and registers `LocaleLinkExtension` in `config/services.yaml` (with `$appLocales` / `$defaultLocale` bound to `%app_locales%` / `%locale%`):
+- `bash $SKILLS/bolt-runtime-extensions/scripts/scaffold.sh` installs into `src/`. Bolt's `App\` resource registers the classes and their `#[Autowire]` attributes inject `%app_locales%`, `%locale%` and `%kernel.project_dir%`, so `config/services.yaml` needs no service definitions:
   - `LocaleLinkExtension` — `locale_link(path)`: prefixes internal links with the current locale (default locale stays unprefixed), keeps query strings and hashes, leaves external URLs and pure `#fragments` untouched.
   - `ImageDimensionsExtension` — `image_dimensions(url)`: cached disk probe (Symfony cache, invalidated by file `mtime`) that gives PhotoSwipe 5 the intrinsic width and height of images without a media-library entry.
   - `FileSizeExtension` — `|file_size` and `|format_file_size`: human-readable sizes for catalogs and download links.

@@ -59,18 +59,9 @@ done
 SERVICES_FILE="$PROJECT_ROOT/config/services.yaml"
 echo "--> Updating $SERVICES_FILE..."
 
-# Ensure $appLocales is configured in LocaleLinkExtension service definition
-if ! grep -q "App\\\\LocaleLinkExtension:" "$SERVICES_FILE"; then
-    echo "    Adding App\\LocaleLinkExtension service definition..."
-    cat << 'EOF' >> "$SERVICES_FILE"
-
-  App\LocaleLinkExtension:
-    arguments:
-      $appLocales: '%app_locales%'
-      $defaultLocale: '%locale%'
-    tags: [ 'twig.extension' ]
-EOF
-fi
+# No service definition: Bolt's App\ resource registers the classes and their #[Autowire]
+# attributes supply the scalar arguments (examples/services_snippet.yaml). An explicit
+# App\LocaleLinkExtension definition would only duplicate them.
 
 # Ensure app_locales parameter is defined
 if ! grep -q "app_locales:" "$SERVICES_FILE"; then
