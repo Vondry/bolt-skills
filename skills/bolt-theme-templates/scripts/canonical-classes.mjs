@@ -87,10 +87,16 @@ if (result.status !== 0) {
     process.exit(2);
 }
 
+// A spacing-scale step (`size-18`, `md:w-18`, `-mt-4`, `w-1/2`) is already canonical. Tailwind
+// still offers a named token whose value happens to be equal (`size-18` → `size-header` when
+// `--spacing-header: 4.5rem`), but a slideshow button is not the header: same value, other meaning.
+const SCALE_STEP = /(^|:)-?[a-z][a-z-]*-\d+(\.\d+)?(\/\d+)?$/;
+const isValueMatch = (input, output) => SCALE_STEP.test(input) && !SCALE_STEP.test(output);
+
 const canonical = new Map();
 for (const row of result.stdout.split('\n').filter((line) => line.startsWith('{'))) {
     const { input, output, changed } = JSON.parse(row);
-    if (changed && output && !/\s/.test(output)) {
+    if (changed && output && !/\s/.test(output) && !isValueMatch(input, output)) {
         canonical.set(input, output);
     }
 }

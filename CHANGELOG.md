@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+False positives in the `bolt-theme-templates` class checks, found by installing 1.8.2 in akvelmez and eurodeck.
+
+### Fixed
+- `verify.sh` step 7 cut class names at the first digit or bracket: `text-h2` and `text-h2-sm` were reported as an undefined `text-h`, `border-b-(length:--hairline)` as `border-b`. The name is now read whole, and classes with an arbitrary value (`-(…)`, `-[…]`) are skipped — they name no token.
+- `canonical-classes.mjs` (step 8) no longer reports a spacing-scale step as shortenable to a named token of the same value (`size-18` → `size-header`, `w-18` → `w-header` with `--spacing-header: 4.5rem`). Same value, other meaning; `--fix` would have tied a button's size to the header height. Arbitrary values are still rewritten to tokens.
+
 ## 1.8.2 — 2026-10-24
 
 ### Fixed

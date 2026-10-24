@@ -189,9 +189,12 @@ else
     # Twig comments are stripped first, so prose such as "call-to-action" is not mistaken for a class.
     # A utility must start a token (not follow a letter, digit or hyphen), so ids and slugs such as
     # "jak-to-funguje" or "back-to-top" are not read as to-*/from-* gradient utilities.
+    # The name is read whole (possessive, no backtracking): text-h2-sm stays text-h2-sm, not text-h.
+    # Arbitrary values (border-b-(length:--hairline), text-[0.9rem]) are skipped: they name no token,
+    # and cut at the bracket they would be reported as border-b / text.
     MISSING_CLASSES=$(find "$THEME_DIR" -name "*.twig" -not -path "*/helper-pages/*" -not -path "*/node_modules/*" -print0 2>/dev/null \
         | xargs -0 perl -0777 -ne 's/\{#.*?#\}//gs; print' 2>/dev/null \
-        | perl -ne 'print "$1\n" while /(?<![\w-])((?:bg|text|border|ring|outline|fill|stroke|from|via|to|divide|decoration|accent|caret|shadow)-[a-z]+(?:-[a-z0-9]+)*)/g' \
+        | perl -ne 'print "$1\n" while /(?<![\w-])((?:bg|text|border|ring|outline|fill|stroke|from|via|to|divide|decoration|accent|caret|shadow)-[a-z][a-z0-9]*+(?:-[a-z0-9]++)*+)(?!-?[(\[])/g' \
         | grep -vE '^stroke-(linecap|linejoin|width|dasharray|dashoffset|miterlimit|opacity)$' \
         | sort -u | while read -r cls; do
             grep -qE -- "${cls}([^a-zA-Z0-9-]|\$)" "$CSS_OUT" || echo "$cls"

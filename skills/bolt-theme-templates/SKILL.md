@@ -1426,7 +1426,7 @@ bash skills/bolt-theme-templates/scripts/verify.sh
 4. **Page Orchestrator Conventions**: every template in `pages/` (outside `components/`) `{% extends %}` a layout.
 5. **Locale Link Safety**: Audits `locale_link(...)` wrapping on template URLs.
 6. **Translation trap**: reports `__('key')|default(...)`.
-7. **Undefined classes**: colour/token utilities used in templates but missing from the compiled `css/index.css` (e.g. a token name that `bolt-tailwind-theme` does not define).
+7. **Undefined classes**: colour/token utilities used in templates but missing from the compiled `css/index.css` (e.g. a token name that `bolt-tailwind-theme` does not define). Classes with an arbitrary value (`border-b-(length:--hairline)`, `text-[0.9rem]`) name no token and are not checked.
 8. **Canonical classes**: fails when a class has a shorter canonical form (`scripts/canonical-classes.mjs`, see below).
 9. **Twig Syntax Linting**: Runs `bin/console lint:twig public/theme/<active_theme>` to catch any syntax bugs.
 10. **Search page**: the template Bolt will render exists; no form posts to `path('search')`; no `{{ __(…) }}` printed directly carries the term without `|e`. Then live, against `BOLT_BASE_URL` or — when it is not set — PHP's built-in server started for the check (`scripts/php-server-router.php`, trusted hosts lifted for `127.0.0.1`), `scripts/check-search.php`:
@@ -1458,7 +1458,7 @@ Write every class in its canonical form — the named token utility, not the arb
    ```
    `verify.sh` step 8 runs the report and fails until it is clean.
 
-**Review before `--fix` — a value match is not a meaning match.** The suggestion only says that a token has the same value. When the token has another role, add a semantic token instead and run the check again: a subpage H1 written as `text-[clamp(2.25rem,4vw,3.5rem)]` would become `text-slogan` (the script-font slogan of the same size) — define `--text-page` (with `--text-page--line-height`) and use `text-page`.
+**Review before `--fix` — a value match is not a meaning match.** The suggestion only says that a token has the same value. A spacing-scale step is already canonical, so the script drops Tailwind's suggestions that replace one with a named token (`size-18` → `size-header` when `--spacing-header: 4.5rem`); it still turns arbitrary values into tokens. When the token has another role, add a semantic token instead and run the check again: a subpage H1 written as `text-[clamp(2.25rem,4vw,3.5rem)]` would become `text-slogan` (the script-font slogan of the same size) — define `--text-page` (with `--text-page--line-height`) and use `text-page`.
 
 **Promote repeated arbitrary values to tokens** (`bolt-tailwind-theme`, section 3): a value used in two or more places with the same meaning becomes a token, and the check then rewrites every use — e.g. `--tracking-label: 0.08em` (uppercase labels), `--spacing-page: clamp(3rem, 6vw, 5.5rem)` (subpage top padding → `pt-page`, `py-page`), `--text-page` / `--text-legal` / `--text-sub` heading sizes. Arbitrary breakpoints are not rewritten by `canonicalize`: after adding `--breakpoint-3xs: 22.5rem`, replace `max-[22.5rem]:` with `max-3xs:` by hand. One-off design measurements (`grid-cols-[repeat(auto-fit,minmax(min(27.5rem,100%),1fr))]`, `flex-[1_1_17.5rem]`, `object-[35%_center]`) stay arbitrary, and so do sizes that only happen to equal a token with another meaning.
 
