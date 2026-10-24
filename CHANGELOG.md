@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.8.3 — 2026-10-24
 
 False positives in the `bolt-theme-templates` class checks, found by installing 1.8.2 in akvelmez and eurodeck.
 
