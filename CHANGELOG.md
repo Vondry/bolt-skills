@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.9.0 — 2026-10-26
 
 The canonical URL override every Bolt 6 project needs until bolt/core PR #3735 is released, and bolt-seo 2.3. Both found while updating five sites to bolt-seo 2.3.0 and bolt/core 6.1.10.
 
