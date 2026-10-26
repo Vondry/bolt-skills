@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.9.1 — 2026-10-26
 
 ### Changed
 - `bolt-extension-setup` sitemap template (`examples/sitemap.xml.twig`, section 2.5): no `<?xml-stylesheet … sitemap.xsl?>` line. Browsers are removing XSLT, and Chrome already shows a warning bar on a sitemap that uses it. Without the line, `/sitemap.xml` shows as plain XML; search engines never used the stylesheet.
