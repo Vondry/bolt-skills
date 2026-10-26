@@ -1,0 +1,8 @@
+{#
+  partials/_canonical.twig — <link rel="canonical"> (config/bolt/config.yaml `canonical_template`).
+
+  The URL comes from partials/_canonical.macros.twig, which also feeds og:url and twitter:url.
+  See there why it is needed, and when to remove it.
+#}
+{% import 'partials/_canonical.macros.twig' as canonical_url %}
+<link rel="canonical" href="{{ canonical_url.url(seo.canonical()) }}">

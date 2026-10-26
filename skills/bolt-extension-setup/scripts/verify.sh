@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# The skill's examples/, to compare the project's canonical partials with (section 1.6).
+EXAMPLES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../examples" && pwd)"
+
 # Detect Bolt CMS project root
 if [ -f "./config/services.yaml" ]; then
     BASE_DIR="$(pwd)"
@@ -45,7 +48,7 @@ echo ""
 # -------------------------------------------------------------
 # 1. Check Composer Dependencies
 # -------------------------------------------------------------
-echo "[1/6] Checking installed packages (vendor/composer/installed.json)..."
+echo "[1/7] Checking installed packages (vendor/composer/installed.json)..."
 for PKG in "appolodev/bolt-seo" "bolt/sitemap-extension" "tomvondracek/bolt-llms-txt"; do
     echo -n "  • $PKG: "
     # The installed version, not the constraint in composer.json: a required package that was
@@ -68,12 +71,21 @@ done
 # 2. Check Extension Configuration Files
 # -------------------------------------------------------------
 echo ""
-echo "[2/6] Checking extension configuration files..."
+echo "[2/7] Checking extension configuration files..."
 
 # SEO config
 echo -n "  • config/extensions/appolo-boltseo.yaml: "
 if [ -f "config/extensions/appolo-boltseo.yaml" ]; then
     echo "FOUND"
+    # Never read by the extension; bolt-seo 2.3 removed them from its config (section 1.3).
+    if grep -qE '^meta_robots:' config/extensions/appolo-boltseo.yaml; then
+        echo "    ⚠️  Dead key 'meta_robots' — remove it; the robots default is 'default.robots' (section 1.3)"
+        WARNINGS=$((WARNINGS+1))
+    fi
+    if grep -qE '^#?[[:space:]]*allow:' config/extensions/appolo-boltseo.yaml; then
+        echo "    ⚠️  Dead 'allow:' block (also commented out) — remove it (section 1.3)"
+        WARNINGS=$((WARNINGS+1))
+    fi
 else
     echo "MISSING (Run: php bin/console extensions:configure --with-config)"
     FAILED=1
@@ -111,7 +123,7 @@ fi
 # 3. Check Symfony Package & Route Configurations
 # -------------------------------------------------------------
 echo ""
-echo "[3/6] Checking package and route recipes..."
+echo "[3/7] Checking package and route recipes..."
 
 # Bolt SEO package config
 echo -n "  • config/packages/extension_bolt-seo.yaml: "
@@ -144,7 +156,7 @@ fi
 # 4. Check ContentTypes Reusable SEO Field
 # -------------------------------------------------------------
 echo ""
-echo "[4/6] Checking ContentTypes SEO schema integration..."
+echo "[4/7] Checking ContentTypes SEO schema integration..."
 CT_FILE="config/bolt/contenttypes.yaml"
 if [ ! -f "$CT_FILE" ]; then
     echo "  ❌ config/bolt/contenttypes.yaml not found!"
@@ -172,7 +184,7 @@ fi
 # 5. Check Theme SEO Integration
 # -------------------------------------------------------------
 echo ""
-echo "[5/6] Checking Theme SEO integration in templates..."
+echo "[5/7] Checking Theme SEO integration in templates..."
 THEME_SEO_FOUND=0
 if [ -d "$THEME_DIR" ]; then
     if grep -rq "seo.metatags()" "$THEME_DIR" 2>/dev/null || grep -rq "@seo/_metatags.html.twig" "$THEME_DIR" 2>/dev/null; then
@@ -196,7 +208,7 @@ fi
 # 6. Check Sitemap Override & llms.txt in Theme Extensions
 # -------------------------------------------------------------
 echo ""
-echo "[6/6] Checking theme extensions folder ($EXT_THEME_DIR)..."
+echo "[6/7] Checking theme extensions folder ($EXT_THEME_DIR)..."
 
 # Sitemap override check
 SITEMAP_FILE=""
@@ -250,6 +262,53 @@ else
     echo "  ❌ llms.txt template MISSING in $EXT_THEME_DIR"
     echo "     Copy 'llms.txt.twig' from skill examples to '$LLMS_FILE'"
     FAILED=1
+fi
+
+# -------------------------------------------------------------
+# 7. Check the canonical URL override (bolt/core PR #3735 workaround)
+# -------------------------------------------------------------
+echo ""
+echo "[7/7] Checking the canonical URL override (section 1.6, needed until bolt/core#3735 is released)..."
+BOLT_CORE_VERSION=$(php -r '$i = json_decode((string) @file_get_contents("vendor/composer/installed.json"), true);
+    foreach ($i["packages"] ?? $i ?? [] as $p) { if (($p["name"] ?? "") === "bolt/core") { echo $p["pretty_version"] ?? $p["version"]; } }' 2>/dev/null || true)
+echo "  • bolt/core ${BOLT_CORE_VERSION:-not installed} — remove the override only on a release that includes https://github.com/bolt/core/pull/3735"
+
+for PARTIAL in _canonical.twig _canonical.macros.twig _seo_metatags.twig; do
+    PARTIAL_FILE="$THEME_DIR/partials/$PARTIAL"
+    if [ ! -f "$PARTIAL_FILE" ]; then
+        echo "  ❌ $PARTIAL_FILE is MISSING — copy examples/$PARTIAL from the skill"
+        FAILED=1
+    elif cmp -s "$PARTIAL_FILE" "$EXAMPLES_DIR/$PARTIAL"; then
+        echo "  ✅ $PARTIAL_FILE matches the skill example"
+    else
+        echo "  ⚠️  $PARTIAL_FILE differs from the skill example — copy examples/$PARTIAL again (the copies must be identical)"
+        WARNINGS=$((WARNINGS+1))
+    fi
+done
+
+if grep -qE "^canonical_template:[[:space:]]*['\"]?partials/_canonical\.twig['\"]?[[:space:]]*(#.*)?$" config/bolt/config.yaml 2>/dev/null; then
+    echo "  ✅ config/bolt/config.yaml: canonical_template is 'partials/_canonical.twig'"
+else
+    echo "  ❌ config/bolt/config.yaml: set canonical_template: 'partials/_canonical.twig'"
+    FAILED=1
+fi
+
+if grep -qE '^templates:' config/extensions/appolo-boltseo.yaml 2>/dev/null \
+    && grep -qE "^[[:space:]]+meta:[[:space:]]*['\"]?partials/_seo_metatags\.twig" config/extensions/appolo-boltseo.yaml; then
+    echo "  ✅ config/extensions/appolo-boltseo.yaml: templates.meta is partials/_seo_metatags.twig"
+else
+    echo "  ❌ config/extensions/appolo-boltseo.yaml: set templates.meta: partials/_seo_metatags.twig"
+    FAILED=1
+fi
+
+# Pages that include the meta tags themselves must pass the canonical, not the request URL (section 1.5).
+REQUEST_URI_FILES=$(grep -rlE 'canonical:[[:space:]]*app\.request\.(uri|requestUri)' "$THEME_DIR" --include='*.twig' 2>/dev/null | grep -v node_modules || true)
+if [ -n "$REQUEST_URI_FILES" ]; then
+    echo "  ⚠️  These templates pass 'canonical: app.request.uri' — use 'canonical: seo.canonical()' (section 1.5):"
+    echo "$REQUEST_URI_FILES" | sed 's/^/       /'
+    WARNINGS=$((WARNINGS+1))
+else
+    echo "  ✅ No template passes the request URL as the canonical"
 fi
 
 echo ""

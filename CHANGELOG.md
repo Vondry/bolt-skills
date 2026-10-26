@@ -2,6 +2,24 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+The canonical URL override every Bolt 6 project needs until bolt/core PR #3735 is released, and bolt-seo 2.3. Both found while updating five sites to bolt-seo 2.3.0 and bolt/core 6.1.10.
+
+### Added
+- `bolt-extension-setup` section 1.6 and `examples/_canonical.macros.twig`, `_canonical.twig`, `_seo_metatags.twig`. Up to bolt/core 6.1.10, Bolt's canonical names a singleton by its record route (`/kontakt/kontakt-2` instead of `/kontakt`) and keeps the listing query (`/clanky?order=-createdAt&status=published`). bolt-seo 2.3 builds `og:url` and `twitter:url` from that canonical. The macro corrects the canonical the way [bolt/core#3735](https://github.com/bolt/core/pull/3735) does. `<link rel="canonical">` (Bolt's `canonical_template`) and bolt-seo's meta tags (`templates.meta`, the stock template with `canonical` replaced) both print it, so the three tags always name the same URL. The section says when and how to remove it: once the project runs a bolt/core release with #3735.
+- `verify.sh` step 7 (now 7 steps): fails without the three partials, `canonical_template` or `templates.meta`, and warns when a copy differs from the example or a template passes `canonical: app.request.uri`. Step 2 warns about the dead `meta_robots` / `allow` keys.
+- WORKFLOWS 6.2 copies the partials, Appendix B.10 tracks the workaround, and the `bolt-audit` checklist reviews it.
+
+### Changed
+- `appolodev/bolt-seo:^2.3` (SKILL.md 1.1, WORKFLOWS 3.1). The example config and section 1.3 set the robots default with `default.robots`. The top-level `meta_robots` they used was never read, and bolt-seo 2.3 removed it, along with the commented-out `allow` block, from its own config.
+- Section 1.5: pages that include `@seo/_metatags.html.twig` themselves pass `canonical: seo.canonical()`. `app.request.uri` carries the query string (`?utm_source=…`), which `<link rel="canonical">` drops.
+
+### Migrating a project
+- `composer update` and `composer bump` for `appolodev/bolt-seo` ^2.3. Delete `meta_robots` and the `allow` block from `config/extensions/appolo-boltseo.yaml`, and set `default.robots: "index, follow"`. That is also the built-in fallback, so the output doesn't change.
+- Copy the three partials to `partials/` (they replace an own `_canonical.twig`), and set `canonical_template: 'partials/_canonical.twig'` and bolt-seo's `templates.meta: partials/_seo_metatags.twig`. Run `bin/console cache:pool:clear cache.app`, then compare `<link rel="canonical">` with `og:url` on a singleton page, its translation and a listing.
+- Replace `canonical: app.request.uri` with `canonical: seo.canonical()` in templates that include the meta tags themselves.
+
 ## 1.8.3 — 2026-10-24
 
 False positives in the `bolt-theme-templates` class checks, found by installing 1.8.2 in akvelmez and eurodeck.

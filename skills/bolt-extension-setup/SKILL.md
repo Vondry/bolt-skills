@@ -2,7 +2,8 @@
 name: bolt-extension-setup
 description: >-
   Use this skill whenever installing, configuring, or verifying the trio of essential
-  Bolt CMS extensions: AppoloDev/bolt-seo (SEO meta fields and tags),
+  Bolt CMS extensions: AppoloDev/bolt-seo (SEO meta fields and tags, with the
+  canonical URL override needed until bolt/core PR #3735 is released),
   bolt/sitemap-extension (with custom singleton slug override), and
   Vondry/bolt-llms-txt (llmstxt.org dynamic endpoint).
 ---
@@ -11,7 +12,7 @@ description: >-
 
 Every modern production website built with Bolt CMS requires three foundational extensions for discoverability, search engine indexing, and AI crawler readiness:
 
-1. **`AppoloDev/bolt-seo` (`appolodev/bolt-seo`)**: Structured SEO meta fields (`type: seo`), OpenGraph tags, JSON-LD, and robots meta tags.
+1. **`AppoloDev/bolt-seo` (`appolodev/bolt-seo`)**: Structured SEO meta fields (`type: seo`), OpenGraph tags, JSON-LD, and robots meta tags — plus a theme override that gives `<link rel="canonical">`, `og:url` and `twitter:url` one clean URL (bolt/core PR #3735 workaround).
 2. **`bolt/sitemap-extension` (`bolt/sitemap-extension`)**: XML sitemap generation with an essential theme override addressing singleton slug routing (PR #5 workaround).
 3. **`Vondry/bolt-llms-txt` (`tomvondracek/bolt-llms-txt`)**: Serves `/llms.txt` dynamically from CMS content adhering strictly to the [llmstxt.org](https://llmstxt.org/) specification.
 
@@ -25,7 +26,7 @@ Official repository: [AppoloDev/bolt-seo](https://github.com/AppoloDev/bolt-seo)
 
 ### 1.1 Install via Composer
 ```bash
-composer require appolodev/bolt-seo:^2.2
+composer require appolodev/bolt-seo:^2.3
 ```
 
 ### 1.2 Copy Config Recipes & Install Assets
@@ -56,8 +57,18 @@ fields:
   keywords: [ ]
   image: [ 'image', 'main_image', 'photo' ]
 
-meta_robots: "index, follow"
+default:
+  title: ""
+  description: ""
+  keywords: ""
+  ogtype: "website"
+  robots: "index, follow"
+
+templates:
+  meta: partials/_seo_metatags.twig # canonical override: set it once the partial exists, section 1.6
 ```
+
+The robots default is `default.robots`. A top-level `meta_robots` key and the commented-out `allow:` block from older recipes were never read, and bolt-seo 2.3 removed both from its own config. Delete them from projects that still carry them; nothing renders differently, because `index, follow` is also the built-in fallback.
 
 ### 1.4 Integrate Reusable SEO Field in `contenttypes.yaml`
 Following the **`bolt-contenttypes`** best practice, declare a reusable anchor under `__nodes` and merge it into every routable ContentType:
@@ -117,10 +128,53 @@ For static or helper pages without a CMS record, override the block in that temp
     {% include '@seo/_metatags.html.twig' with {
         title: seoTitle,
         description: __('page.seo.description'),
-        keywords: __('page.seo.keywords')
+        keywords: __('page.seo.keywords'),
+        canonical: seo.canonical()
     } %}
 {% endblock seo %}
 ```
+
+Pass `canonical: seo.canonical()`, the URL `<link rel="canonical">` prints. Do not pass `app.request.uri`: it carries the query string (`?utm_source=…`), which the canonical drops, so `og:url` would differ from the canonical on every tagged link.
+
+### 1.6 Canonical URL Override (bolt/core PR #3735 Workaround)
+> [!IMPORTANT]
+> Until [bolt/core Pull Request #3735](https://github.com/bolt/core/pull/3735) is merged **and** the project runs a bolt/core release that includes it, every Bolt 6 project needs this override. Bolt's canonical URL (bolt/core ≤ 6.1.10):
+> 1. names a singleton by its record route, e.g. `/kontakt/kontakt-2`, although visitors use `/kontakt` (localized: `/en/kontakt/kontakt-2`);
+> 2. keeps the listing query on a listing page, e.g. `/clanky?order=-createdAt&status=published`.
+>
+> bolt-seo 2.3 builds `og:url` and `twitter:url` from the same Bolt canonical, so both problems show up in `<link rel="canonical">`, `og:url` and `twitter:url`. A theme that corrects only `<link rel="canonical">` (its own `canonical_template`) makes it worse: `og:url` then names a different URL than the canonical.
+>
+> **The Workaround:** one macro corrects Bolt's canonical the way PR #3735 does, and both `<link rel="canonical">` and bolt-seo's `og:url` / `twitter:url` print its result. The three tags always name the same URL.
+
+Copy the three files from `examples/` to `public/theme/<themename>/partials/` **unchanged**, before the config below names them: neither Bolt nor bolt-seo falls back when the template is missing, and every page fails to render. They are identical in every project, so the removal later is the same everywhere:
+
+| File | Role |
+| :--- | :--- |
+| `_canonical.macros.twig` | The correction. On a listing or record route it drops a singleton's record slug and a listing's query. A canonical set explicitly is kept as written. |
+| `_canonical.twig` | `<link rel="canonical">`, Bolt's `canonical_template`. |
+| `_seo_metatags.twig` | bolt-seo's `templates.meta`. It includes the stock `@seo/_metatags.html.twig` with `canonical` replaced, so upstream template changes still arrive. |
+
+Point Bolt and bolt-seo at them:
+```yaml
+# config/bolt/config.yaml
+# Workaround until https://github.com/bolt/core/pull/3735 is released, see
+# partials/_canonical.macros.twig in the theme.
+canonical_template: 'partials/_canonical.twig'
+```
+```yaml
+# config/extensions/appolo-boltseo.yaml
+# Renders bolt-seo's own template with og:url and twitter:url set to the same URL as
+# <link rel="canonical">, until https://github.com/bolt/core/pull/3735 is released.
+templates:
+  meta: partials/_seo_metatags.twig
+```
+
+Rules:
+* **Never fix a mismatch in the admin.** The SEO field's "Canonical Link" (and `override_default.<route>.canonical`) is meant for a page that really belongs under another URL. With the override it sets `<link rel="canonical">`, `og:url` and `twitter:url` alike, as written. Without the override it sets only `og:url`/`twitter:url`. Typing the clean URL into every record per locale would hard-code the host, miss listings (no record) and go stale.
+* **Pages that include `@seo/_metatags.html.twig` themselves** pass `canonical: seo.canonical()` (section 1.5). On their static routes the canonical needs no correction, and the line survives the removal.
+* **Check it:** with `bin/console cache:pool:clear cache.app` first (Bolt caches canonical links for 60 seconds, and `cache:clear` doesn't empty that pool), compare `<link rel="canonical">` with `og:url` on a singleton page, its translation and a listing. They must be equal, slugless and without `?order=…`, and the URL must answer 200.
+
+**Removing it** once the project runs a bolt/core release with PR #3735: delete the three partials, `canonical_template` from `config/bolt/config.yaml` and `templates` from `config/extensions/appolo-boltseo.yaml`, then run the check above again. Until then the macro is a safe no-op on an already clean canonical, so a forgotten copy renders the same URLs. After the removal the admin "Canonical Link" sets only `og:url` again, so leave it empty.
 
 ---
 
@@ -421,3 +475,6 @@ vendor/tomvondracek/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
    * Verifies `sitemap.xml.twig` exists in `public/theme/<themename>/extensions/` and contains the singleton slug fix.
    * Verifies `llms.txt.twig` exists in `public/theme/<themename>/extensions/` and follows the `llmstxt.org` layout.
    * Warns when `public/robots.txt` is missing or has no absolute `Sitemap: …/sitemap.xml` line (section 2.6).
+7. **Canonical URL override (section 1.6, until bolt/core PR #3735 is released):**
+   * Fails when `partials/_canonical.twig`, `_canonical.macros.twig` or `_seo_metatags.twig` is missing, or when `canonical_template` / `templates.meta` doesn't point at them. Warns when a copy differs from the skill example.
+   * Warns when a theme template passes `canonical: app.request.uri` to the meta tags (section 1.5), or `appolo-boltseo.yaml` still has the dead `meta_robots` / `allow` keys (section 1.3).

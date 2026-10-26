@@ -405,13 +405,13 @@ Verifications 2.1 and 2.2 pass; `bolt-security-hardening` reports the baseline C
 **Goal:** every extension and custom Twig function the content model and templates rely on is installed before they are used.
 
 ### 3.1 Essential Extensions (`bolt-extension-setup`, Part A: packages & configuration)
-- `composer require appolodev/bolt-seo:^2.2 bolt/sitemap-extension:^2.0 tomvondracek/bolt-llms-txt:^1.1`
+- `composer require appolodev/bolt-seo:^2.3 bolt/sitemap-extension:^2.0 tomvondracek/bolt-llms-txt:^1.1`
 - `php bin/console extensions:configure --with-config`
 - `php bin/console assets:install --symlink --relative public`
-- Configure `config/extensions/appolo-boltseo.yaml` (fallback chains; the field names are revisited in 5.2), `config/extensions/bolt-sitemapextension.yaml` (`templates.xml: "@theme/extensions/sitemap.xml.twig"` — the template is created in 6.2) and `config/extensions/tomvondracek-llmstxt.yaml` (`template: '@theme/extensions/llms.txt.twig'`, `locale`, `max_age`).
+- Configure `config/extensions/appolo-boltseo.yaml` (fallback chains; the field names are revisited in 5.2; `default.robots`, never the dead `meta_robots`; `templates.meta` is set in 6.2 together with the partial it names), `config/extensions/bolt-sitemapextension.yaml` (`templates.xml: "@theme/extensions/sitemap.xml.twig"` — the template is created in 6.2) and `config/extensions/tomvondracek-llmstxt.yaml` (`template: '@theme/extensions/llms.txt.twig'`, `locale`, `max_age`).
 - Confirm `bolt/redactor` and `bolt/article` are in `composer.json` (they ship with `bolt/project`). Phase 5 uses the field types `redactor`, `article` and `seo`, which these packages and `appolodev/bolt-seo` provide.
 - Part B (theme templates and the SEO block) is done in 6.2.
-- *Verify (partial):* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` — checks [1/6] to [3/6] pass now; [4/6] to [6/6] pass after 5.1 and 6.2.
+- *Verify (partial):* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` — checks [1/7] to [3/7] pass now; [4/7] to [7/7] pass after 5.1 and 6.2.
 
 ### 3.2 Runtime Twig Extensions (`bolt-runtime-extensions`)
 - `bash $SKILLS/bolt-runtime-extensions/scripts/scaffold.sh` installs into `src/`. Bolt's `App\` resource registers the classes and their `#[Autowire]` attributes inject `%app_locales%`, `%locale%` and `%kernel.project_dir%`, so `config/services.yaml` needs no service definitions:
@@ -528,6 +528,7 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 ### 6.2 Extension Theme Integration (`bolt-extension-setup`, Part B)
 - The `seo` block is already in the master layout. Static and helper pages without a record override `{% block seo %}` (the skill's `@seo/_metatags.html.twig` example).
 - Copy `examples/sitemap.xml.twig` to `extensions/sitemap.xml.twig` (singleton slug fix until bolt/sitemap-extension PR #5 is merged).
+- Copy `examples/_canonical.macros.twig`, `_canonical.twig` and `_seo_metatags.twig` unchanged to `partials/`, then set `canonical_template: 'partials/_canonical.twig'` in `config/bolt/config.yaml` and `templates.meta: partials/_seo_metatags.twig` in `config/extensions/appolo-boltseo.yaml` (skill section 1.6). Both name a theme file, so set them only once it exists. Until bolt/core PR #3735 is merged and the project runs a release with it, this is the only way `<link rel="canonical">`, `og:url` and `twitter:url` name the same clean URL: no record slug on singletons, no `?order=…` on listings. Static pages that include `@seo/_metatags.html.twig` themselves pass `canonical: seo.canonical()`, never `app.request.uri`.
 - Copy `examples/llms.txt.twig` to `extensions/llms.txt.twig`. It uses the `bolt-contenttypes` blueprint names (`homepage.hero_title`, `homepage.hero_intro`, `settings.email` / `phone`, `articles.teaser`), queries only ContentTypes that exist, and falls back to `theme.yaml` contacts — map it to the site's ContentTypes and follow the llmstxt.org rules from the skill.
 - *Verify:* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` (all checks now).
 
@@ -742,3 +743,4 @@ The skills implement the Integration Contract; these points still need judgement
 7. **Consent Mode choice is legal, not technical.** Basic mode (default) loads trackers only after consent; advanced mode sends cookieless pings before consent — only on the operator's explicit decision, recorded in the site plan; the privacy page describes the active mode automatically.
 8. **`make db-update` / `db-reset` are development tools**; production uses `make db-migrate` (`doctrine:migrations:migrate`).
 9. **Thumbnails are not served from disk on bolt/core 6.0.1 – 6.1.x.** `save_files: true` writes them to `public/thumbs/<w>_<h>_<q>_<fit>_<location>/`, a path no thumbnail URL points to, so every `/thumbs/…` request still runs PHP (the HTTP caching of `bolt-asset-caching` still works). Fixed by bolt/core PR #3828 once released; thumbnail URLs stay the same, so afterwards only delete the unused `public/thumbs/*_files/` folders (locally and on the server). `bolt-asset-caching/scripts/verify.sh` warns on the affected versions; its delivery check (`serve-apache.sh` + `check-delivery.php`) confirms the fix.
+10. **Canonical URL override** (`partials/_canonical.macros.twig`, `_canonical.twig`, `_seo_metatags.twig`; `bolt-extension-setup` section 1.6) is needed until bolt/core PR #3735 is merged **and** the project runs a bolt/core release that includes it. Up to bolt/core 6.1.10, Bolt's canonical names a singleton by its record route (`/kontakt/kontakt-2`) and keeps the listing query (`/clanky?order=-createdAt&status=published`), and bolt-seo 2.3 copies it into `og:url` and `twitter:url`. Afterwards, delete the three partials, `canonical_template` and bolt-seo's `templates.meta`, and check a singleton page, its translation and a listing again (`bin/console cache:pool:clear cache.app` first).

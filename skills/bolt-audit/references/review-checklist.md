@@ -55,9 +55,9 @@ never "keep, record as deviation".
 - **Severity hints:** fragments never invalidated (no override, wrong tags) or containing forms / user data → High; preview showing cached content → Medium; missing `tags()` → Low.
 
 ## 8. bolt-extension-setup
-- **Script:** packages in `composer.json`, extension config files, recipes, SEO field in ContentTypes, SEO tags in templates, theme `extensions/` folder (sitemap override, `llms.txt.twig`).
-- **Review:** `appolo-boltseo.yaml` fallback fields match real field names; every routable ContentType has the `seo` field; the sitemap override is still needed (bolt/sitemap-extension PR #5, Appendix B.6); `/llms.txt` content is real, not the blueprint.
-- **Severity hints:** no SEO tags / sitemap → Medium; blueprint text left in `llms.txt` → Low.
+- **Script:** packages in `composer.json`, extension config files (and the dead bolt-seo keys `meta_robots` / `allow`), recipes, SEO field in ContentTypes, SEO tags in templates, theme `extensions/` folder (sitemap override, `llms.txt.twig`), the canonical URL override (three `partials/`, `canonical_template`, `templates.meta`) and templates that pass `canonical: app.request.uri`.
+- **Review:** `appolo-boltseo.yaml` fallback fields match real field names; every routable ContentType has the `seo` field; the sitemap override is still needed (bolt/sitemap-extension PR #5, Appendix B.6); the canonical override is still needed (bolt/core PR #3735 merged and in the installed release? Appendix B.10). With `--base-url`, `<link rel="canonical">` equals `og:url` and `twitter:url` on a singleton page, its translation and a listing, with no record slug and no `?order=…`. `/llms.txt` content is real, not the blueprint.
+- **Severity hints:** no SEO tags / sitemap → Medium; canonical override missing (canonical with record slug or listing query, or `og:url` ≠ canonical) → Medium; dead `meta_robots` / `allow` keys → Low; blueprint text left in `llms.txt` → Low.
 
 ## 9. bolt-runtime-extensions
 - **Script:** the three `src/*Extension.php` files, service registration and bindings, container compilation and Twig registration.

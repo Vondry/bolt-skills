@@ -21,5 +21,12 @@ default:
   description: ""
   keywords: ""
   ogtype: "website"
+  # The <meta name="robots"> used when a record's SEO field sets none. Top-level
+  # `meta_robots` was never read (bolt-seo 2.3 removed it from its config) — don't add it.
+  robots: "index, follow"
 
-meta_robots: "index, follow"
+# Renders bolt-seo's own template with og:url and twitter:url set to the same URL as
+# <link rel="canonical">, until https://github.com/bolt/core/pull/3735 is released.
+# See partials/_canonical.macros.twig in the theme and SKILL.md section 1.6.
+templates:
+  meta: partials/_seo_metatags.twig

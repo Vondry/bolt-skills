@@ -1,0 +1,30 @@
+{#
+  partials/_canonical.macros.twig — the page's canonical URL, shared by <link rel="canonical">
+  (partials/_canonical.twig) and og:url / twitter:url (partials/_seo_metatags.twig), so both
+  always name the same URL.
+
+  Workaround for Bolt <= 6.1.10, whose canonical URL
+  - names a singleton by its record route (/kontakt/kontakt-2) instead of the URL visitors
+    use (/kontakt), and
+  - keeps the query on a listing page (/clanky?order=-createdAt&status=published).
+  https://github.com/bolt/core/pull/3735 fixes both in Bolt. Once a Bolt release with it is
+  installed, delete this file, partials/_canonical.twig and partials/_seo_metatags.twig, and
+  remove `canonical_template` from config/bolt/config.yaml and `templates` from
+  config/extensions/appolo-boltseo.yaml.
+
+  A canonical set explicitly (the SEO field's Canonical Link, or `override_default`) is kept
+  as it is. Only Bolt's own canonical URL is corrected.
+#}
+{% macro url(url) -%}
+    {%- set route = app.request.attributes.get('_route') -%}
+    {%- if url == canonical() and route in ['listing', 'listing_locale', 'record', 'record_locale'] -%}
+        {%- set definition = record is defined and record is not null ? record.definition : null -%}
+        {%- set segments = url|split('?')|first|split('/') -%}
+        {%- if definition and definition.singleton and segments|slice(-2, 1)|first == definition.singular_slug -%}
+            {%- set url = segments|slice(0, -1)|join('/') -%}
+        {%- elseif route starts with 'listing' -%}
+            {%- set url = url|split('?')|first -%}
+        {%- endif -%}
+    {%- endif -%}
+    {{- url -}}
+{%- endmacro %}

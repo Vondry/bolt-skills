@@ -1,0 +1,10 @@
+{#
+  partials/_seo_metatags.twig — bolt-seo's meta tags (config/extensions/appolo-boltseo.yaml
+  `templates.meta`).
+
+  Renders the extension's own template, with og:url and twitter:url taken from
+  partials/_canonical.macros.twig: the same URL as <link rel="canonical">. See there why it
+  is needed, and when to remove it.
+#}
+{% import 'partials/_canonical.macros.twig' as canonical_url %}
+{% include '@seo/_metatags.html.twig' with {canonical: canonical_url.url(canonical)} %}
