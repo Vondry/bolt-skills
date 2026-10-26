@@ -220,7 +220,6 @@ Create the file `public/theme/<themename>/extensions/sitemap.xml.twig` with the 
 ```twig
 {# public/theme/<themename>/extensions/sitemap.xml.twig #}
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="{{ app.request.basePath }}/sitemap.xsl"?>
 <urlset
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"

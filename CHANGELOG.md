@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+- `bolt-extension-setup` sitemap template (`examples/sitemap.xml.twig`, section 2.5): no `<?xml-stylesheet … sitemap.xsl?>` line. Browsers are removing XSLT, and Chrome already shows a warning bar on a sitemap that uses it. Without the line, `/sitemap.xml` shows as plain XML; search engines never used the stylesheet.
+
+### Migrating a project
+- Delete the `<?xml-stylesheet type="text/xsl" …?>` line (line 2) from the theme's `extensions/sitemap.xml.twig` (or `_sitemap.xml.twig`). `templates.xsl` in `bolt-sitemapextension.yaml` can stay; it only serves `/sitemap.xsl`.
+
 ## 1.9.0 — 2026-10-26
 
 The canonical URL override every Bolt 6 project needs until bolt/core PR #3735 is released, and bolt-seo 2.3. Both found while updating five sites to bolt-seo 2.3.0 and bolt/core 6.1.10.
