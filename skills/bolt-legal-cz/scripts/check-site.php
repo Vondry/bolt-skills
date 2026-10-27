@@ -90,7 +90,19 @@ foreach ($links($homeHtml, $finalUrl) as $link) {
     }
 }
 [$sitemapStatus, $sitemap] = legal_http_get($origin . '/sitemap.xml', 15, 'application/xml,text/xml');
-if ($sitemapStatus === 200 && preg_match_all('~<loc>\s*([^<\s]+)\s*</loc>~i', $sitemap, $locs)) {
+$sitemaps = $sitemapStatus === 200 ? [$sitemap] : [];
+// A sitemap index (tomvondracek/bolt-sitemap) lists child sitemaps, read from the checked host.
+if ($sitemapStatus === 200 && stripos($sitemap, '<sitemapindex') !== false && preg_match_all('~<loc>\s*([^<\s]+)\s*</loc>~i', $sitemap, $children)) {
+    $sitemaps = [];
+    foreach (array_slice($children[1], 0, 20) as $child) {
+        [$childStatus, $childXml] = legal_http_get($origin . (string) parse_url(html_entity_decode($child), PHP_URL_PATH), 15, 'application/xml,text/xml');
+        if ($childStatus === 200) {
+            $sitemaps[] = $childXml;
+        }
+    }
+}
+foreach ($sitemaps as $xml) {
+    preg_match_all('~<loc>\s*([^<\s]+)\s*</loc>~i', $xml, $locs);
     foreach ($locs[1] as $loc) {
         $loc = html_entity_decode($loc);
         if ($sameHost($loc) && ! preg_match($files, $loc)) {

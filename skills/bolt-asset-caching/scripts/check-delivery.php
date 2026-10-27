@@ -131,6 +131,15 @@ function pathOf(string $url): string
 $queue = ['/'];
 $seen = ['/' => true];
 $sitemap = fetch($base . '/sitemap.xml', [], true);
+// A sitemap index (tomvondracek/bolt-sitemap) lists child sitemaps, read from the checked host.
+if ($sitemap['status'] === 200 && stripos($sitemap['body'], '<sitemapindex') !== false && preg_match_all('#<loc>\s*([^<]+?)\s*</loc>#', $sitemap['body'], $children)) {
+    $body = '';
+    foreach (array_slice($children[1], 0, 20) as $child) {
+        $childSitemap = fetch($base . pathOf(html_entity_decode($child)), [], true);
+        $body .= $childSitemap['status'] === 200 ? $childSitemap['body'] : '';
+    }
+    $sitemap['body'] = $body;
+}
 if ($sitemap['status'] === 200 && preg_match_all('#<loc>\s*([^<]+?)\s*</loc>#', $sitemap['body'], $m)) {
     foreach ($m[1] as $loc) {
         $u = localize($loc, $base . '/');

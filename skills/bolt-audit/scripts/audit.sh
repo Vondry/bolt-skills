@@ -270,11 +270,22 @@ if [ -n "$BASE_URL" ] && { [ -z "$ONLY_LIST" ] || in_list "http-smoke" "$ONLY_LI
 elif [ -n "$BASE_URL" ] && { [ -z "$ONLY_LIST" ] || in_list "http-smoke" "$ONLY_LIST"; } && ! in_list "http-smoke" "$SKIP_LIST"; then
     HTTP_LOG="$OUT/logs/http-smoke.log"
     URLS="$OUT/http-urls.txt"
-    curl -s --max-time 30 "$BASE_URL/sitemap.xml" | grep -oE "<loc>[^<]+</loc>" | sed -E 's#</?loc>##g; s#^https?://[^/]+##' > "$URLS.base" || true
+    SITEMAP_XML=$(curl -s --max-time 30 "$BASE_URL/sitemap.xml" || true)
+    if printf '%s' "$SITEMAP_XML" | grep -q "<sitemapindex"; then
+        # A sitemap index (tomvondracek/bolt-sitemap): read its child sitemaps from the audited host.
+        for CHILD in $(printf '%s' "$SITEMAP_XML" | grep -oE "<loc>[^<]+</loc>" | sed -E 's#</?loc>##g; s#^https?://[^/]+##' | head -n 50); do
+            curl -s --max-time 30 "$BASE_URL$CHILD" || true
+        done
+    else
+        printf '%s' "$SITEMAP_XML"
+    fi | grep -oE "<loc>[^<]+</loc>" | sed -E 's#</?loc>##g; s#^https?://[^/]+##' > "$URLS.base" || true
     [ -s "$URLS.base" ] || echo "/" > "$URLS.base"
     cp "$URLS.base" "$URLS"
+    # The /<locale> variant of every default-locale URL; a sitemap that lists each locale
+    # already has them, and URLs with a locale prefix get none.
+    LOCALE_PREFIX="^/($(echo "$SECONDARY" | tr ' ' '|'))(/|$)"
     for code in $SECONDARY; do
-        awk -v c="$code" -v p="/$code/" '$0 !~ "^" p && $0 != "/" c { print ($0 == "/" ? p : "/" c $0) }' "$URLS.base" >> "$URLS"
+        awk -v c="$code" -v p="/$code/" -v re="$LOCALE_PREFIX" '$0 !~ re && $0 != "/" c { print ($0 == "/" ? p : "/" c $0) }' "$URLS.base" >> "$URLS"
     done
     echo "/search?searchTerm=test" >> "$URLS"
     for code in $SECONDARY; do echo "/$code/search?searchTerm=test" >> "$URLS"; done

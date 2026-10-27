@@ -112,6 +112,13 @@ if ($term !== '') {
     }
 } else {
     [, $sitemap] = $get('/sitemap.xml');
+    // A sitemap index (tomvondracek/bolt-sitemap) lists child sitemaps: read the first ones.
+    if (stripos($sitemap, '<sitemapindex') !== false && preg_match_all('~<loc>\s*([^<\s]+)\s*</loc>~i', $sitemap, $children)) {
+        $sitemap = '';
+        foreach (array_slice($children[1], 0, 5) as $child) {
+            $sitemap .= $get((string) parse_url(html_entity_decode($child), PHP_URL_PATH))[1];
+        }
+    }
     preg_match_all('~<loc>\s*([^<\s]+)\s*</loc>~i', $sitemap, $m);
     $candidates = array_map(static fn (string $url): string => rtrim((string) parse_url(html_entity_decode($url), PHP_URL_PATH), '/') ?: '/', $m[1]);
     if ($candidates === []) {
