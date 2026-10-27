@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.10.0 — 2026-10-27
 
 `bolt-extension-setup` installs [`tomvondracek/bolt-sitemap`](https://packagist.org/packages/tomvondracek/bolt-sitemap) instead of `bolt/sitemap-extension`. The theme override is no longer needed, and the theme's static pages get into the sitemap through their routes.
 
