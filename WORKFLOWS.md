@@ -130,7 +130,7 @@ The skills meet in a few shared places: the master layout, the theme folder stru
 | Partials | `partials/_master.twig`, `partials/_locale-switcher.twig`, `partials/_cookie-banner.twig`, `partials/_consent-mode.twig`, `partials/_consent-embed.twig`, `partials/_cookie-table.twig`, `partials/_privacy-macros.twig`, `partials/_privacy-form-note.twig` |
 | Static pages | `static-pages/<name>.twig`, served through `TemplateController` routes (see [Static Routes](#static-routes)) |
 | Error & maintenance pages | `helper-pages/` |
-| Extension overrides | `extensions/sitemap.xml.twig`, `extensions/llms.txt.twig` |
+| Extension templates | `extensions/llms.txt.twig` (the sitemap needs no theme template) |
 | Template binding | ContentType `record_template` / `listing_template` point either directly at `pages/<name>/…` or at a one-line root entrypoint that `{% extends %}` it (for example `product.twig`). The generic root `index.twig`, `record.twig` and `listing.twig` are fallbacks and never point at one specific ContentType's pages |
 | CSS | Source `css/tailwind/index.css` → build output `css/index.css` (never edit the output) |
 | JavaScript | Source `js/src/index.ts` (imports the modules) → build output `js/app.js` |
@@ -244,7 +244,7 @@ All behaviour ships with `bolt-theme-init` (`js/src/*.ts`) and `bolt-cookie-cons
 
 ### Static Routes
 
-Pages without a ContentType (privacy policy as a static page, legal notices, thank-you pages) are served by Bolt's `TemplateController`. Add the routes to `config/routes.yaml` **above** the `frontend:` import:
+Pages without a ContentType (privacy policy as a static page, legal notices, thank-you pages) are served by Bolt's `TemplateController`. Add the routes to `config/routes.yaml` **above** the `frontend:` import. The sitemap (`tomvondracek/bolt-sitemap`) lists every such route without parameters, and pairs the `<name>_locale` twin of the **same template** with it as the page's other languages (`bolt-extension-setup` section 2.4). Every static page therefore needs both routes on a multilingual site:
 
 ```yaml
 # config/routes.yaml
@@ -405,10 +405,10 @@ Verifications 2.1 and 2.2 pass; `bolt-security-hardening` reports the baseline C
 **Goal:** every extension and custom Twig function the content model and templates rely on is installed before they are used.
 
 ### 3.1 Essential Extensions (`bolt-extension-setup`, Part A: packages & configuration)
-- `composer require appolodev/bolt-seo:^2.3 bolt/sitemap-extension:^2.0 tomvondracek/bolt-llms-txt:^1.1`
+- `composer require appolodev/bolt-seo:^2.3 tomvondracek/bolt-sitemap:^1.0 tomvondracek/bolt-llms-txt:^1.1`
 - `php bin/console extensions:configure --with-config`
 - `php bin/console assets:install --symlink --relative public`
-- Configure `config/extensions/appolo-boltseo.yaml` (fallback chains; the field names are revisited in 5.2; `default.robots`, never the dead `meta_robots`; `templates.meta` is set in 6.2 together with the partial it names), `config/extensions/bolt-sitemapextension.yaml` (`templates.xml: "@theme/extensions/sitemap.xml.twig"` — the template is created in 6.2) and `config/extensions/tomvondracek-llmstxt.yaml` (`template: '@theme/extensions/llms.txt.twig'`, `locale`, `max_age`).
+- Configure `config/extensions/appolo-boltseo.yaml` (fallback chains; the field names are revisited in 5.2; `default.robots`, never the dead `meta_robots`; `templates.meta` is set in 6.2 together with the partial it names), `config/extensions/tomvondracek-sitemap.yaml` (copy the skill's `examples/tomvondracek-sitemap.yaml`; keep `static_routes: true`, `images.fields` for ContentTypes whose first image is not the page's) and `config/extensions/tomvondracek-llmstxt.yaml` (`template: '@theme/extensions/llms.txt.twig'`, `locale`, `max_age`).
 - Confirm `bolt/redactor` and `bolt/article` are in `composer.json` (they ship with `bolt/project`). Phase 5 uses the field types `redactor`, `article` and `seo`, which these packages and `appolodev/bolt-seo` provide.
 - Part B (theme templates and the SEO block) is done in 6.2.
 - *Verify (partial):* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` — checks [1/7] to [3/7] pass now; [4/7] to [7/7] pass after 5.1 and 6.2.
@@ -487,7 +487,7 @@ Verifications 3.1 (partial) and 3.2 pass, `make cscheck` passes. Commit.
 Update `fields:` in `config/extensions/appolo-boltseo.yaml` to the real field names from 5.1 (title, description/teaser, image).
 
 ### 5.3 Static Routes
-Add a `TemplateController` route (plus the `/{_locale}/` variant on multilingual sites) above the `frontend:` import for every static page in the site plan. Use the snippet in [Static Routes](#static-routes). The privacy policy routes are inserted by `bolt-cookie-consent`'s scaffold in 6.5; the templates themselves are created in Phase 6.
+Add a `TemplateController` route (plus the `<name>_locale` variant with the same `templateName` on multilingual sites) above the `frontend:` import for every static page in the site plan. Use the snippet in [Static Routes](#static-routes). These routes are also how the static pages get into the sitemap; pages that must not be indexed (thank-you pages) go into `exclude_static_routes` in `config/extensions/tomvondracek-sitemap.yaml`. The privacy policy routes are inserted by `bolt-cookie-consent`'s scaffold in 6.5; the templates themselves are created in Phase 6.
 
 ### 5.4 Menu Content (`bolt-menu`, `menu.yaml`; also `bolt-add-language` Step 4)
 - Rewrite `config/bolt/menu.yaml` to the information architecture: `main` (with `class: cta` and `class: has-submenu` where needed) and `footer` columns with `submenu:` lists.
@@ -527,7 +527,6 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 
 ### 6.2 Extension Theme Integration (`bolt-extension-setup`, Part B)
 - The `seo` block is already in the master layout. Static and helper pages without a record override `{% block seo %}` (the skill's `@seo/_metatags.html.twig` example).
-- Copy `examples/sitemap.xml.twig` to `extensions/sitemap.xml.twig` (singleton slug fix until bolt/sitemap-extension PR #5 is merged).
 - Copy `examples/_canonical.macros.twig`, `_canonical.twig` and `_seo_metatags.twig` unchanged to `partials/`, then set `canonical_template: 'partials/_canonical.twig'` in `config/bolt/config.yaml` and `templates.meta: partials/_seo_metatags.twig` in `config/extensions/appolo-boltseo.yaml` (skill section 1.6). Both name a theme file, so set them only once it exists. Until bolt/core PR #3735 is merged and the project runs a release with it, this is the only way `<link rel="canonical">`, `og:url` and `twitter:url` name the same clean URL: no record slug on singletons, no `?order=…` on listings. Static pages that include `@seo/_metatags.html.twig` themselves pass `canonical: seo.canonical()`, never `app.request.uri`.
 - Copy `examples/llms.txt.twig` to `extensions/llms.txt.twig`. It uses the `bolt-contenttypes` blueprint names (`homepage.hero_title`, `homepage.hero_intro`, `settings.email` / `phone`, `articles.teaser`), queries only ContentTypes that exist, and falls back to `theme.yaml` contacts — map it to the site's ContentTypes and follow the llmstxt.org rules from the skill.
 - *Verify:* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` (all checks now).
@@ -597,7 +596,7 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 
 ### 7.3 SEO per Locale (`bolt-add-language`, Step 5)
 - Add a `locales:` entry for every secondary locale to each `override_default` item in `config/extensions/appolo-boltseo.yaml`; fill the SEO fields of the records.
-- Open `/sitemap.xml` and `/llms.txt` and check their content (singleton URLs without a duplicated slug, alternates per locale, llms.txt sections).
+- Open `/sitemap.xml` (an index) and its child sitemaps, and `/llms.txt`, and check their content: singleton URLs without a duplicated slug, every page in every locale with `hreflang` alternates, the static pages, and the llms.txt sections.
 
 ### 7.4 Production Build
 - `cd public/theme/<theme> && npm run prod && cd -` — the build script is called `prod` (`build:css` + `build:js`); there is no `build` script.
@@ -739,7 +738,7 @@ The skills implement the Integration Contract; these points still need judgement
 3. **`bolt-disable-api` verification accepts only the full disable.** With the lock-down variant (API consumers), skip it in `verify-all.sh` and test the endpoints manually (8.3).
 4. **`bolt-add-language` checks are text searches** (codes in `services.yaml`, `contenttypes.yaml`, `menu.yaml`, the switcher). Also confirm in the browser that every `/<code>/…` page renders translated text.
 5. **Helper pages are single-locale** until bolt/core#3726 is available: error pages render in the default locale.
-6. **Sitemap override** (`extensions/sitemap.xml.twig`) is needed until bolt/sitemap-extension PR #5 is merged; remove it afterwards.
+6. **Sitemap:** `tomvondracek/bolt-sitemap` replaces `bolt/sitemap-extension` and its theme override. Projects that still have `extensions/sitemap.xml.twig` migrate with `bolt-extension-setup` section 2.6.
 7. **Consent Mode choice is legal, not technical.** Basic mode (default) loads trackers only after consent; advanced mode sends cookieless pings before consent — only on the operator's explicit decision, recorded in the site plan; the privacy page describes the active mode automatically.
 8. **`make db-update` / `db-reset` are development tools**; production uses `make db-migrate` (`doctrine:migrations:migrate`).
 9. **Thumbnails are not served from disk on bolt/core 6.0.1 – 6.1.x.** `save_files: true` writes them to `public/thumbs/<w>_<h>_<q>_<fit>_<location>/`, a path no thumbnail URL points to, so every `/thumbs/…` request still runs PHP (the HTTP caching of `bolt-asset-caching` still works). Fixed by bolt/core PR #3828 once released; thumbnail URLs stay the same, so afterwards only delete the unused `public/thumbs/*_files/` folders (locally and on the server). `bolt-asset-caching/scripts/verify.sh` warns on the affected versions; its delivery check (`serve-apache.sh` + `check-delivery.php`) confirms the fix.

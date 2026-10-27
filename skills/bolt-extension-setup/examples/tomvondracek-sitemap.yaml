@@ -1,0 +1,58 @@
+# Configuration of tomvondracek/bolt-sitemap (https://github.com/Vondry/bolt-sitemap)
+# Placed in config/extensions/tomvondracek-sitemap.yaml (bolt-extension-setup section 2.3).
+#
+# /sitemap.xml is a sitemap index:
+#   /sitemap-main.xml          homepage, singletons and static pages
+#   /sitemap-<contenttype>.xml one per ContentType: its listing page and records
+# No theme template is needed: singletons are slugless, every locale has its own
+# <url> with hreflang alternates, and static pages come from their routes.
+
+# Listing pages of ContentTypes (/clanky, /en/clanky) while they show published
+# records. Viewless ContentTypes, `viewless_listing: true` and
+# `hide_listing_from_xml_sitemap: true` are honoured.
+listings: true
+
+# ContentTypes whose records are left out (their listing page stays).
+exclude_contenttypes: []
+
+# ContentTypes whose listing page is left out (their records stay).
+exclude_listings: []
+
+# Taxonomies whose pages are listed, e.g. [categories, tags].
+taxonomies: []
+
+# Static pages (section 2.4): every TemplateController route without parameters
+# in config/routes.yaml, with its `<name>_locale` twin (same templateName) for the
+# other languages. Keep it on whenever the theme has static-pages/.
+static_routes: true
+
+# Route names of static pages that must not be indexed (thank-you pages, form
+# confirmations): both the route and its _locale twin.
+exclude_static_routes: []
+
+# When a static page's text last changed, by route name. Without a date the URL
+# has no <lastmod>: a template's file time is the time of the last deploy.
+#   static_route_lastmod:
+#     privacy: 2026-10-01
+static_route_lastmod: {}
+
+images:
+  enabled: true
+  # Image and imagelist fields to list, by ContentType. Without an entry, a
+  # record's first image is listed; [] lists none (e.g. a decorative badge).
+  #   fields:
+  #     homepage: []
+  #     products: [image, gallery]
+  fields: {}
+
+seo:
+  # Leave out pages bolt-seo marks noindex or gives another canonical URL
+  # (record SEO field or override_default).
+  respect_noindex: true
+
+# What people see when they open the sitemap in a browser; crawlers ignore it.
+# false = raw XML. true = the extension's /sitemap.css (styled list) or
+# /sitemap-ui.js (table with links).
+human_view:
+  stylesheet: false
+  script: false

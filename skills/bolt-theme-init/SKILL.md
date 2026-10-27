@@ -59,7 +59,7 @@ public/theme/<theme-name>/
 │
 ├── static-pages/                 # Templates served by TemplateController routes (e.g. gdpr.twig)
 ├── helper-pages/                 # 404 / 403 / 500 / 503 pages                               (bolt-helper-pages)
-├── extensions/                   # sitemap.xml.twig, llms.txt.twig                           (bolt-extension-setup)
+├── extensions/                   # llms.txt.twig                                             (bolt-extension-setup)
 │
 ├── css/
 │   ├── article/                  # Bolt Article / Redactor extension styles

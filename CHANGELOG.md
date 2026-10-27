@@ -2,6 +2,43 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+`bolt-extension-setup` installs [`tomvondracek/bolt-sitemap`](https://packagist.org/packages/tomvondracek/bolt-sitemap) instead of `bolt/sitemap-extension`. The theme override is no longer needed, and the theme's static pages get into the sitemap through their routes.
+
+### Changed
+- `bolt-extension-setup` section 2: `composer require tomvondracek/bolt-sitemap:^1.0` and `examples/tomvondracek-sitemap.yaml`. The extension serves `/sitemap.xml` as a sitemap index:
+  - one `<url>` per page and locale with `hreflang` alternates;
+  - slugless singletons;
+  - listing pages;
+  - images and an honest `<lastmod>`;
+  - no pages that bolt-seo marks `noindex`.
+
+  `examples/sitemap.xml.twig` and `examples/bolt-sitemapextension.yaml` are removed.
+- Section 2.4: static pages (`static-pages/*.twig`) are listed through their `TemplateController` routes. Each needs a route without parameters and, on multilingual sites, its `<name>_locale` twin with the same `templateName`. Pages not to index go into `exclude_static_routes`. WORKFLOWS Static Routes and 5.3 say the same.
+- `verify.sh`:
+  - checks `tomvondracek/bolt-sitemap`, its config and its recipes;
+  - fails while `bolt/sitemap-extension` is installed, or a static `public/sitemap.xml` shadows the extension;
+  - warns about the old override and config;
+  - checks every static page: no route → failure, no `_locale` twin on a multilingual site → warning, `static_routes: false` → warning (new `scripts/static-pages.php`).
+- WORKFLOWS 3.1, 6.2, 7.3 and Appendix B.6, the `bolt-audit` checklist and example map, and the `bolt-theme-init` folder tree follow the new extension.
+
+### Fixed
+- The scripts that read `/sitemap.xml` follow a sitemap index to its child sitemaps, read from the checked host:
+  - `bolt-legal-cz/check-site.php`;
+  - `bolt-theme-templates/check-search.php`;
+  - `bolt-asset-caching/check-delivery.php`;
+  - `bolt-audit`'s HTTP smoke test.
+
+  Before, they took the child sitemaps for pages. The smoke test no longer adds a locale prefix to URLs that already have one (`/de/en/…`).
+
+### Migrating a project
+- `bolt-extension-setup` section 2.6:
+  1. `composer remove bolt/sitemap-extension`, then `composer require tomvondracek/bolt-sitemap:^1.0` and `php bin/console extensions:configure --with-config`.
+  2. Delete `extensions/sitemap.xml.twig` (or `_sitemap.xml.twig`) and `config/extensions/bolt-sitemapextension.yaml`.
+  3. Run `verify.sh`, which lists static pages without a route or `_locale` twin.
+  4. Check that the other extensions' `config/packages/extension_*.yaml` are still there.
+
 ## 1.9.1 — 2026-10-26
 
 ### Changed

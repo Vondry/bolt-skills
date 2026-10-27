@@ -204,7 +204,7 @@ How the shipped partial builds the links:
 - It strips the current locale prefix from `app.request.pathinfo` and re-prefixes `/<code>` for every non-default locale (after `app.request.basePath`, so sub-directory installs work; repeated leading slashes are collapsed, so a request for `//other.host` cannot turn into an off-site link) (the default locale stays unprefixed; the homepage becomes `/<code>/`, matching Bolt's `homepage_locale` route), and appends the query string.
 - Every link carries `data-locale-switch`, `hreflang`, `lang`, and `aria-current="page"` on the active locale; `js/src/locale-switcher.ts` (from `bolt-theme-init`) re-appends the URL hash and restores the scroll position after the switch.
 - The dropdown uses `data-dropdown-toggle` and a `.dropdown` panel, driven by `js/src/menu.ts`.
-- Record slugs are not translated by this path-based switch: when slugs differ per locale, link records with `record|link(true, code)` instead (see `bolt-extension-setup`'s sitemap for an example of per-locale record links).
+- Record slugs are not translated by this path-based switch: when slugs differ per locale, link records with `record|link(true, code)` instead (as the sitemap does: `tomvondracek/bolt-sitemap` lists every record in each locale).
 
 ### hreflang alternates in `<head>`
 

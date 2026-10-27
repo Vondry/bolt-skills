@@ -30,9 +30,8 @@ bolt-cookie-consent	_privacy-form-note.twig	{theme}/partials/_privacy-form-note.
 bolt-cookie-consent	gdpr.twig	{theme}/static-pages/gdpr.twig	design
 bolt-cookie-consent	theme.privacy.yaml	{theme}/theme.yaml	snippet
 bolt-extension-setup	appolo-boltseo.yaml	config/extensions/appolo-boltseo.yaml	design
-bolt-extension-setup	bolt-sitemapextension.yaml	config/extensions/bolt-sitemapextension.yaml	design
+bolt-extension-setup	tomvondracek-sitemap.yaml	config/extensions/tomvondracek-sitemap.yaml	design
 bolt-extension-setup	tomvondracek-llmstxt.yaml	config/extensions/tomvondracek-llmstxt.yaml	design
-bolt-extension-setup	sitemap.xml.twig	{theme}/extensions/sitemap.xml.twig	logic
 bolt-extension-setup	llms.txt.twig	{theme}/extensions/llms.txt.twig	design
 bolt-helper-pages	_helper_template_with_master.twig	{theme}/helper-pages/_helper_template_with_master.twig	logic
 bolt-helper-pages	_helper_template_without_master.twig	{theme}/helper-pages/_helper_template_without_master.twig	logic

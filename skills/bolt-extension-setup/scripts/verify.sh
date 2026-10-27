@@ -3,6 +3,7 @@ set -e
 
 # The skill's examples/, to compare the project's canonical partials with (section 1.6).
 EXAMPLES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../examples" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Detect Bolt CMS project root
 if [ -f "./config/services.yaml" ]; then
@@ -27,7 +28,7 @@ cd "$BASE_DIR"
 
 echo "=========================================================="
 echo " Bolt CMS Essential Extensions Verification"
-echo " (AppoloDev/bolt-seo, bolt/sitemap-extension, bolt-llms-txt)"
+echo " (AppoloDev/bolt-seo, bolt-sitemap, bolt-llms-txt)"
 echo " Project root: $BASE_DIR"
 echo "=========================================================="
 
@@ -49,7 +50,7 @@ echo ""
 # 1. Check Composer Dependencies
 # -------------------------------------------------------------
 echo "[1/7] Checking installed packages (vendor/composer/installed.json)..."
-for PKG in "appolodev/bolt-seo" "bolt/sitemap-extension" "tomvondracek/bolt-llms-txt"; do
+for PKG in "appolodev/bolt-seo" "tomvondracek/bolt-sitemap" "tomvondracek/bolt-llms-txt"; do
     echo -n "  • $PKG: "
     # The installed version, not the constraint in composer.json: a required package that was
     # never installed (or was removed from vendor/) must not pass.
@@ -66,6 +67,14 @@ for PKG in "appolodev/bolt-seo" "bolt/sitemap-extension" "tomvondracek/bolt-llms
         FAILED=1
     fi
 done
+
+# bolt/sitemap-extension also serves /sitemap.xml; tomvondracek/bolt-sitemap replaces it (section 2.6).
+OLD_SITEMAP=$(php -r '$i = json_decode((string) @file_get_contents("vendor/composer/installed.json"), true);
+    foreach ($i["packages"] ?? $i ?? [] as $p) { if (($p["name"] ?? "") === "bolt/sitemap-extension") { echo $p["pretty_version"] ?? $p["version"]; } }' 2>/dev/null || true)
+if [ -n "$OLD_SITEMAP" ]; then
+    echo "  ❌ bolt/sitemap-extension ($OLD_SITEMAP) is still installed — run: composer remove bolt/sitemap-extension (section 2.6)"
+    FAILED=1
+fi
 
 # -------------------------------------------------------------
 # 2. Check Extension Configuration Files
@@ -92,12 +101,17 @@ else
 fi
 
 # Sitemap config
-echo -n "  • config/extensions/bolt-sitemapextension.yaml: "
-if [ -f "config/extensions/bolt-sitemapextension.yaml" ]; then
+SITEMAP_CONFIG="config/extensions/tomvondracek-sitemap.yaml"
+echo -n "  • $SITEMAP_CONFIG: "
+if [ -f "$SITEMAP_CONFIG" ]; then
     echo "FOUND"
 else
-    echo "MISSING (Run: php bin/console extensions:configure --with-config)"
+    echo "MISSING (Run: php bin/console extensions:configure --with-config, then section 2.3)"
     FAILED=1
+fi
+if [ -f "config/extensions/bolt-sitemapextension.yaml" ]; then
+    echo "    ⚠️  Leftover config/extensions/bolt-sitemapextension.yaml of bolt/sitemap-extension — delete it (section 2.6)"
+    WARNINGS=$((WARNINGS+1))
 fi
 
 # llms.txt config
@@ -131,6 +145,22 @@ if [ -f "config/packages/extension_bolt-seo.yaml" ]; then
     echo "FOUND"
 else
     echo "MISSING (Required for Appolo SEO doctrine mappings and translations)"
+    FAILED=1
+fi
+
+# Sitemap package and route config
+echo -n "  • config/packages/extension_bolt-sitemap.yaml: "
+if [ -f "config/packages/extension_bolt-sitemap.yaml" ]; then
+    echo "FOUND"
+else
+    echo "MISSING (Required for the sitemap cache invalidation and Twig namespace)"
+    FAILED=1
+fi
+echo -n "  • config/routes/extension_bolt-sitemap.yaml: "
+if [ -f "config/routes/extension_bolt-sitemap.yaml" ]; then
+    echo "FOUND"
+else
+    echo "MISSING (Required for the /sitemap.xml route registration)"
     FAILED=1
 fi
 
@@ -205,46 +235,57 @@ else
 fi
 
 # -------------------------------------------------------------
-# 6. Check Sitemap Override & llms.txt in Theme Extensions
+# 6. Check the sitemap's static pages, robots.txt & llms.txt in Theme Extensions
 # -------------------------------------------------------------
 echo ""
-echo "[6/7] Checking theme extensions folder ($EXT_THEME_DIR)..."
+echo "[6/7] Checking the sitemap's static pages and the theme extensions folder ($EXT_THEME_DIR)..."
 
-# Sitemap override check
-SITEMAP_FILE=""
-if [ -f "$EXT_THEME_DIR/sitemap.xml.twig" ]; then
-    SITEMAP_FILE="$EXT_THEME_DIR/sitemap.xml.twig"
-elif [ -f "$EXT_THEME_DIR/_sitemap.xml.twig" ]; then
-    SITEMAP_FILE="$EXT_THEME_DIR/_sitemap.xml.twig"
-fi
-
-if [ -n "$SITEMAP_FILE" ]; then
-    echo "  ✅ Sitemap template override found ($SITEMAP_FILE)"
-    # Check if the singleton slug stripping logic is included
-    if grep -q "record.slug" "$SITEMAP_FILE" && grep -q "isSingleton" "$SITEMAP_FILE"; then
-        echo "  ✅ Singleton slug fix logic is present (PR #5 workaround active)"
-    else
-        echo "  ⚠️  Sitemap override file exists but may lack singleton slug stripping logic."
+# The old bolt/sitemap-extension override is not read any more (section 2.6).
+for OLD_OVERRIDE in "$EXT_THEME_DIR/sitemap.xml.twig" "$EXT_THEME_DIR/_sitemap.xml.twig"; do
+    if [ -f "$OLD_OVERRIDE" ]; then
+        echo "  ⚠️  Leftover sitemap override $OLD_OVERRIDE of bolt/sitemap-extension — delete it; bolt-sitemap needs no theme template (section 2.6)"
         WARNINGS=$((WARNINGS+1))
     fi
-else
-    echo "  ❌ Sitemap template override MISSING in $EXT_THEME_DIR (needed until bolt/sitemap-extension#5 is merged)"
-    echo "     Copy 'sitemap.xml.twig' from skill examples to '$EXT_THEME_DIR/sitemap.xml.twig'"
-    echo "     and set 'xml: \"@theme/extensions/sitemap.xml.twig\"' in config/extensions/bolt-sitemapextension.yaml."
-    FAILED=1
+done
+
+# Static pages are in the sitemap only through their TemplateController routes (section 2.4).
+if [ -d "$THEME_DIR/static-pages" ]; then
+    if grep -qE '^static_routes:[[:space:]]*false' "$SITEMAP_CONFIG" 2>/dev/null; then
+        echo "  ⚠️  static_routes: false in $SITEMAP_CONFIG — the static pages are not in the sitemap (section 2.4)"
+        WARNINGS=$((WARNINGS+1))
+    fi
+
+    APP_LOCALES=$(grep -E "^[[:space:]]*app_locales:" config/services.yaml | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
+    STATIC_REPORT=$(php "$SCRIPT_DIR/static-pages.php" "$THEME_DIR" "$APP_LOCALES" "$SITEMAP_CONFIG" 2>&1 || true)
+    if [ -z "$STATIC_REPORT" ]; then
+        echo "  ✅ No static pages in $THEME_DIR/static-pages"
+    fi
+    while IFS='|' read -r LEVEL MESSAGE; do
+        case "$LEVEL" in
+            OK)   echo "  ✅ $MESSAGE" ;;
+            WARN) echo "  ⚠️  $MESSAGE"; WARNINGS=$((WARNINGS+1)) ;;
+            FAIL) echo "  ❌ $MESSAGE"; FAILED=1 ;;
+            "")   ;;
+            *)    echo "  ⚠️  $LEVEL${MESSAGE:+|$MESSAGE}"; WARNINGS=$((WARNINGS+1)) ;;
+        esac
+    done <<< "$STATIC_REPORT"
 fi
 
-# robots.txt names the sitemap (section 2.6), so crawlers find it without Search Console.
+# robots.txt names the sitemap (section 2.5), so crawlers find it without Search Console.
 if [ -f "public/robots.txt" ]; then
     if grep -qiE '^\s*Sitemap:\s*https?://[^ ]+/sitemap\.xml' public/robots.txt; then
         echo "  ✅ public/robots.txt names the sitemap ($(grep -iE '^\s*Sitemap:' public/robots.txt | head -n 1 | tr -d '\r'))"
     else
-        echo "  ⚠️  public/robots.txt has no 'Sitemap: https://<domain>/sitemap.xml' line (section 2.6)"
+        echo "  ⚠️  public/robots.txt has no 'Sitemap: https://<domain>/sitemap.xml' line (section 2.5)"
         WARNINGS=$((WARNINGS+1))
     fi
 else
-    echo "  ⚠️  public/robots.txt is missing — add one with a 'Sitemap: https://<domain>/sitemap.xml' line (section 2.6)"
+    echo "  ⚠️  public/robots.txt is missing — add one with a 'Sitemap: https://<domain>/sitemap.xml' line (section 2.5)"
     WARNINGS=$((WARNINGS+1))
+fi
+if [ -f "public/sitemap.xml" ]; then
+    echo "  ❌ A static public/sitemap.xml is served instead of the extension's — delete it (section 2.5)"
+    FAILED=1
 fi
 
 # llms.txt check
