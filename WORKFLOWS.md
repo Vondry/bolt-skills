@@ -619,7 +619,7 @@ Commit.
 
 ### 8.1 Static Analysis & Linters
 ```bash
-make cscheck                                         # ECS + PHPStan level 8 (bolt-code-quality), i.e.:
+make cscheck                                         # ECS + PHPStan level max (bolt-code-quality), i.e.:
                                                      #   vendor/bin/ecs check src/
                                                      #   vendor/bin/phpstan analyse -c phpstan.dist.neon src/
 php bin/console lint:twig public/theme/<theme>
