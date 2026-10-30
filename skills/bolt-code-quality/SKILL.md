@@ -3,7 +3,7 @@ name: bolt-code-quality
 description: >-
   Use this skill whenever setting up, standardizing, or verifying PHP code quality,
   static analysis, and CI/CD pipelines in a Bolt CMS repository. Configures
-  Easy Coding Standard (ECS) with PSR-12/cleanCode rules, PHPStan Level 8 static
+  Easy Coding Standard (ECS) with PSR-12/cleanCode rules, PHPStan level max static
   analysis on src/, unified Makefile commands (cscheck, csfix, stancheck, csclear),
   safe Doctrine migration synchronization, and a GitLab CI matrix for PHP 8.2–8.5.
 ---
@@ -13,7 +13,7 @@ description: >-
 Maintaining strict code standards and static analysis is essential for stable Bolt CMS applications. Across production Bolt CMS repositories, code quality is standardized into a four-pillar pipeline:
 
 1. **Easy Coding Standard (ECS)** via `ecs.php`: Enforces PSR-12, clean code, `declare(strict_types=1)`, import ordering, and custom fixer rules.
-2. **PHPStan Level 8** via `phpstan.dist.neon`: Rigorous type checking on `src/` with Symfony and Doctrine extension support.
+2. **PHPStan level max** via `phpstan.dist.neon`: The strictest type checking on `src/` with Symfony and Doctrine extension support.
 3. **Task Automation** via `Makefile`: Standard developer targets (`cscheck`, `csfix`, `stancheck`, `csclear`), development database workflows (`db-update`, `db-reset`) and the production migration target (`db-migrate`).
 4. **Automated CI/CD** via `.gitlab-ci.yml`: PHPStan across PHP 8.2–8.5 (ECS once — style does not depend on the PHP version), pinned and signature-checked tool downloads, Composer caching, Twig, XLIFF, and YAML syntax validation, and `composer audit` / `npm audit` for known vulnerabilities (`make audit` locally).
 
@@ -25,7 +25,7 @@ Maintaining strict code standards and static analysis is essential for stable Bo
 Project Root (/)
 ├── composer.json               # Dev dependencies, scripts (lint, lint:fix, phpstan), allow-plugins
 ├── ecs.php                     # Easy Coding Standard rule definitions & fixer configuration
-├── phpstan.dist.neon           # PHPStan configuration (Level 8 on src/)
+├── phpstan.dist.neon           # PHPStan configuration (level max on src/)
 ├── Makefile                    # Developer workflow targets (cscheck, csfix, db-update)
 ├── .gitlab-ci.yml              # CI pipeline (ECS, PHPStan, lint:twig, lint:xliff, lint:yaml)
 └── var/cache/ecs/              # Cache directory for ECS runs (git-ignored, cleared by csclear)
@@ -230,7 +230,7 @@ Create `phpstan.dist.neon` at the root:
 
 ```neon
 parameters:
-    level: 8
+    level: max
 
     paths:
         - src
@@ -239,7 +239,7 @@ parameters:
     reportUnmatchedIgnoredErrors: true
 ```
 
-* **Level 8**: Enforces strict typing, eliminates undefined properties, and ensures explicit return and parameter types.
+* **`level: max`**: Everything level 8 enforces (strict typing, no undefined properties, explicit return and parameter types, nullability), plus no unchecked `mixed`: a value PHPStan can't type, such as a Bolt config value, `Content::getFieldValue()`, decoded JSON or a Doctrine query result, must be narrowed before it is used (see Pitfall 4). Projects still on `level: 8` get a warning from `verify.sh`.
 * **`treatPhpDocTypesAsCertain: false`**: Crucial in Symfony/Bolt environments where runtime doctrine entities or database hydrations may return values different from docblocks.
 
 ---
@@ -338,7 +338,7 @@ Create or update `.gitlab-ci.yml` at the root:
 #
 # Linting is defined via the composer scripts in composer.json:
 #   composer lint     -> vendor/bin/ecs check       (Easy Coding Standard)
-#   composer phpstan  -> vendor/bin/phpstan analyse  (level 8 on src/)
+#   composer phpstan  -> vendor/bin/phpstan analyse  (level max on src/)
 
 stages:
   - lint
@@ -444,7 +444,7 @@ skills/bolt-code-quality/scripts/verify.sh
 
 The script verifies:
 1. `ecs.php` existence, PHP syntax validity, and paths configuration; warns on the deprecated `BracesFixer` / `NewWithBracesFixer` (older copies of the example — take the current `examples/ecs.php`).
-2. `phpstan.dist.neon` existence, Level 8 verification, and paths configuration.
+2. `phpstan.dist.neon` existence, `level: max` verification (`level: 8` is a warning), and paths configuration.
 3. `composer.json` scripts (`lint`, `lint:fix`, `phpstan`) and dev dependencies.
 4. `Makefile` targets (`cscheck`, `csfix`, `stancheck`, `csclear`, `db-update`; `db-migrate` recommended for production).
 5. `.gitlab-ci.yml` lint stage and validation jobs (ECS, PHPStan, Twig, XLIFF, YAML).
@@ -481,3 +481,11 @@ make stancheck
 - **Symptom:** Running `bin/console doctrine:schema:update` causes migration errors or attempts to recreate Bolt core tables.
 - **Solution (development):** Always run `doctrine:migrations:sync-metadata-storage -q` followed by `doctrine:migrations:version --add --all --no-interaction -q` immediately after schema updates (see `make db-update`).
 - **Production:** never use `db-update` / `db-reset`; run `make db-migrate` (`doctrine:migrations:migrate`) so data migrations actually execute.
+
+### Pitfall 4: `mixed` Errors at Level Max
+- **Symptom:** `Cannot cast mixed to int.`, `Cannot access offset 'x' on mixed.` or `Parameter #1 ... expects string, mixed given.`, mostly on Bolt config values, `Content::getFieldValue()`, `json_decode()` and Doctrine query results.
+- **Solution:** narrow the value where it enters the code instead of silencing the error:
+  - **Config, field values, decoded JSON:** check the type (`is_string()`, `is_int()`, `is_scalar()`, `is_array()`) and fall back to a default. One small helper per type keeps it readable, e.g. `private function int(string $key, int $default): int` that returns `is_scalar($value) ? (int) $value : $default`.
+  - **Doctrine `getResult()` / `getSingleColumnResult()`:** assign the result to a variable typed with `/** @var list<Entity> $rows */`. The DQL guarantees the type; PHPStan just can't see it.
+  - **Casting `mixed`** (`(int) $value`, `(string) $value`) is itself an error at max: check first, then cast the scalar.
+  - Don't reach max with a baseline or `@phpstan-ignore` comments.

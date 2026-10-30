@@ -2,7 +2,7 @@
 #
 # Linting is defined via the composer scripts in composer.json:
 #   composer lint     -> vendor/bin/ecs check       (Easy Coding Standard)
-#   composer phpstan  -> vendor/bin/phpstan analyse  (level 8 on src/)
+#   composer phpstan  -> vendor/bin/phpstan analyse  (level max on src/)
 
 stages:
   - lint

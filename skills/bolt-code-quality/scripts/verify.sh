@@ -116,11 +116,15 @@ else
     HAS_STAN_SRC=$(grep -E -- "-\s*src" "$STAN_FILE" || true)
     HAS_CERTAIN_FLAG=$(grep -E "treatPhpDocTypesAsCertain:\s*false" "$STAN_FILE" || true)
 
-    if [ "$STAN_LEVEL" = "8" ] && [ -n "$HAS_STAN_SRC" ] && [ -n "$HAS_CERTAIN_FLAG" ]; then
-        echo "PASSED (Level 8 on src/, treatPhpDocTypesAsCertain: false)"
+    if [ "$STAN_LEVEL" = "max" ] && [ -n "$HAS_STAN_SRC" ] && [ -n "$HAS_CERTAIN_FLAG" ]; then
+        echo "PASSED (level max on src/, treatPhpDocTypesAsCertain: false)"
+    elif [ "$STAN_LEVEL" = "8" ] && [ -n "$HAS_STAN_SRC" ] && [ -n "$HAS_CERTAIN_FLAG" ]; then
+        echo "WARNING / NOTICE"
+        echo "  - 'level: 8': raise it to 'level: max' (SKILL.md, Pitfall 4 lists the usual fixes)"
+        WARNINGS=$((WARNINGS + 1))
     else
         echo "FAILED"
-        [ "$STAN_LEVEL" != "8" ] && echo "  - Expected 'level: 8', found '${STAN_LEVEL:-missing}'"
+        [ "$STAN_LEVEL" != "max" ] && [ "$STAN_LEVEL" != "8" ] && echo "  - Expected 'level: max', found '${STAN_LEVEL:-missing}'"
         [ -z "$HAS_STAN_SRC" ] && echo "  - Missing target path '- src'"
         [ -z "$HAS_CERTAIN_FLAG" ] && echo "  - Missing 'treatPhpDocTypesAsCertain: false'"
         FAILED=1
@@ -216,7 +220,7 @@ echo ""
 echo "=========================================================="
 if [ $FAILED -eq 0 ]; then
     echo " VERIFICATION PASSED ($WARNINGS warning(s))"
-    echo " Code quality standards, PHPStan Level 8, and tooling are properly configured."
+    echo " Code quality standards, PHPStan, and tooling are properly configured."
     echo "=========================================================="
     exit 0
 else

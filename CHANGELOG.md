@@ -2,6 +2,21 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+`bolt-code-quality` sets PHPStan to `level: max` instead of `level: 8`. Max adds one thing to level 8: no unchecked `mixed`, so values PHPStan can't type (Bolt config, `Content::getFieldValue()`, decoded JSON, Doctrine query results) are narrowed before use.
+
+### Changed
+- `examples/phpstan.dist.neon` and Step 3 of the skill: `level: max`.
+- `verify.sh` passes on `level: max`. `level: 8` is a warning that asks to raise it, so existing projects keep passing; any other level fails.
+- The `(level max on src/)` comment in `examples/gitlab-ci.yml` and the skill's CI block, the skill's description, README, AGENTS and WORKFLOWS 8.1.
+
+### Added
+- Pitfall 4 in the skill: the usual level-max errors and how to fix them (type checks with a default for config, field values and JSON; a typed `@var` on Doctrine results; check before casting `mixed`; no baseline or `@phpstan-ignore`).
+
+### Migrating a project
+- Set `level: max` in `phpstan.dist.neon` and run `make stancheck`. Fix what it reports as in Pitfall 4, then update the comment in `.gitlab-ci.yml`.
+
 ## 1.10.0 — 2026-10-27
 
 `bolt-extension-setup` installs [`tomvondracek/bolt-sitemap`](https://packagist.org/packages/tomvondracek/bolt-sitemap) instead of `bolt/sitemap-extension`. The theme override is no longer needed, and the theme's static pages get into the sitemap through their routes.
