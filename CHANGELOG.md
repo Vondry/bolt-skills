@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.11.0 — 2026-10-30
 
 `bolt-code-quality` sets PHPStan to `level: max` instead of `level: 8`. Max adds one thing to level 8: no unchecked `mixed`, so values PHPStan can't type (Bolt config, `Content::getFieldValue()`, decoded JSON, Doctrine query results) are narrowed before use.
 
