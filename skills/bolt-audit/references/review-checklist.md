@@ -101,14 +101,15 @@ never "keep, record as deviation".
 - **Severity hints:** 500 or 503 page querying the database → High; contact details or time promises on the 503 page → Low; default Bolt error pages in production → Medium.
 
 ## 16. bolt-cookie-consent
-- **Script:** the `theme.yaml` `privacy:` data model, banner wiring and compliance, wording, hard-coded trackers, footer, privacy page and route, translations, live HTML.
-- **Review:** projects built before this skill usually have no `privacy:` block, so most script failures are a **deviation** (another banner implementation). Judge the existing banner and policy against `skills/bolt-cookie-consent/references/guidelines.cs.md` directly — that is where the **defects** are:
+- **Script:** the data model — `theme.yaml` `privacy:` or a privacy ContentType's record (SKILL.md, "Data model in a ContentType"; both are compliant) — banner wiring and compliance, wording, hard-coded trackers, footer, privacy page and route, translations, live HTML, and the cookies the site sets (`/`, the policy, every `/<locale>/` homepage) against the inventory.
+- **Review:** projects built before this skill may have neither model, so most script failures are a **deviation** (another banner implementation). Judge the existing banner and policy against `skills/bolt-cookie-consent/references/guidelines.cs.md` directly — that is where the **defects** are:
+  - INV-01: the inventory matches what the site sets — no `_ga` items while `analytics.ga4_id` is empty (the banner then asks for consent to nothing), and the session cookie of a multilingual site listed (Bolt sets it on `/<locale>/` pages).
   - CB-01: tracker (GA, Sklik, Meta, Hotjar, embeds, Google Fonts) loaded before a choice — read the master layout and the profile's "Tracking found" line; with `--base-url`, fetch the homepage HTML.
   - CB-10–CB-12 / DP-01–DP-02: Reject in layer 1, a button, same styling as Accept.
   - CB-20 / DP-03: no pre-ticked categories; CB-30: settings link in the footer; CB-05: no "používáním webu souhlasíte".
   - Privacy page: the 11 mandatory blocks (guidelines, *Povinný obsah*), controller identity (§ 435 OZ), a cookie list matching what the site sets.
   - CB-02: YouTube / map iframes without a placeholder.
-- **Severity hints:** tracking before consent, Reject missing from layer 1, no privacy page, cookies not described → Critical (ÚOOÚ fines exactly these); unequal buttons, missing footer link, English-only descriptions → High; not using the skill's data model → Medium (one deviation; migration = scaffold with the intake).
+- **Severity hints:** tracking before consent, Reject missing from layer 1, no privacy page, cookies not described → Critical (ÚOOÚ fines exactly these); unequal buttons, missing footer link, English-only descriptions → High; cookies set but not listed (INV-01) → High; inventory for a tracker that is not configured → Medium; using neither data model → Medium (one deviation; migration = scaffold with the intake, or the ContentType contract).
 
 ## 17. bolt-legal-cz
 - **Script:** the `theme.yaml` `contact:` identity and `legal:` profile (IČO check digit, register entry by operator type, ADR body, online-contract pages, privacy controller = `contact:`), the identity partial in the footer, typed-in IČOs and EU ODR links in templates, the reviews notice, translations, and the live pages through `check-site.php`.
@@ -116,7 +117,7 @@ never "keep, record as deviation".
   - ID-01–ID-04: name, registered seat, IČO and the Trade / Commercial Register entry on the site, matching ARES (ID-06); an IČO of someone else (template leftover, ID-09).
   - SP-01: ADR body with its web address on consumer sites; SP-02: links to the closed EU ODR platform (often in the terms page in the database); SP-06: testimonials without a verification statement.
   - EC (online shops): terms, withdrawal information, the „Odstoupit od smlouvy“ button from 1. 1. 2027.
-  - Ask the operator what the script cannot know: consumers or B2B, employees (whistleblowing, accessibility), regulated profession — or list it under *Not checked*.
+  - Ask the operator what the script cannot know: consumers or B2B, employees (whistleblowing, accessibility), regulated profession — or list it under *Not checked*. For a regulated profession (advocates, doctors, architects) pass `--operator=profession`: the register entry is the chamber list and number („Ev. č. ČAK: 12345“), and REG-01 asks for the chamber, the title and the professional rules.
 - **Severity hints:** IČO, name, seat or register entry missing or wrong; no ADR information on a consumer site; no withdrawal button on an online shop from 1. 1. 2027 → High (fines up to CZK 1 M / 5 M); EU ODR link, reviews without a statement, identity only on the contact page → Medium; not using the skill's data model → Low (one deviation).
 
 ## 18. bolt-add-language *(multilingual only — once per secondary locale)*
