@@ -2,6 +2,22 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.1 — 2026-10-31
+
+When Bolt sets its session cookie, measured instead of assumed. Also fixes a 500 that the canonical override caused on Bolt's locale redirect.
+
+### Fixed
+- `bolt-extension-setup`: `canonical_template` is now `'@theme/partials/_canonical.twig'`, and `_canonical.twig` imports its macros through `@theme/`.
+  - For an unsupported locale (`/?_locale=de`, or a record under `/<locale>/` that its ContentType's `locales` lack) Bolt answers a redirect to the default locale without rendering a page, so the theme folder is not on Twig's path yet. The canonical widget still renders `canonical_template` into that response, and the bare `partials/_canonical.twig` turned the redirect into a 500 that any query string could trigger.
+  - `verify.sh` fails on the bare path and, with `BOLT_BASE_URL`, requests `/?_locale=bolt-probe`, which must redirect. SKILL.md § 1.6 explains why, and WORKFLOWS 6.2 and the audit checklist (High) follow.
+
+### Changed
+- `bolt-cookie-consent` pitfalls: a table of the requests that make Bolt set `PHPSESSID`, measured on bolt/core 6.1.10 in prod. Every `/<locale>/…` page, an explicit `/cs/…`, any `?_locale=xx`, a record redirected to the default locale, and the admin set it. Unprefixed default-locale pages and unmatched prefixes don't. Bolt's documentation doesn't mention the cookie, and the frontend never reads the value back.
+- A single-language site sets the cookie only for typed or linked `/cs/…` or `?_locale=` URLs, so it is listed there only when the site links them. Multilingual sites always list it. The same wording is in the catalog, `verify.sh`, `privacy-config.php` and the audit checklist.
+
+### Migrating a project
+- Set `canonical_template: '@theme/partials/_canonical.twig'` in `config/bolt/config.yaml`, copy `examples/_canonical.twig` to `partials/` again, and check that `/?_locale=xx` redirects.
+
 ## 1.13.0 — 2026-10-31
 
 From an audit of a live site. `bolt-cookie-consent` accepts the privacy data in a ContentType as well as in `theme.yaml`, and its checks compare the cookie inventory with what the site sets. The htaccess and legal checks no longer fail on things that are right.
