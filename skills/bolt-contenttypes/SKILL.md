@@ -411,7 +411,7 @@ The rules are checked by `scripts/check-contenttypes.php` on the parsed YAML (me
 3. **Singleton Ordering:** Flags any `singleton: true` ContentType missing `order: -id`.
 4. **Deprecated `repeater`:** Flags legacy `type: repeater` and advises migrating to `collection` + `set`.
 5. **Shared vs. Translated Fields (warning):** Flags text fields (`text`, `textarea`, `html`, `markdown`, `redactor`, `article`) without `localize: true` in multilingual ContentTypes. Fields whose name marks a shared value (`…url`, `…link`, `…email`, `…phone`, `ico`, `dic`, social network names) are skipped. Also warns when fields are `localize: true` but the ContentType has no `locales`.
-6. **Valid Slugs:** Verifies all `type: slug` fields define the `uses` mapping.
+6. **Valid Slugs:** Verifies that every `type: slug` field defines the `uses` mapping when its ContentType has a text field to generate it from (a slug the editors type — a year, a code — next to no text field is fine).
 7. **Permitted Locales:** Verifies ContentType `locales` are declared in `app_locales`.
 8. **Sanitised Rich Text:** Flags `redactor` and `article` fields without `sanitise: true`, any `allow_twig: true`, and `sanitise: false` on any field.
 9. **Reserved Field Names:** Fails on any field (top level, collection item, set sub-field) named after a method of Bolt's `Content` entity, and on set sub-fields named after a `SetField` method (rule 8).

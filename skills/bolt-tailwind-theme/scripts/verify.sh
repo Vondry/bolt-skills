@@ -138,8 +138,10 @@ if [ -f "$THEME_DIR/package.json" ] && [ -d "$THEME_DIR/node_modules" ] && comma
         SIZE=$(wc -c < "$TMP_CSS" | tr -d ' ')
         echo "PASSED (compiles, $SIZE bytes)"
         # Helper pages and inline styles read the tokens with var(); Tailwind v4 emits a token as a
-        # variable only when something references it, unless the block is @theme static.
-        if ! grep -q -- "--color-accent:" "$TMP_CSS"; then
+        # variable only when something references it, unless the block is @theme static. Only a
+        # theme whose templates read var(--color-accent) needs it — others use their own tokens.
+        if grep -rqF -- "var(--color-accent" "$THEME_DIR" --include="*.twig" --exclude-dir=node_modules 2>/dev/null \
+            && ! grep -q -- "--color-accent:" "$TMP_CSS"; then
             echo "  WARNING: the build defines no --color-accent variable — use @theme static inline (section 3), or the helper pages fall back to hard-coded colours."
             WARNINGS=$((WARNINGS + 1))
         fi

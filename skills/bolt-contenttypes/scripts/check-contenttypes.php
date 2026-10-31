@@ -120,8 +120,11 @@ function checkFields(array $fields, string $prefix, bool $isLocalized, array &$f
         if (! empty($field['allow_twig'])) {
             $findings[] = ['FAIL', "{$path}: allow_twig — the content runs as a server-side Twig template; rule 7"];
         }
-        if ($type === 'slug' && empty($field['uses'])) {
-            $findings[] = ['FAIL', "{$path}: slug without uses (e.g. uses: [ title ])"];
+        // A slug is generated from a text field (uses). Without any text field there is nothing to
+        // generate it from: editors type it (a year, a code), which is fine.
+        $textFields = array_filter($fields, static fn ($sibling): bool => is_array($sibling) && in_array($sibling['type'] ?? '', ['text', 'textarea'], true));
+        if ($type === 'slug' && empty($field['uses']) && $textFields !== []) {
+            $findings[] = ['FAIL', "{$path}: slug without uses (e.g. uses: [ " . array_key_first($textFields) . " ])"];
         }
         // A non-localized field holds one value for every language: editing it on the English
         // tab of the editor overwrites the Czech text. Fine for images, dates, numbers, links;
