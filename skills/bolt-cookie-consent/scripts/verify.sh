@@ -68,24 +68,49 @@ fi
 pass "$ACTIVE_THEME ($THEME_DIR)"
 
 # -------------------------------------------------------------
-# 2. Data model in theme.yaml (single source of truth)
+# 2. Data model: theme.yaml privacy: (default) or a privacy ContentType (single source of truth)
 # -------------------------------------------------------------
-echo "[2/10] theme.yaml privacy: data (controllers, purposes, recipients, cookie inventory)"
+# A theme.yaml without a privacy: block may keep the data in a ContentType instead: the first
+# ContentType whose `cookies` collection has a `category` field (SKILL.md, "Data model in a
+# ContentType"). Its published record is then read through the project's kernel.
+PRIVACY_CT=""
+if [ -f vendor/autoload.php ] && [ -f "$THEME_DIR/theme.yaml" ] && ! grep -qE '^privacy:' "$THEME_DIR/theme.yaml"; then
+    PRIVACY_CT=$(php -r '
+        require "vendor/autoload.php";
+        $types = Symfony\Component\Yaml\Yaml::parseFile("config/bolt/contenttypes.yaml");
+        foreach ($types as $key => $type) {
+            $cookies = $type["fields"]["cookies"] ?? [];
+            $item = is_array($cookies["fields"] ?? null) ? reset($cookies["fields"]) : null;
+            if (($cookies["type"] ?? "") === "collection" && is_array($item) && isset($item["fields"]["category"])) {
+                echo $type["slug"] ?? $key;
+                break;
+            }
+        }' 2>/dev/null || true)
+fi
+if [ -n "$PRIVACY_CT" ]; then
+    echo "[2/10] privacy data in the '$PRIVACY_CT' ContentType (cookie inventory; tracker IDs in theme.yaml analytics:)"
+else
+    echo "[2/10] theme.yaml privacy: data (controllers, purposes, recipients, cookie inventory)"
+fi
 CATEGORIES=""
+INVENTORY=""
 if [ ! -f "$THEME_DIR/theme.yaml" ]; then
     fail "$THEME_DIR/theme.yaml not found."
 elif [ ! -f vendor/autoload.php ]; then
-    warn "vendor/autoload.php missing (run composer install) — theme.yaml data not validated."
+    warn "vendor/autoload.php missing (run composer install) — privacy data not validated."
     CATEGORIES="unknown"
 else
+    CT_ARG=()
+    [ -n "$PRIVACY_CT" ] && CT_ARG=("--contenttype=$PRIVACY_CT")
     while IFS= read -r line; do
         case "$line" in
             FAIL:*) fail "${line#FAIL: }" ;;
             WARN:*) warn "${line#WARN: }" ;;
             OK:*) pass "${line#OK: }" ;;
             CATEGORIES:*) CATEGORIES="$(echo "${line#CATEGORIES:}" | tr -d ' ')" ;;
+            INVENTORY:*) INVENTORY="$(echo "${line#INVENTORY:}" | tr -d ' ')" ;;
         esac
-    done < <(php "$SCRIPT_DIR/check-privacy.php" "$THEME_DIR/theme.yaml" $DRAFT 2>&1)
+    done < <(php "$SCRIPT_DIR/check-privacy.php" "$THEME_DIR/theme.yaml" ${CT_ARG[@]+"${CT_ARG[@]}"} $DRAFT 2>&1)
 fi
 
 if [ -z "$CATEGORIES" ]; then
@@ -106,9 +131,13 @@ echo "[3/10] Banner partials and layout"
 BANNER_FILE="$THEME_DIR/partials/_cookie-banner.twig"
 CONSENT_FILE="$THEME_DIR/partials/_consent-mode.twig"
 MASTER_FILE="$THEME_DIR/partials/_master.twig"
-for partial in _privacy-macros.twig _cookie-table.twig; do
-    [ -f "$THEME_DIR/partials/$partial" ] || fail "partials/$partial missing (used by the privacy page and the banner)."
-done
+# The macros render theme.yaml privacy: data; a ContentType model renders the record with the
+# site's own templates.
+if [ -z "$PRIVACY_CT" ]; then
+    for partial in _privacy-macros.twig _cookie-table.twig; do
+        [ -f "$THEME_DIR/partials/$partial" ] || fail "partials/$partial missing (used by the privacy page and the banner)."
+    done
+fi
 # Bolt returns theme.yaml blocks as collections: |column('category') finds nothing in them (no
 # consent categories → no banner, no consent configuration) and a key set to ~ throws on access.
 for file in "$THEME_DIR/partials/_consent-mode.twig" "$THEME_DIR/partials/_cookie-banner.twig" "$THEME_DIR/partials/_privacy-form-note.twig" "$THEME_DIR/static-pages/gdpr.twig"; do
@@ -265,8 +294,14 @@ if [ -z "$FOOTER_FILES" ]; then
     warn "no footer template found — the footer must link the privacy policy and \"Nastavení cookies\" on every page."
 else
     # shellcheck disable=SC2086
-    grep -q "zasady-ochrany-osobnich-udaju" $FOOTER_FILES && pass "footer links the privacy policy (PP-01)." \
-        || fail "footer does not link /zasady-ochrany-osobnich-udaju (PP-01)."
+    if grep -q "zasady-ochrany-osobnich-udaju" $FOOTER_FILES; then
+        pass "footer links the privacy policy (PP-01)."
+    elif [ -n "$PRIVACY_CT" ] && grep -qE "\|link" $FOOTER_FILES; then
+        # The ContentType model links the record (`privacy_policy|link`); its URL is checked live.
+        pass "footer links a record with |link — the link to /zasady-ochrany-osobnich-udaju is checked live (PP-01)."
+    else
+        fail "footer does not link /zasady-ochrany-osobnich-udaju (PP-01)."
+    fi
     if [ $HAS_CONSENT -eq 1 ]; then
         # shellcheck disable=SC2086
         if grep -q "data-cookie-settings" $FOOTER_FILES; then
@@ -286,7 +321,33 @@ fi
 # -------------------------------------------------------------
 echo "[9/10] Privacy policy page (/zasady-ochrany-osobnich-udaju)"
 PAGE="$THEME_DIR/static-pages/gdpr.twig"
-if [ -f "$PAGE" ]; then
+CHECK_ANCHORS_LIVE=0
+if [ -n "$PRIVACY_CT" ]; then
+    # The record is the page: its record_template renders the controllers, purposes, recipients
+    # and cookies from the same record the banner reads. Its sections are checked on the live page
+    # (step 10), where ids built from variables are visible.
+    RECORD_TEMPLATE=$(php -r '
+        require "vendor/autoload.php";
+        foreach (Symfony\Component\Yaml\Yaml::parseFile("config/bolt/contenttypes.yaml") as $key => $type) {
+            if (($type["slug"] ?? $key) === $argv[1]) { echo $type["record_template"] ?? ""; }
+        }' "$PRIVACY_CT" 2>/dev/null || true)
+    if [ -z "$RECORD_TEMPLATE" ]; then
+        fail "the '$PRIVACY_CT' ContentType has no record_template — the record must render the privacy page."
+    elif [ ! -f "$THEME_DIR/$RECORD_TEMPLATE" ]; then
+        fail "record_template $RECORD_TEMPLATE of '$PRIVACY_CT' not found in $THEME_DIR."
+    else
+        pass "page rendered from the '$PRIVACY_CT' record ($RECORD_TEMPLATE)."
+        grep -rq "data-cookie-banner-defer" "$(dirname "$THEME_DIR/$RECORD_TEMPLATE")" \
+            || warn "the banner may cover the privacy page — add <div data-cookie-banner-defer hidden></div> to $RECORD_TEMPLATE (PP-05)."
+    fi
+    if [ $HAS_CONSENT -eq 1 ]; then
+        # shellcheck disable=SC2046
+        grep -qE "setcontent [a-z_]+ = '$PRIVACY_CT'" $(theme_twig | grep -E "partials/(_master|_consent-mode|_cookie-banner)\.twig") 2>/dev/null \
+            && pass "the layout reads the consent categories from the '$PRIVACY_CT' record (same data as the page)." \
+            || warn "partials/_master.twig / _consent-mode.twig do not setcontent '$PRIVACY_CT' — the banner must read the same record as the page."
+    fi
+    CHECK_ANCHORS_LIVE=1
+elif [ -f "$PAGE" ]; then
     pass "static-pages/gdpr.twig present."
     if grep -q "zasady-ochrany-osobnich-udaju" config/routes.yaml 2>/dev/null; then
         pass "route in config/routes.yaml."
@@ -343,6 +404,50 @@ if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     PAGE_HTML=$(curl -s --max-time 10 "$BASE_URL/zasady-ochrany-osobnich-udaju" || true)
     if echo "$PAGE_HTML" | grep -qE '\[(DOPLNIT|OVĚŘIT)'; then
         [ -n "$DRAFT" ] && warn "the live privacy page still shows placeholders." || fail "the live privacy page still shows [DOPLNIT] / [OVĚŘIT]."
+    fi
+    echo "$HOME_HTML" | grep -qE 'href="[^"]*/zasady-ochrany-osobnich-udaju"' && pass "$BASE_URL/ links /zasady-ochrany-osobnich-udaju (PP-01)." \
+        || fail "$BASE_URL/ has no link to /zasady-ochrany-osobnich-udaju (PP-01)."
+    if [ $CHECK_ANCHORS_LIVE -eq 1 ]; then
+        MISSING_ANCHORS=""
+        for anchor in spravce ucely prijemci prava namitka cookies kontakt historie-zmen; do
+            echo "$PAGE_HTML" | grep -q "id=\"$anchor\"" || MISSING_ANCHORS="$MISSING_ANCHORS #$anchor"
+        done
+        [ -z "$MISSING_ANCHORS" ] && pass "the live privacy page has every mandatory section (#spravce … #historie-zmen)." \
+            || fail "the live privacy page lacks section(s)$MISSING_ANCHORS (mandatory content blocks / recommended order)."
+    fi
+
+    # INV-01: every cookie the site sets itself is in the inventory. Bolt writes the locale into the
+    # session on every /<locale>/ page (LocaleSubscriber), so a multilingual site sets a session
+    # cookie on its secondary-locale pages even without forms — request those too.
+    if [ "$CATEGORIES" != "unknown" ]; then
+        DEFAULT_LOCALE=$(grep -E '^\s+locale:' config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/.*locale:[[:space:]]*['\"]?([a-z_A-Z]+).*/\1/")
+        COOKIE_PATHS="/ /zasady-ochrany-osobnich-udaju"
+        for code in $(grep -E '^\s+app_locales:' config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/.*app_locales:[[:space:]]*['\"]?([^'\"]*).*/\1/" | tr '|' ' '); do
+            [ "$code" != "$DEFAULT_LOCALE" ] && COOKIE_PATHS="$COOKIE_PATHS /$code/"
+        done
+        SET_COOKIES=""
+        for p in $COOKIE_PATHS; do
+            for name in $(curl -s -o /dev/null -D - --max-time 10 "$BASE_URL$p" | tr -d '\r' | grep -iE '^set-cookie:' | sed -E 's/^[Ss][Ee][Tt]-[Cc][Oo][Oo][Kk][Ii][Ee]:[[:space:]]*([^=;]+)=.*/\1/'); do
+                SET_COOKIES="$SET_COOKIES $name@$p"
+            done
+        done
+        UNLISTED=""
+        for entry in $SET_COOKIES; do
+            name="${entry%@*}"
+            listed=0
+            for item in $(echo "$INVENTORY" | tr ',' ' '); do
+                # shellcheck disable=SC2254
+                case "$name" in $item) listed=1 ;; esac
+            done
+            [ $listed -eq 0 ] && UNLISTED="$UNLISTED $name (${entry#*@})"
+        done
+        if [ -z "$SET_COOKIES" ]; then
+            pass "no cookie set by $COOKIE_PATHS."
+        elif [ -z "$UNLISTED" ]; then
+            pass "every cookie set by $COOKIE_PATHS is in the inventory (INV-01)."
+        else
+            fail "cookie(s) set by the site but missing from the inventory:$UNLISTED — list them as necessary items (INV-01). A session cookie on /<locale>/ pages comes from Bolt storing the locale in the session; describe it as such, with the session lifetime (framework.session.cookie_lifetime)."
+        fi
     fi
 else
     echo "  SKIPPED: $BASE_URL not reachable (set BOLT_BASE_URL / verify-all.sh --base-url=…)."

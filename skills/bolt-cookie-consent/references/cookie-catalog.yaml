@@ -36,6 +36,20 @@ necessary_optional:
       purpose: { cs: 'Technická relace pro odeslání formuláře a ochranu proti podvrženým požadavkům (CSRF).', en: 'Technical session for form submission and protection against forged requests (CSRF).' }
       expiry: { cs: 'do zavření prohlížeče', en: 'until the browser is closed' }
       transfer: false
+  # Added automatically on multilingual sites (more than one locale): Bolt writes the locale into
+  # the session on every /<locale>/ page (LocaleSubscriber), so those pages set the session cookie
+  # even without a form. PHPSESSID is PHP's default session name; the expiry is the 8 h
+  # framework.session.cookie_lifetime of bolt-security-hardening — measure both on the live site.
+  # With --necessary=session too, the form purpose is appended to this one item (same cookie).
+  locale_session:
+    - name: PHPSESSID
+      technology: cookie
+      category: necessary
+      provider: { cs: 'Provozovatel webu', en: 'Website operator' }
+      party: first
+      purpose: { cs: 'Technická relace redakčního systému; na stránkách v dalších jazycích si pamatuje zvolený jazyk.', en: 'Technical session of the CMS; on the pages in other languages it remembers the language you chose.' }
+      expiry: { cs: '8 hodin', en: '8 hours' }
+      transfer: false
 
 # Trackers: the key is the value for --trackers=. `analytics_key` is the theme.yaml key holding
 # the ID, `recipient` the entry from `recipients:` below, `purpose` the entry from `purposes:`.

@@ -3,15 +3,16 @@ name: bolt-cookie-consent
 description: >-
   Intake-driven cookie banner and privacy policy page for Czech Bolt CMS sites (ZEK § 89/3, GDPR,
   ÚOOÚ / EDPB practice). Asks which trackers (Google Analytics 4, Google Ads, Seznam Sklik, Meta
-  Pixel, …), embeds and controller model the site uses, writes one data model into theme.yaml, and
-  renders from it a two-layer opt-in banner (Consent Mode v2, equal Accept / Reject, per-category
-  settings), consent-gated embeds and the /zasady-ochrany-osobnich-udaju page — styled with the
-  theme's design tokens and verified by scripts/verify.sh.
+  Pixel, …), embeds and controller model the site uses, writes one data model into theme.yaml (or
+  validates one kept in a privacy ContentType), and renders from it a two-layer opt-in banner
+  (Consent Mode v2, equal Accept / Reject, per-category settings), consent-gated embeds and the
+  /zasady-ochrany-osobnich-udaju page — styled with the theme's design tokens and verified by
+  scripts/verify.sh.
 ---
 
 # Bolt CMS Cookie Consent & Privacy Policy (`bolt-cookie-consent`)
 
-This skill builds two things for a Czech website, both from **one data model** in `theme.yaml`:
+This skill builds two things for a Czech website, both from **one data model** — in `theme.yaml`, or in a privacy ContentType the editors maintain ([§ 2](#data-model-in-a-contenttype-alternative)):
 
 1. a **cookie banner** — only when the site uses something that needs consent (analytics, ads, retargeting, embedded video or maps);
 2. the **privacy policy page** `/zasady-ochrany-osobnich-udaju` — on every site, with or without trackers.
@@ -97,6 +98,19 @@ theme.yaml
 | `automated_decision_making` | `false`, or a localized description | čl. 13/2 f |
 
 Texts are localized maps — `{ cs: '…', en: '…' }` — with Czech mandatory (CB-23); a plain string is used for every locale. The generator writes one key per locale in `app_locales` and `[DOPLNIT překlad xx]` where the catalog has no text.
+
+### Data model in a ContentType (alternative)
+
+When the editors should maintain the policy in the admin, the same data can live in one record instead of `theme.yaml`: usually a singleton ContentType (e.g. `privacy`, `localize: true` texts) whose `record_template` renders `/zasady-ochrany-osobnich-udaju`. Both models are valid; pick one per site and never split the data between them. The contract `verify.sh` relies on:
+
+| Part | Requirement |
+| :--- | :--- |
+| `cookies` collection | One set per item with `category` (`necessary`, `preferences`, `analytics`, `marketing`, `third_party`), a name (`name` or `cookie_name`; `name` and `label` are reserved inside a set — bolt-contenttypes rule 8), `technology`, `party` (`first`, `third`), `provider`, purpose (`purpose` or `cookie_purpose`), `expiry`, optional `transfer`. The same rules as `privacy.cookies` (INV-01–INV-03, CB-21) |
+| Controllers, purposes, recipients, joint arrangement, change history | Fields of the record, rendered by the site's templates; the page must still have every section anchor (`#spravce` … `#historie-zmen`) |
+| Banner | `partials/_master.twig` (or `_consent-mode.twig`) reads the consent categories from the **same record** (`{% setcontent privacy_policy = 'privacy' returnsingle %}`), so the banner, the cookie table and the page never disagree |
+| Tracker IDs | Stay in the `analytics:` block of `theme.yaml` |
+
+`verify.sh` detects the model: a `theme.yaml` without `privacy:` and a ContentType whose `cookies` collection has a `category` field. It reads the published record through the project's kernel and Doctrine, validates the inventory like `privacy.cookies`, and checks the sections, the footer link and the cookies on the rendered page. Content of the record lives in the database: a change made locally must be repeated in the production admin, because the database is not uploaded.
 
 ---
 
@@ -280,15 +294,15 @@ bash $SKILLS/bolt-cookie-consent/scripts/verify.sh           # sign-off: placeho
 | Step | Checks |
 | :--- | :--- |
 | 1 | Active theme |
-| 2 | `theme.yaml` data (`scripts/check-privacy.php`): placeholders; controller model and identity; joint arrangement; purposes with Czech texts, valid legal basis, concrete legitimate interest; recipients; every cookie item classified with Czech purpose, provider and expiry; consent record listed; tracker IDs inventoried; consent lifetimes; version, date, changelog; automated decisions stated |
+| 2 | Privacy data (`scripts/check-privacy.php`) from `theme.yaml` `privacy:` or the privacy ContentType's record: placeholders; every cookie item classified with Czech purpose, provider and expiry; consent record listed when a banner exists — and not listed without one; tracker IDs inventoried; tracker cookies (`_ga`, `_gcl_*`, `_fbp`, …) listed while their ID is empty (warning: the banner asks for consent to nothing). For `theme.yaml` also: controller model and identity; joint arrangement; purposes with Czech texts, valid legal basis, concrete legitimate interest; recipients; consent lifetimes; version, date, changelog; automated decisions stated |
 | 3 | Banner partials present, `_consent-mode.twig` in `<head>`, banner included in the master layout |
 | 4 | Reject / Accept (layer 1) and Reject / Save / Accept (layer 2) share identical classes; settings button; layer-2 dialog; switches start off; `role="dialog"`, `aria-labelledby`, `role="switch"` |
 | 5 | No implied-consent wording; one label for "Nastavení cookies" |
 | 6 | No tracker script, gtag call or third-party iframe hard-coded in any template |
 | 7 | `cookie-consent.ts` present and imported; no auto-hide |
-| 8 | Footer links the policy and has `[data-cookie-settings]` |
-| 9 | Privacy page, route, rendered from `privacy:`, all section anchors, banner deferred on the page |
-| 10 | Every `cookie.*` / `privacy.*` unit in every catalog (Czech mandatory); live checks with `BOLT_BASE_URL`: no tracker script in the homepage HTML, consent configuration rendered, policy returns 200 without placeholders |
+| 8 | Footer links the policy (or, in the ContentType model, a record with `|link`) and has `[data-cookie-settings]` |
+| 9 | Privacy page: `theme.yaml` model — route, rendered from `privacy:`, all section anchors; ContentType model — `record_template` exists, the layout reads the same record; banner deferred on the page |
+| 10 | Every `cookie.*` / `privacy.*` unit in every catalog (Czech mandatory); live checks with `BOLT_BASE_URL`: no tracker script in the homepage HTML, consent configuration rendered, policy returns 200 without placeholders, the homepage links it, its sections (ContentType model), and every cookie that `/`, the policy and each `/<locale>/` homepage set is in the inventory (INV-01) |
 
 Without trackers and embeds the banner checks are skipped and the privacy page is still verified — run this skill on every site. The behaviour that a script cannot see (DevTools before and after a choice, 360 px, keyboard and screen reader) is the manual checklist printed at the end of the run.
 
@@ -298,6 +312,8 @@ Without trackers and embeds the banner checks are skipped and the privacy page i
 
 - **No banner, no consent configuration, privacy page 500.** `theme.yaml` blocks come as Bolt collections: `|column('category')` finds nothing in them (no consent categories, so the banner and `_consent-mode.twig` render nothing) and a key set to `~` (`summary: ~`, `dpo: ~`) throws on access. Every template converts `privacy:` and `analytics:` with `toArray()` before use; `verify.sh` step 3 fails on a copy that does not. Found 2026-10-22 by rendering the examples with their own `theme.privacy.yaml` in Bolt 6.1.9.
 - **A tracker ID without inventory never loads.** That is intended: add the items to `privacy.cookies` first.
+- **…and inventory without a tracker ID asks for consent to nothing.** `_ga` items with an empty `analytics.ga4_id` still make the banner ask for analytics consent, and the policy describes processing (and a transfer to Google) that never happens. When the tracker is not used, remove its cookies together with the purpose and recipient that describe it; the banner and "Nastavení cookies" then disappear on their own. `verify.sh` step 2 warns. Found 2026-10-31 in an audit of a site prepared for GA that never got an ID.
+- **Multilingual sites set a session cookie.** Bolt's `LocaleSubscriber` writes the locale into the session on every `/<locale>/` page, so `/en/…` sets `PHPSESSID` (lifetime `framework.session.cookie_lifetime`, 8 h with bolt-security-hardening) even on a site without forms. It is necessary (language preference, § 89/3 ZEK) but must be listed. `privacy-config.php` adds it whenever `app_locales` has more than one locale; `verify.sh` step 10 compares the `Set-Cookie` headers of `/`, the policy and every `/<locale>/` homepage with the inventory. With no consent category there is no banner, so `bolt-cookie-consent` (localStorage) is never written — do not list it.
 - **`theme.yaml` is cached.** Clear Bolt's cache after every change, or the banner keeps the old configuration (and the old `config_version`).
 - **Changing purposes, controllers, recipients or categories** without bumping `config_version` leaves earlier consents in force for processing they never covered (CB-42).
 - **`preconnect` / `dns-prefetch` to `googletagmanager.com`, `c.seznam.cz` …** contacts the provider before consent. Do not add them.
