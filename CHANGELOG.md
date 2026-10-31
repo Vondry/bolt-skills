@@ -2,6 +2,34 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+From an audit of a live site. `bolt-cookie-consent` accepts the privacy data in a ContentType as well as in `theme.yaml`, and its checks compare the cookie inventory with what the site sets. The htaccess and legal checks no longer fail on things that are right.
+
+### Added
+- `bolt-cookie-consent`: **data model in a ContentType** (SKILL.md § 2). A ContentType whose `cookies` collection has a `category` field — e.g. a `privacy` singleton the editors maintain — is a valid alternative to `theme.yaml` `privacy:`. `verify.sh` detects it, and `check-privacy.php --contenttype=<slug>` reads the published record through the project's kernel and Doctrine and validates its inventory like `privacy.cookies`. The rendered page is then checked for the record template, the layout reading the same record, the section anchors, and the footer link.
+- `bolt-cookie-consent` `verify.sh` step 10: every cookie that `/`, the policy and each `/<locale>/` homepage set must be in the inventory (INV-01), and the homepage must link the policy.
+- `bolt-cookie-consent` `check-privacy.php`, both models:
+  - a warning when a tracker's cookies are listed (`_ga`, `_gcl_*`, `_fbp`, Sklik) but its ID in `analytics:` is empty — the banner asks for consent to something that never loads;
+  - a warning when `bolt-cookie-consent` is listed although no item needs consent (there is no banner, so the choice is never stored);
+  - an `INVENTORY:` output line with every listed name.
+- `bolt-cookie-consent` catalog `locale_session` (`PHPSESSID`, necessary, 8 h). `privacy-config.php` adds it on every multilingual site: Bolt's `LocaleSubscriber` writes the locale into the session on each `/<locale>/` page, so those pages set the session cookie even without a form. With `--necessary=session` the form purpose joins the same item. New pitfalls in SKILL.md cover this cookie and the banner without a tracker.
+
+### Fixed
+- `bolt-htaccess` `verify.sh`: the live probes send `X-Forwarded-Proto: https` to local URLs, as `check-delivery.php` does. Against `serve-apache.sh` every probe used to see only the root HTTPS redirect. Non-local URLs get no extra header.
+- `bolt-legal-cz` `check-site.php`:
+  - a chamber list entry („Ev. č. ČAK: 12345“, „komora“) counts as the register entry (ID-04), also without `--operator`;
+  - an English IČO label („Company ID“, „Company registration no.“, „Business ID“) is recognised on translated pages, so the identity in an English footer counts for ID-05;
+  - consumer-information pages count as legal documents: the statutory „sleva“ remedy there no longer triggers the SP-05 discount warning, and the providers' IČOs listed there no longer count as „other IČO“.
+
+### Changed
+- `bolt-contenttypes` rule 8: `label` is reserved by Bolt's notices widget, not by a getter. `item.label` renders today through `Field::__call()`, but a future getter would shadow it. Renaming a field in use needs its stored rows renamed too.
+- `bolt-audit`: the checklist accepts both cookie-consent data models and adds INV-01 and the `--operator=profession` hint. A new pitfall covers local live checks that read a developer's `.env.local` (debug token, foreign `Host`, `X-Robots-Tag: noindex`), and how to simulate production with real environment variables on `serve-apache.sh`.
+
+### Migrating a project
+- Multilingual sites: list the session cookie (`PHPSESSID`, necessary, the `framework.session.cookie_lifetime`) in the inventory — `verify.sh` step 10 now fails without it.
+- Sites with tracker cookies listed but no tracker ID: set the ID, or remove those items together with the purpose and recipient that describe them.
+
 ## 1.12.1 — 2026-10-31
 
 ShellCheck notes fixed. Results are unchanged for normal project paths.
