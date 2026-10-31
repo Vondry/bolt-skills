@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.12.1 — 2026-10-31
+
+ShellCheck notes fixed. Results are unchanged for normal project paths.
+
+### Fixed
+- `bolt-theme-init/scaffold.sh` and `bolt-cookie-consent/verify.sh` quote the path they strip from file names (`${dest#"$PROJECT_ROOT"/}`). A project path with `[`, `*` or `?` printed the full path instead of the relative one (SC2295).
+- `bolt-helper-pages/verify.sh`: removed `find_setcontent_tags()`, which was never called, and `has_setcontent_tag()`, unused since `has_db_lookup()` replaced it (SC2329).
+
 ## 1.12.0 — 2026-10-31
 
 The sites move to PHP 8.4: they require `"php": "^8.4"`, and the CI template tests 8.4 and 8.5. Bolt 6 itself still runs on 8.2, and so does this plugin.
