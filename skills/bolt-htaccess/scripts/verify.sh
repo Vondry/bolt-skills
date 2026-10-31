@@ -349,10 +349,16 @@ fi
 # -------------------------------------------------------------
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
 BASE_URL="${BASE_URL%/}"
+# A local Apache (bolt-asset-caching/scripts/serve-apache.sh) answers plain HTTP: tell the root
+# .htaccess HTTPS redirect that a TLS proxy is in front, as check-delivery.php does — otherwise
+# every probe below only sees that redirect.
+LOCAL_PROTO="X-Forwarded-Proto:"  # curl: "Name:" sends no header
+echo "$BASE_URL" | grep -qE '^http://(127\.0\.0\.1|localhost|\[::1\])(:|/|$)' && LOCAL_PROTO="X-Forwarded-Proto: https"
+live_curl() { curl -H "$LOCAL_PROTO" "$@"; }
 echo -n "[6/6] Checking live HTTP responses against $BASE_URL... "
 # 10 s: a production site on a cold cache (or behind a CDN) often needs more than 2 s; a closed
 # port still fails at once.
-if curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
+if live_curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     echo "SERVER ONLINE"
 
     THEME_NAME=$(grep -E "^theme:" config/bolt/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"' | tr -d "'" || true)
@@ -366,7 +372,7 @@ if curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     )
 
     for p in "${TEST_PATHS[@]}"; do
-        STATUS=$(curl -s -k -o /dev/null -w "%{http_code}" "$BASE_URL$p" || true)
+        STATUS=$(live_curl -s -k -o /dev/null -w "%{http_code}" "$BASE_URL$p" || true)
         if [ "$STATUS" = "403" ] || [ "$STATUS" = "404" ]; then
             echo "  $p -> HTTP $STATUS (SAFE / PROTECTED)"
         else
@@ -377,7 +383,7 @@ if curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
 
     # A built asset must still be served — with the static-file headers.
     if [ -f "public/theme/$THEME_NAME/css/index.css" ]; then
-        HEADERS=$(curl -s -k -D - -o /dev/null "$BASE_URL/theme/$THEME_NAME/css/index.css" || true)
+        HEADERS=$(live_curl -s -k -D - -o /dev/null "$BASE_URL/theme/$THEME_NAME/css/index.css" || true)
         STATUS=$(echo "$HEADERS" | head -n 1 | awk '{print $2}')
         if [ "$STATUS" = "200" ]; then
             echo "  /theme/$THEME_NAME/css/index.css -> HTTP 200 (built asset served)"
@@ -401,7 +407,7 @@ if curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
         echo "  SKIPPED: /index.php/… not requested — without the Pitfall 10 rules in public/.htaccess (section 2)"
         echo "           the request would put the script path into Bolt's cached canonical links and llms.txt."
     else
-        TARGET=$(curl -s -k -o /dev/null --max-time 10 -w "%{http_code} %{redirect_url}" "$BASE_URL/index.php/bolt-htaccess-probe?x=1" || true)
+        TARGET=$(live_curl -s -k -o /dev/null --max-time 10 -w "%{http_code} %{redirect_url}" "$BASE_URL/index.php/bolt-htaccess-probe?x=1" || true)
     fi
     case "$TARGET" in
         skip) ;;
