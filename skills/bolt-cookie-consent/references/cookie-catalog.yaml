@@ -37,8 +37,9 @@ necessary_optional:
       expiry: { cs: 'do zavření prohlížeče', en: 'until the browser is closed' }
       transfer: false
   # Added automatically on multilingual sites (more than one locale): Bolt writes the locale into
-  # the session on every /<locale>/ page (LocaleSubscriber), so those pages set the session cookie
-  # even without a form. PHPSESSID is PHP's default session name; the expiry is the 8 h
+  # the session whenever the URL names one (LocaleSubscriber) — every /<locale>/ page, an explicit
+  # /cs/…, any ?_locale= — so those pages set the session cookie even without a form (SKILL.md
+  # pitfalls has the full table). PHPSESSID is PHP's default session name; the expiry is the 8 h
   # framework.session.cookie_lifetime of bolt-security-hardening — measure both on the live site.
   # With --necessary=session too, the form purpose is appended to this one item (same cookie).
   locale_session:

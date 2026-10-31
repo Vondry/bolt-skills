@@ -104,7 +104,8 @@ $localize = static function ($value) use (&$localize, $locales) {
 // Cookies / similar technologies (INV-01, INV-02). The consent record exists only with a banner.
 $cookies = ($trackers || $embeds) ? $catalog['necessary'] : [];
 // A multilingual site sets the session cookie on its /<locale>/ pages (Bolt keeps the locale in
-// the session); with forms as well it is still one cookie, so the form purpose joins that item.
+// the session whenever the URL names one); with forms as well it is still one cookie, so the form
+// purpose joins that item. A single-language site sets it only for /cs/… or ?_locale= URLs.
 if (count($locales) > 1) {
     $session = $catalog['necessary_optional']['locale_session'];
     if (in_array('session', $necessaryExtra, true)) {

@@ -417,8 +417,9 @@ if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     fi
 
     # INV-01: every cookie the site sets itself is in the inventory. Bolt writes the locale into the
-    # session on every /<locale>/ page (LocaleSubscriber), so a multilingual site sets a session
-    # cookie on its secondary-locale pages even without forms — request those too.
+    # session whenever the URL names one (LocaleSubscriber: /<locale>/…, /cs/…, ?_locale=), so a
+    # multilingual site sets a session cookie on its secondary-locale pages even without forms —
+    # request those too. ?_locale= is left out: normal navigation never produces it.
     if [ "$CATEGORIES" != "unknown" ]; then
         DEFAULT_LOCALE=$(grep -E '^\s+locale:' config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/.*locale:[[:space:]]*['\"]?([a-z_A-Z]+).*/\1/")
         COOKIE_PATHS="/ /zasady-ochrany-osobnich-udaju"

@@ -103,7 +103,7 @@ never "keep, record as deviation".
 ## 16. bolt-cookie-consent
 - **Script:** the data model — `theme.yaml` `privacy:` or a privacy ContentType's record (SKILL.md, "Data model in a ContentType"; both are compliant) — banner wiring and compliance, wording, hard-coded trackers, footer, privacy page and route, translations, live HTML, and the cookies the site sets (`/`, the policy, every `/<locale>/` homepage) against the inventory.
 - **Review:** projects built before this skill may have neither model, so most script failures are a **deviation** (another banner implementation). Judge the existing banner and policy against `skills/bolt-cookie-consent/references/guidelines.cs.md` directly — that is where the **defects** are:
-  - INV-01: the inventory matches what the site sets — no `_ga` items while `analytics.ga4_id` is empty (the banner then asks for consent to nothing), and the session cookie of a multilingual site listed (Bolt sets it on `/<locale>/` pages).
+  - INV-01: the inventory matches what the site sets — no `_ga` items while `analytics.ga4_id` is empty (the banner then asks for consent to nothing), and the session cookie of a multilingual site listed (Bolt sets it whenever the URL names a locale: `/<locale>/…`, `/cs/…`, `?_locale=`; bolt-cookie-consent pitfalls).
   - CB-01: tracker (GA, Sklik, Meta, Hotjar, embeds, Google Fonts) loaded before a choice — read the master layout and the profile's "Tracking found" line; with `--base-url`, fetch the homepage HTML.
   - CB-10–CB-12 / DP-01–DP-02: Reject in layer 1, a button, same styling as Accept.
   - CB-20 / DP-03: no pre-ticked categories; CB-30: settings link in the footer; CB-05: no "používáním webu souhlasíte".
