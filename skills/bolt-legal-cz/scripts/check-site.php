@@ -81,7 +81,7 @@ $links = static function (string $html, string $pageUrl): array {
 // Downloads and images are not pages; legal documents (terms, privacy) name other businesses and
 // quote prices and discounts in a contractual context, so some checks skip them.
 $files = '~\.(xml|pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?)(\?|$)~i';
-$legalDocument = static fn (string $url): bool => preg_match('~podmink|osobnich|udaju|gdpr|zasady|privacy|cookie|smlouv|dpa|reklamac|odstoup|terms~i', $url) === 1;
+$legalDocument = static fn (string $url): bool => preg_match('~podmink|osobnich|udaju|gdpr|zasady|privacy|cookie|smlouv|dpa|reklamac|odstoup|terms|spotrebitel|consumer~i', $url) === 1;
 $legalWords = '~kontakt|o-nas|o-mne|obchodni|podmink|reklama|odstoup|gdpr|osobnich|ochrana|impressum|pravni|vop|terms|contact|about|complaint|withdraw~i';
 $queue = [$finalUrl];
 foreach ($links($homeHtml, $finalUrl) as $link) {
@@ -139,7 +139,8 @@ $pagesMatching = static function (string $pattern, bool $html = false) use ($pag
 $allText = implode("\n", array_column($pages, 'text'));
 
 // ---------------------------------------------------------------- ID-03 IČO
-$icoPattern = '~\bI\.?\s?Č\.?\s?(?:O\.?)?\s*[:.]?\s*((?:\d\s?){7}\d)\b~u';
+// The Czech label, or the English one of a translated page ("Company ID: 12345678").
+$icoPattern = '~(?:\bI\.?\s?Č\.?\s?(?:O\.?)?|(?i:\b(?:company|business)\s+(?:id|identification\s+number|reg(?:istration)?\.?\s+no\.?)))\s*[:.]?\s*((?:\d\s?){7}\d)\b~u';
 $found = [];
 $icoPages = [];
 foreach ($pages as $url => $page) {
@@ -220,7 +221,8 @@ if ($ares !== null) {
 $registryPatterns = [
     'trade' => '~živnostensk\w*\s+rejstř|živnostensk\w*\s+úřad|zapsan\w*\s+v\s+živnost~iu',
     'company' => '~obchodní\w*\s+rejstř|spisov\w+\s+značk|oddíl\s+[A-Z][a-z]?\b.{0,20}vložk~iu',
-    'profession' => '~komor\w*|seznam\w*\s+advokát|evidenc\w*|registr\w*~iu',
+    // Chamber lists are often abbreviated: „Ev. č. ČAK: 12345“.
+    'profession' => '~komor\w*|seznam\w*\s+advokát|evidenc\w*|registr\w*|\bev\.\s*č\.|\bČAK\b~iu',
     'other' => '~rejstř\w*|evidenc\w*|komor\w*~iu',
 ];
 if (isset($registryPatterns[$operator])) {
@@ -234,7 +236,8 @@ if (isset($registryPatterns[$operator])) {
                 : 'the register or chamber list and number',
         } . ' (ID-04, § 435 OZ)');
 } else {
-    preg_match('~rejstř|evidenc|spisov\w+\s+značk~iu', $identityText) ? $ok('a registration entry is stated (ID-04)')
+    // Operator type unknown (no --operator, no --ares): any register, or a chamber list entry.
+    preg_match('~rejstř|evidenc|spisov\w+\s+značk|komor\w*|\bev\.\s*č\.~iu', $identityText) ? $ok('a registration entry is stated (ID-04)')
         : $fail('no registration entry next to the IČO — živnostenský / obchodní rejstřík or other register (ID-04, § 435 OZ)');
 }
 if ($ares !== null && $ares['vr'] && $ares['insert'] !== null) {
