@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.14.0 — 2026-10-31
 
 Interface text is the same on every page, in every language. Also: iframes in rich text are the operator's decision, and three checks no longer fail on things that are right.
 
