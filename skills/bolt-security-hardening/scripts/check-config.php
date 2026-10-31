@@ -318,7 +318,8 @@ if ($badTags !== []) {
     out('FAIL', 'htmlcleaner.allowed_tags allows ' . implode(', ', $badTags) . ' — remove them.');
 }
 if (in_array('iframe', $tags, true)) {
-    out('WARN', 'htmlcleaner.allowed_tags allows iframe (its src is not filtered) — remove it; embeds use _consent-embed.twig.');
+    // The operator's decision: editors may embed rich content and are responsible for it (section 4).
+    out('INFO', 'htmlcleaner.allowed_tags allows iframe — editors can embed any page (its src is not filtered); keep it as the operator\'s decision.');
 }
 if (($bolt['reset_password_settings']['show_already_requested_password_notice'] ?? false) === true) {
     out('WARN', 'reset_password_settings.show_already_requested_password_notice: true reveals which e-mail addresses have an account — set false.');

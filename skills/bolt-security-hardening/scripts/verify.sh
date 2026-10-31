@@ -52,6 +52,7 @@ while IFS= read -r line; do
         PASS) pass "$message" ;;
         WARN) warn "$message" ;;
         FAIL) fail "$message" ;;
+        INFO) echo "  ℹ $message" ;;
         *) [ -n "$line" ] && echo "  $line" ;;
     esac
 done < <(php "$SCRIPT_DIR/check-config.php" "$BASE_DIR" 2>&1)

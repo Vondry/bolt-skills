@@ -20,8 +20,9 @@ query_search:
   ignore_empty: true
 
 # Sanitised HTML (every redactor / article field, see bolt-contenttypes rule 7). <iframe> is left
-# out: its src is not filtered, so an editor could embed any page, including javascript: URLs.
-# Video and maps go through partials/_consent-embed.twig (bolt-cookie-consent) instead.
+# out by default: its src is not filtered, so an editor could embed any page, including
+# javascript: URLs. Add it when the operator lets editors embed rich content (their
+# responsibility, recorded in the site plan); theme embeds go through partials/_consent-embed.twig.
 htmlcleaner:
   allowed_tags: [ div, span, p, br, hr, s, u, strong, em, i, b, li, ul, ol, mark, blockquote, cite, pre, code, tt, h1, h2, h3, h4, h5, h6, dd, dl, dt, table, tbody, thead, tfoot, th, td, tr, a, img, address, abbr, caption, sub, sup, figure, figcaption, article, section, small ]
   allowed_attributes: [ id, class, style, name, value, href, src, alt, title, width, height, target, colspan, rowspan, rel, download, hreflang ]
