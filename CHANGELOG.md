@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.13.0 — 2026-10-31
 
 From an audit of a live site. `bolt-cookie-consent` accepts the privacy data in a ContentType as well as in `theme.yaml`, and its checks compare the cookie inventory with what the site sets. The htaccess and legal checks no longer fail on things that are right.
 
