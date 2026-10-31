@@ -4,11 +4,25 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 
 ## Unreleased
 
+Interface text is the same on every page, in every language. Also: iframes in rich text are the operator's decision, and three checks no longer fail on things that are right.
+
 ### Added
-- `bolt-theme-templates`: `components/ui/lightbox-labels.twig` renders the translated PhotoSwipe labels. Every `.photoswipe-gallery` container includes it, so all galleries on all pages say the same; `product.record.twig` uses it and `scaffold.sh` copies it.
+- `bolt-theme-templates`: `components/ui/lightbox-labels.twig` renders the translated PhotoSwipe labels. Every `.photoswipe-gallery` container includes it, so all galleries on all pages say the same. `product.record.twig` uses it, `scaffold.sh` copies it, and the bolt-theme-init `photoswipe.ts` example and SKILL.md name it.
+- `bolt-theme-templates` `verify.sh` step 7 (the steps are now 11):
+  - fails on a gallery container without the lightbox labels;
+  - on a multilingual site, warns on an `aria-label` typed in one language instead of coming from the catalog (brand names such as Facebook excepted).
+
+### Changed
+- `bolt-security-hardening`: allowing `iframe` in `htmlcleaner.allowed_tags` is the operator's decision. Editors can then embed rich content and are responsible for it. `check-config.php` reports it as information (a new `INFO` line in `verify.sh`), not a warning. The SKILL.md table and the example comment explain the trade-off; the example still leaves it out by default.
 
 ### Fixed
-- `bolt-theme-templates` `check-search.php`: a page under `/<locale>/` is searched on `/<locale>/search` and compared with that locale's results. English headings were searched on the default-locale page, so multilingual sites failed.
+- `bolt-theme-templates` `check-search.php`: a page under `/<locale>/` is searched on `/<locale>/search` and compared with that locale's results. English headings used to be searched on the default-locale page, so multilingual sites failed.
+- `bolt-contenttypes`: a slug without `uses` fails only when its ContentType has a text field to generate it from. A slug the editors type (a year, a code) next to no text field is fine. The failure now suggests that field.
+- `bolt-tailwind-theme` `verify.sh`: the missing `--color-accent` warning appears only when the theme's templates read `var(--color-accent)`; themes whose helper pages use their own tokens no longer warn.
+- `bolt-audit` checklist: bolt-theme-templates lists the new checks.
+
+### Migrating a project
+- Add `components/ui/lightbox-labels.twig` and include it on every `.photoswipe-gallery` container, replacing typed-in `data-pswp-*` labels. Add the `gallery.*` units to every catalog and let `photoswipe.ts` read the labels (bolt-theme-init example). Then run `verify.sh`.
 
 ## 1.13.1 — 2026-10-31
 
