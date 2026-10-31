@@ -236,7 +236,7 @@ Follow the standard theme architecture from `bolt-theme-init` (Integration Contr
 | Hook | Element | Behaviour |
 | :--- | :--- | :--- |
 | `[data-sticky-header]` | `<header id="site-header">` | Height subtracted from anchor scroll targets (`auto-scroll.ts`) |
-| `[data-dropdown-toggle="<id>"]` → `#<id>.dropdown` | Submenu button and panel (`components/nav/dropdown.twig`) | Accordion: click / ArrowDown opens, Escape / outside click closes, `aria-expanded` and `inert` kept in sync, height animated via `.dropdown` |
+| `[data-dropdown-toggle="<id>"]` → `#<id>.dropdown` | Submenu button and panel (`components/nav/dropdown.twig`) | Accordion: click / ArrowDown opens, Escape / a press outside closes, `aria-expanded` and `inert` kept in sync, height animated via `.dropdown` |
 | `[data-menu-toggle]` | `#menu-toggle` button; `data-label-open` / `data-label-close` hold the translated `aria-label`s | Opens the drawer |
 | `[data-mobile-menu="drawer"]` | `<aside id="mobile-drawer" role="dialog" aria-modal="true">` (starts `inert`, `aria-hidden="true"`, `translate-x-full`) — a modal dialog for screen readers, matching the focus trap | Slide-in drawer with focus trap and body scroll lock |
 | `[data-menu-backdrop]` | `#menu-backdrop` | Shown with the drawer; a click closes it |
@@ -464,7 +464,7 @@ Accessible dropdown driven by the accordion in `menu.ts`:
 {#
   Pure Component: Accessible Navigation Dropdown
   Behaviour comes from js/src/menu.ts (bolt-theme-init): click or ArrowDown opens the
-  panel, Escape or a click outside closes it, `aria-expanded` and `inert` stay in sync.
+  panel, Escape or a press outside closes it, `aria-expanded` and `inert` stay in sync.
   The panel uses `.dropdown` (overflow: hidden; height: 0; height transition) from the
   Tailwind source; padding and borders sit on the inner element so the height animates.
 

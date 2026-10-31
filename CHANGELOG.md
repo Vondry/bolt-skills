@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+- `bolt-theme-init` `menu.ts`: a tap outside an open dropdown or collapse menu closes it on phones too. The dropdowns listened for `click` on the document, and iOS Safari sends no click for a tap on text, images or plain sections. The listener was also added only on `transitionend` (never, under `prefers-reduced-motion`), and when the panel was closed with its own button it stayed behind and shut the panel again on the next open. The collapse menu had no outside close at all. `onPressOutside()` now uses `pointerdown` + `pointerup` (a scroll gesture ends in `pointercancel` and closes nothing) and is registered once per panel. A panel closed during its opening animation no longer reopens to `height: auto`.
+
+### Migrating a project
+- Copy `onPressOutside()` and its three uses from the bolt-theme-init `menu.ts` example. A site with its own dropdown code (the `closeOnClickInDocument` pattern) replaces that function the same way: one `onPressOutside([button, panel], …)` per toggle, guarded by `aria-expanded`, plus a click listener on the panel for `#` links.
+
 ## 1.14.0 — 2026-10-31
 
 Interface text is the same on every page, in every language. Also: iframes in rich text are the operator's decision, and three checks no longer fail on things that are right.

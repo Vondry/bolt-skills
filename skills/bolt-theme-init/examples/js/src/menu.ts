@@ -21,6 +21,37 @@
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * Call `close` when a press starts and ends outside every element in `inside`
+ * (an open panel and the button that opened it).
+ *
+ * Pointer events, not `click`: iOS Safari sends no click for a tap on content
+ * that is not itself clickable (text, images, plain sections), so a click
+ * listener on the document never hears the tap that should dismiss the menu.
+ * The close runs on `pointerup`, before the click, so a panel that collapses
+ * in the page flow has not moved the content yet when that click lands. A
+ * press that turns into a scroll ends in `pointercancel` and closes nothing,
+ * the same as a click would.
+ */
+const onPressOutside = (inside: Element[], close: () => void): void => {
+    const isOutside = (target: EventTarget | null): boolean =>
+        !(target instanceof Node && inside.some((el) => el.contains(target)));
+    let pressedOutside = false;
+    // Capture phase, so a widget that stops propagation (a carousel, a lightbox) cannot swallow the press.
+    const options = { capture: true, passive: true };
+
+    document.addEventListener('pointerdown', (event: PointerEvent) => {
+        pressedOutside = event.isPrimary && event.button === 0 && isOutside(event.target);
+    }, options);
+    document.addEventListener('pointercancel', () => {
+        pressedOutside = false;
+    }, options);
+    document.addEventListener('pointerup', (event: PointerEvent) => {
+        if (pressedOutside && isOutside(event.target)) close();
+        pressedOutside = false;
+    }, options);
+};
+
 // ── Dropdown accordions ─────────────────────────────────────────────────
 
 const DROPDOWN_TOGGLE = 'data-dropdown-toggle';
@@ -52,26 +83,6 @@ const closeDropdown = (button: Element, panel: HTMLElement, height: string | nul
     });
 };
 
-/**
- * Close the panel on any click outside it, and on clicks of in-page links
- * (links containing "#"), whose target may be on the current page.
- */
-const closeOnClickInDocument = (button: Element, panel: HTMLElement): void => {
-    const listener = (event: MouseEvent): void => {
-        const target = event.target as HTMLElement | null;
-        const isHashLink = !!target?.closest('a')?.getAttribute('href')?.includes('#');
-
-        if ((target && button.contains(target)) || (target && panel.contains(target) && !isHashLink)) {
-            return;
-        }
-
-        closeDropdown(button, panel, null);
-        document.removeEventListener('click', listener);
-    };
-
-    document.addEventListener('click', listener);
-};
-
 document.querySelectorAll<HTMLElement>(`[${DROPDOWN_TOGGLE}]`).forEach((button) => {
     const panelId = button.getAttribute(DROPDOWN_TOGGLE);
     const panel = panelId ? document.getElementById(panelId) : null;
@@ -97,13 +108,24 @@ document.querySelectorAll<HTMLElement>(`[${DROPDOWN_TOGGLE}]`).forEach((button) 
         button.setAttribute('aria-expanded', 'true');
 
         panel.addEventListener('transitionend', () => {
-            // `auto` lets nested panels expand their parent after the animation.
-            panel.style.height = 'auto';
-            closeOnClickInDocument(button, panel);
+            // `auto` lets nested panels expand their parent after the animation —
+            // unless the panel was closed again before the opening animation ended.
+            if (button.getAttribute('aria-expanded') === 'true') panel.style.height = 'auto';
         }, { once: true });
     };
 
     button.addEventListener('click', toggle);
+
+    // A press outside the trigger and the panel closes it; so does an in-page link
+    // inside it (a "#" link may scroll the current page instead of leaving it).
+    onPressOutside([button, panel], () => {
+        if (button.getAttribute('aria-expanded') === 'true') closeDropdown(button, panel, null);
+    });
+    panel.addEventListener('click', (event: MouseEvent) => {
+        if (button.getAttribute('aria-expanded') === 'true' && (event.target as Element).closest('a[href*="#"]')) {
+            closeDropdown(button, panel, null);
+        }
+    });
 
     // ArrowDown on the trigger opens the panel and focuses its first item.
     button.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -158,6 +180,10 @@ if (opener && mobileMenu) {
         opener.addEventListener('click', () => setOpen(mobileMenu.clientHeight === 0));
         closers.forEach((el) => el.addEventListener('click', () => setOpen(false)));
         mobileMenu.querySelectorAll('a[href]').forEach((link) => link.addEventListener('click', () => setOpen(false)));
+        // A press anywhere outside the open panel and its button closes it.
+        onPressOutside([opener, mobileMenu], () => {
+            if (mobileMenu.clientHeight !== 0) setOpen(false);
+        });
         // Escape closes the open panel and returns focus to the menu button.
         document.addEventListener('keydown', (event: KeyboardEvent) => {
             if (event.key !== 'Escape' || mobileMenu.clientHeight === 0) return;
