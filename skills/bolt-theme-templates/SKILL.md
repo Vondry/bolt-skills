@@ -1221,7 +1221,7 @@ Bolt registers `/search` and `/{_locale}/search` on **every** site (GET and POST
 
 Bolt picks the template in this order: `search_results_template` in `theme.yaml`, then in `config/bolt/config.yaml` (default `search.twig`), then `listing_template`. When none fits, the page answers 500 or renders the listing template without a form. `scaffold.sh` installs the three files below and the root entrypoint `search.twig` (`{% extends 'pages/search/search.twig' %}`), which matches Bolt's default.
 
-Rules the example follows (and `verify.sh` step 10 checks):
+Rules the example follows (and `verify.sh` step 11 checks):
 - **Results stay in the visitor's locale.** The form submits to the current route (`search` or `search_locale` with its `_locale`), never to `path('search')`, which is always the default locale. A header search box outside the search page passes `action: path('search_locale', { _locale: app.request.locale })` on secondary locales.
 - **The term is escaped exactly once, where it is printed.** Bolt runs the term through its HTML cleaner, which keeps the allowed tags (`<b>`, `<img>`, `<a>` …). `{{ __(…) }}` printed directly is not escaped, so there the parameter is `searchTerm|e` (the `<title>`). A `__()` result passed to a component is a plain string that the component escapes (`section-header`'s `typo()`, `empty-state`), so there the parameter is the plain term — `|e` would show `&lt;b&gt;` and `&amp;amp;`. A component that prints a parameter with `|raw` needs the `|e` again.
 - **Result pages are `noindex, follow`** and have their own `<title>`.
@@ -1421,12 +1421,13 @@ bash skills/bolt-theme-templates/scripts/verify.sh
 4. **Page Orchestrator Conventions**: every template in `pages/` (outside `components/`) `{% extends %}` a layout.
 5. **Locale Link Safety**: Audits `locale_link(...)` wrapping on template URLs.
 6. **Translation trap**: reports `__('key')|default(...)`.
-7. **Undefined classes**: colour/token utilities used in templates but missing from the compiled `css/index.css` (e.g. a token name that `bolt-tailwind-theme` does not define). Classes with an arbitrary value (`border-b-(length:--hairline)`, `text-[0.9rem]`) name no token and are not checked.
-8. **Canonical classes**: fails when a class has a shorter canonical form (`scripts/canonical-classes.mjs`, see below).
-9. **Twig Syntax Linting**: Runs `bin/console lint:twig public/theme/<active_theme>` to catch any syntax bugs.
-10. **Search page**: the template Bolt will render exists; no form posts to `path('search')`; no `{{ __(…) }}` printed directly carries the term without `|e`. Then live, against `BOLT_BASE_URL` or — when it is not set — PHP's built-in server started for the check (`scripts/php-server-router.php`, trusted hosts lifted for `127.0.0.1`), `scripts/check-search.php`:
+7. **Same interface text everywhere**: fails on a `.photoswipe-gallery` container without `components/ui/lightbox-labels.twig` (PhotoSwipe would show English buttons there); on a multilingual site, warns on an `aria-label` typed in one language instead of coming from the catalog (brand names such as Facebook excepted).
+8. **Undefined classes**: colour/token utilities used in templates but missing from the compiled `css/index.css` (e.g. a token name that `bolt-tailwind-theme` does not define). Classes with an arbitrary value (`border-b-(length:--hairline)`, `text-[0.9rem]`) name no token and are not checked.
+9. **Canonical classes**: fails when a class has a shorter canonical form (`scripts/canonical-classes.mjs`, see below).
+10. **Twig Syntax Linting**: Runs `bin/console lint:twig public/theme/<active_theme>` to catch any syntax bugs.
+11. **Search page**: the template Bolt will render exists; no form posts to `path('search')`; no `{{ __(…) }}` printed directly carries the term without `|e`. Then live, against `BOLT_BASE_URL` or — when it is not set — PHP's built-in server started for the check (`scripts/php-server-router.php`, trusted hosts lifted for `127.0.0.1`), `scripts/check-search.php`:
     - `/search` answers 200 with a `searchTerm` form;
-    - a real term returns results with HTTP 200: the longest word of a page's `<h1>` (from `sitemap.xml`), and the results must link to that page — more often than the page for a term without matches does, so menu links do not count. `BOLT_SEARCH_TERM=word` skips the guess;
+    - a real term returns results with HTTP 200: the longest word of a page's `<h1>` (from `sitemap.xml`), searched on that page's own locale (`/<locale>/search` for a page under `/<locale>/`), and the results must link to that page — more often than the page for a term without matches does, so menu links do not count. `BOLT_SEARCH_TERM=word` skips the guess;
     - a term without matches answers 200; markup in the term is not printed as markup (this catches every path, including components that print with `|raw`);
     - every secondary locale from `app_locales`: `/<locale>/search` answers 200, its form submits to `/<locale>/search`, and the results link to `/<locale>/` pages.
     The step fails when no site can be reached: the search page is always verified.
@@ -1451,7 +1452,7 @@ Write every class in its canonical form — the named token utility, not the arb
    node vendor/tomvondracek/bolt-skills/skills/bolt-theme-templates/scripts/canonical-classes.mjs --fix  # rewrite the templates in place
    cd public/theme/<theme> && npm run prod
    ```
-   `verify.sh` step 8 runs the report and fails until it is clean.
+   `verify.sh` step 9 runs the report and fails until it is clean.
 
 **Review before `--fix` — a value match is not a meaning match.** The suggestion only says that a token has the same value. A spacing-scale step is already canonical, so the script drops Tailwind's suggestions that replace one with a named token (`size-18` → `size-header` when `--spacing-header: 4.5rem`); it still turns arbitrary values into tokens. When the token has another role, add a semantic token instead and run the check again: a subpage H1 written as `text-[clamp(2.25rem,4vw,3.5rem)]` would become `text-slogan` (the script-font slogan of the same size) — define `--text-page` (with `--text-page--line-height`) and use `text-page`.
 
@@ -1476,7 +1477,7 @@ Name tokens by role, not by position: `--spacing-page` / `--spacing-page-end` re
 | **Bolt 3 pager API** (`records.pager`, `pager.totalpages`, `makelink`) | Pagination never renders on Bolt 6. | `{{ pager(records, template = 'components/ui/pagination.twig') }}` (Pagerfanta). |
 | **PhotoSwipe attributes on `<img>`** | The lightbox never opens. | `a.photoswipe-gallery__link` inside `.photoswipe-gallery` (`picture.twig` with `pswp: true`). |
 | **`__('key')\|default('…')`** | The key is shown instead of the text. | Add the key to every catalog. |
-| **No search template** (`search_results_template: search.twig`, file missing) | `/search` answers 500 or renders the listing template without a form — on every site, linked or not. | `scaffold.sh` (section 3 M); `verify.sh` step 10. |
+| **No search template** (`search_results_template: search.twig`, file missing) | `/search` answers 500 or renders the listing template without a form — on every site, linked or not. | `scaffold.sh` (section 3 M); `verify.sh` step 11. |
 | **Search form posting to `path('search')`** | On `/en/search`, pressing Search shows the Czech results. | Submit to the current route (`search-form.twig`). |
 | **Search term unescaped in `{{ __() }}`** | `<img>` or `<a>` from the URL appears in the heading (Bolt's cleaner keeps allowed tags, `__()` printed directly is not escaped). | `searchTerm\|e` where `__()` is printed directly; the plain term where its result goes to a component that escapes — `\|e` there shows `&lt;b&gt;` and `&amp;amp;`. |
 | **„Nalezeno: %count%“** | Only the number is shown: Symfony reads a leading `Word:` as a plural label when `%count%` is passed. | Plural rules: `{1} …\|[2,4] …\|[5,Inf] …`. |

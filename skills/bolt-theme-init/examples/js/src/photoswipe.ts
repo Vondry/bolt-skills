@@ -11,8 +11,9 @@ import PhotoSwipeLightbox from 'photoswipe/lightbox';
  *       .photoswipe-gallery__caption    optional; innerHTML shown as lightbox caption
  *
  * UI labels (PhotoSwipe defaults to English) come from the first gallery's data attributes,
- * rendered from the translation catalog: data-pswp-close-title, data-pswp-zoom-title,
- * data-pswp-arrow-prev-title, data-pswp-arrow-next-title, data-pswp-error-msg.
+ * rendered from the translation catalog by components/ui/lightbox-labels.twig, which every
+ * gallery container includes (so all galleries carry the same values): data-pswp-close-title,
+ * data-pswp-zoom-title, data-pswp-arrow-prev-title, data-pswp-arrow-next-title, data-pswp-error-msg.
  */
 const GALLERY_SELECTOR = '.photoswipe-gallery';
 const LINK_SELECTOR = '.photoswipe-gallery__link';

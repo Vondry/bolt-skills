@@ -50,7 +50,7 @@ WARNINGS=0
 # -------------------------------------------------------------
 # 1. Detect Active Theme
 # -------------------------------------------------------------
-echo -n "[1/10] Detecting active theme... "
+echo -n "[1/11] Detecting active theme... "
 ACTIVE_THEME="default"
 if [ -f "$BOLT_CONFIG" ]; then
     FOUND_THEME=$(grep -E "^theme:" "$BOLT_CONFIG" | head -n 1 | awk '{print $2}' | tr -d '"' | tr -d "'")
@@ -69,7 +69,7 @@ echo "PASSED (Theme: '$ACTIVE_THEME')"
 # -------------------------------------------------------------
 # 2. Check Directory Structure & Layout Shell (Integration Contract)
 # -------------------------------------------------------------
-echo -n "[2/10] Checking architectural directories and partials/_master.twig... "
+echo -n "[2/11] Checking architectural directories and partials/_master.twig... "
 STRUCT_ERRORS=()
 for d in components containers pages; do
     [ -d "$THEME_DIR/$d" ] || STRUCT_ERRORS+=("Missing $d/ folder")
@@ -94,7 +94,7 @@ fi
 # -------------------------------------------------------------
 # 3. Strict Pure Component Audit: ZERO setcontent in components/
 # -------------------------------------------------------------
-echo -n "[3/10] Auditing pure components (ZERO setcontent rule)... "
+echo -n "[3/11] Auditing pure components (ZERO setcontent rule)... "
 SETCONTENT_VIOLATIONS=0
 
 # Find all components directories (both top-level and page-scoped)
@@ -124,7 +124,7 @@ fi
 # -------------------------------------------------------------
 # 4. Page Orchestrator Audit: every page extends a layout
 # -------------------------------------------------------------
-echo -n "[4/10] Auditing page orchestrators in pages/... "
+echo -n "[4/11] Auditing page orchestrators in pages/... "
 if [ -d "$THEME_DIR/pages" ]; then
     PAGE_FILES=$(find "$THEME_DIR/pages" -name "*.twig" ! -path "*/components/*" 2>/dev/null || true)
     PAGE_COUNT=0
@@ -153,7 +153,7 @@ fi
 # -------------------------------------------------------------
 # 5. Link Locale Safety Audit: locale_link usage
 # -------------------------------------------------------------
-echo -n "[5/10] Auditing URL localization safety (locale_link usage)... "
+echo -n "[5/11] Auditing URL localization safety (locale_link usage)... "
 LOCALE_LINKS=$(grep -rn "locale_link(" "$THEME_DIR" --include="*.twig" 2>/dev/null || true)
 if [ -n "$LOCALE_LINKS" ]; then
     echo "PASSED (Found locale_link calls wrapping template URLs)"
@@ -167,7 +167,7 @@ fi
 #    The translator returns the key itself for a missing translation, so the
 #    default never renders; every key must exist in every catalog instead.
 # -------------------------------------------------------------
-echo -n "[6/10] Checking for __('key')|default(...) fallbacks... "
+echo -n "[6/11] Checking for __('key')|default(...) fallbacks... "
 DEFAULT_TRAPS=$(grep -rnE "__\([^)]*\)\|default\(" "$THEME_DIR" --include="*.twig" --exclude-dir=node_modules 2>/dev/null || true)
 if [ -n "$DEFAULT_TRAPS" ]; then
     echo "WARNING"
@@ -179,9 +179,43 @@ else
 fi
 
 # -------------------------------------------------------------
-# 7. Undefined Tailwind Classes (colour/token utilities missing from the build)
+# 7. Same interface text everywhere: lightbox labels on every gallery container, and no
+#    aria-label typed in one language on a multilingual site.
 # -------------------------------------------------------------
-echo -n "[7/10] Checking template classes against the compiled css/index.css... "
+echo -n "[7/11] Checking lightbox labels and translated aria-labels... "
+# Every opening tag whose class list holds photoswipe-gallery (not __link / __caption) must
+# include components/ui/lightbox-labels.twig, or PhotoSwipe shows English buttons there.
+UNLABELLED=$(find "$THEME_DIR" -name "*.twig" -not -path "*/node_modules/*" -print0 2>/dev/null | xargs -0 perl -0777 -ne '
+    s/\{#.*?#\}//gs;
+    while (/<(?:div|figure|section|ul)\b[^>]*?class="[^"]*\bphotoswipe-gallery\b(?!__)[^"]*"[^>]*>/gs) {
+        my $tag = $&;
+        print "$ARGV\n" unless $tag =~ /lightbox-labels|data-pswp-close-title/;
+    }' 2>/dev/null | sort -u || true)
+LOCALE_COUNT=$(grep -E "^\s*app_locales:" config/services.yaml 2>/dev/null | head -n 1 | sed -E "s/[[:space:]]+#.*$//; s/^[[:space:]]*app_locales:[[:space:]]*//" | tr -d "\"'" | tr '|' '\n' | grep -c . || true)
+LITERAL_LABELS=""
+if [ "${LOCALE_COUNT:-1}" -gt 1 ]; then
+    # Brand and social names ("Facebook") are the same in every language; anything else is text.
+    LITERAL_LABELS=$(grep -rnE 'aria-label="[A-Za-zÀ-ž][^"{]*"' "$THEME_DIR" --include="*.twig" --exclude-dir=node_modules --exclude-dir=helper-pages 2>/dev/null \
+        | grep -vE 'aria-label="(Facebook|Instagram|LinkedIn|YouTube|X|Twitter|TikTok|GitHub|WhatsApp|Pinterest)"' || true)
+fi
+if [ -n "$UNLABELLED" ]; then
+    echo "FAILED"
+    echo "  Gallery containers without the lightbox labels (add {{ include('components/ui/lightbox-labels.twig') }}):"
+    echo "$UNLABELLED" | sed "s#^$THEME_DIR/#    - #"
+    FAILED=$((FAILED + 1))
+elif [ -n "$LITERAL_LABELS" ]; then
+    echo "WARNING"
+    echo "  aria-labels typed in one language on a multilingual site — move them to the catalogs (__('a11y.…')):"
+    echo "$LITERAL_LABELS" | head -10 | sed "s#^$THEME_DIR/##; s/^/    - /" | cut -c1-160
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo "PASSED"
+fi
+
+# -------------------------------------------------------------
+# 8. Undefined Tailwind Classes (colour/token utilities missing from the build)
+# -------------------------------------------------------------
+echo -n "[8/11] Checking template classes against the compiled css/index.css... "
 CSS_OUT="$THEME_DIR/css/index.css"
 if [ ! -s "$CSS_OUT" ]; then
     echo "SKIPPED (css/index.css not built yet — run npm run prod in the theme)"
@@ -224,9 +258,9 @@ else
 fi
 
 # -------------------------------------------------------------
-# 8. Canonical Tailwind classes (the IDE's "can be written as" hint)
+# 9. Canonical Tailwind classes (the IDE's "can be written as" hint)
 # -------------------------------------------------------------
-echo -n "[8/10] Checking that Tailwind classes use their canonical (token) form... "
+echo -n "[9/11] Checking that Tailwind classes use their canonical (token) form... "
 CANONICAL_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/canonical-classes.mjs"
 if ! command -v node > /dev/null 2>&1; then
     echo "SKIPPED (node not available)"
@@ -248,9 +282,9 @@ else
 fi
 
 # -------------------------------------------------------------
-# 9. Twig Syntax Linting
+# 10. Twig Syntax Linting
 # -------------------------------------------------------------
-echo -n "[9/10] Linting Twig syntax via bin/console lint:twig... "
+echo -n "[10/11] Linting Twig syntax via bin/console lint:twig... "
 if [ -f "bin/console" ]; then
     if php bin/console lint:twig "$THEME_DIR" > /dev/null 2>&1; then
         echo "PASSED (0 syntax errors in $THEME_DIR)"
@@ -264,9 +298,9 @@ else
 fi
 
 # -------------------------------------------------------------
-# 10. Search page: Bolt serves /search and /{_locale}/search on every site
+# 11. Search page: Bolt serves /search and /{_locale}/search on every site
 # -------------------------------------------------------------
-echo "[10/10] Checking the search page (template, locale, escaping, live results)..."
+echo "[11/11] Checking the search page (template, locale, escaping, live results)..."
 yaml_value() { grep -E "^$1:" "$2" 2>/dev/null | head -n 1 | sed -E "s/^$1:[[:space:]]*//; s/[[:space:]]+#.*$//" | tr -d "\"'"; }
 SEARCH_TEMPLATE=$(yaml_value search_results_template "$THEME_DIR/theme.yaml")
 [ -z "$SEARCH_TEMPLATE" ] && SEARCH_TEMPLATE=$(yaml_value search_results_template "$BOLT_CONFIG")

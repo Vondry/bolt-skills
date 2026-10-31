@@ -91,7 +91,7 @@ never "keep, record as deviation".
 - **Severity hints:** hard-coded navigation → Low; anchors without root slash → Medium (broken on subpages); inaccessible mobile menu → Medium.
 
 ## 14. bolt-theme-templates
-- **Script:** directories and master, zero `setcontent` in components, page orchestrators, `locale_link` usage, `__()|default()` misuse, classes missing from the compiled CSS, `lint:twig`.
+- **Script:** directories and master, zero `setcontent` in components, page orchestrators, `locale_link` usage, `__()|default()` misuse, the lightbox labels on every gallery container and translated `aria-label`s on multilingual sites, classes missing from the compiled CSS, `lint:twig`, and the search page per locale.
 - **Review:** raw HTML volume in `pages/` (Appendix B.1); Bolt 6 pager (`pager(records, …)`, not the Bolt 3 API); images through a picture component with `alt`, dimensions and thumbnails (no full-size originals); heading order; translated strings instead of literals on multilingual sites.
 - **Severity hints:** a page answering 500 (see `http.md`) → High; classes not in the CSS → High (unstyled UI); originals served instead of thumbnails → Medium (performance); literal strings on a multilingual site → Medium.
 
