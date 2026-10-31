@@ -28,25 +28,10 @@ echo " (404 Not Found, 403 Forbidden, 500 Error, 503 Maintenance)"
 echo " Project root: $BASE_DIR"
 echo "=========================================================="
 
-# True when a template contains a real {% setcontent %} tag (Twig comments {# … #} are ignored,
-# so documentation such as "Rules: Zero setcontent." does not count).
-has_setcontent_tag() {
-    perl -0777 -ne 's/\{#.*?#\}//gs; exit(/\{%-?\s*setcontent\b/ ? 0 : 1)' "$1"
-}
-
-# True when a template queries the database: a {% setcontent %} tag or a menu_array() call
-# (comments ignored).
+# True when a template queries the database: a real {% setcontent %} tag or a menu_array() call
+# (Twig comments {# … #} are ignored, so documentation such as "Rules: Zero setcontent." does not count).
 has_db_lookup() {
     perl -0777 -ne 's/\{#.*?#\}//gs; exit(/\{%-?\s*setcontent\b|\bmenu_array\s*\(/ ? 0 : 1)' "$1"
-}
-
-# Lists templates under a directory that contain a real {% setcontent %} tag.
-find_setcontent_tags() {
-    find "$1" -type f -name "*.twig" 2>/dev/null | while IFS= read -r tpl; do
-        if has_setcontent_tag "$tpl"; then
-            echo "$tpl"
-        fi
-    done
 }
 
 FAILED=0

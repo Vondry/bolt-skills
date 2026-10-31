@@ -86,7 +86,7 @@ copy_file() {
     local dest="$2"
     local sed_expr="${3:-}"
     if [ -f "$dest" ] && [ $FORCE -eq 0 ]; then
-        echo "  [skip]   ${dest#$PROJECT_ROOT/} already exists"
+        echo "  [skip]   ${dest#"$PROJECT_ROOT"/} already exists"
         return
     fi
     mkdir -p "$(dirname "$dest")"
@@ -95,7 +95,7 @@ copy_file() {
     else
         cp "$src" "$dest"
     fi
-    echo "  [create] ${dest#$PROJECT_ROOT/}"
+    echo "  [create] ${dest#"$PROJECT_ROOT"/}"
 }
 
 # Write a one-line file unless it exists (or --force).
@@ -103,11 +103,11 @@ write_file() {
     local dest="$1"
     local content="$2"
     if [ -f "$dest" ] && [ $FORCE -eq 0 ]; then
-        echo "  [skip]   ${dest#$PROJECT_ROOT/} already exists"
+        echo "  [skip]   ${dest#"$PROJECT_ROOT"/} already exists"
         return
     fi
     printf '%s\n' "$content" > "$dest"
-    echo "  [create] ${dest#$PROJECT_ROOT/}"
+    echo "  [create] ${dest#"$PROJECT_ROOT"/}"
 }
 
 # 1. Create directory hierarchy (Integration Contract)
