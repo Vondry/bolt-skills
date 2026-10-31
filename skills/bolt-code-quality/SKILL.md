@@ -5,7 +5,7 @@ description: >-
   static analysis, and CI/CD pipelines in a Bolt CMS repository. Configures
   Easy Coding Standard (ECS) with PSR-12/cleanCode rules, PHPStan level max static
   analysis on src/, unified Makefile commands (cscheck, csfix, stancheck, csclear),
-  safe Doctrine migration synchronization, and a GitLab CI matrix for PHP 8.2–8.5.
+  safe Doctrine migration synchronization, and a GitLab CI matrix for PHP 8.4–8.5.
 ---
 
 # Bolt CMS Code Quality, Static Analysis & CI Pipeline
@@ -15,7 +15,7 @@ Maintaining strict code standards and static analysis is essential for stable Bo
 1. **Easy Coding Standard (ECS)** via `ecs.php`: Enforces PSR-12, clean code, `declare(strict_types=1)`, import ordering, and custom fixer rules.
 2. **PHPStan level max** via `phpstan.dist.neon`: The strictest type checking on `src/` with Symfony and Doctrine extension support.
 3. **Task Automation** via `Makefile`: Standard developer targets (`cscheck`, `csfix`, `stancheck`, `csclear`), development database workflows (`db-update`, `db-reset`) and the production migration target (`db-migrate`).
-4. **Automated CI/CD** via `.gitlab-ci.yml`: PHPStan across PHP 8.2–8.5 (ECS once — style does not depend on the PHP version), pinned and signature-checked tool downloads, Composer caching, Twig, XLIFF, and YAML syntax validation, and `composer audit` / `npm audit` for known vulnerabilities (`make audit` locally).
+4. **Automated CI/CD** via `.gitlab-ci.yml`: PHPStan across PHP 8.4–8.5 (ECS once, on 8.4 — the PHP version the project requires), pinned and signature-checked tool downloads, Composer caching, Twig, XLIFF, and YAML syntax validation, and `composer audit` / `npm audit` for known vulnerabilities (`make audit` locally).
 
 ---
 
@@ -331,10 +331,10 @@ db-migrate: ## [prod] to run pending Doctrine migrations (what Bolt recommends a
 
 ### Step 5: Configure GitLab CI (`.gitlab-ci.yml`)
 
-Create or update `.gitlab-ci.yml` at the root:
+Create or update `.gitlab-ci.yml` at the root. The matrix starts at the PHP version the project requires: `"php": "^8.4"` in `composer.json`, `ARG PHP_VERSION=8.4` in the `Dockerfile`. A lock file resolved on 8.4 can hold packages that need 8.4, so jobs on an older PHP fail at `composer install`.
 
 ```yaml
-# GitLab CI: lint the Bolt CMS project (ECS + PHPStan) across PHP 8.2 – 8.5.
+# GitLab CI: lint the Bolt CMS project (ECS + PHPStan) across PHP 8.4 – 8.5.
 #
 # Linting is defined via the composer scripts in composer.json:
 #   composer lint     -> vendor/bin/ecs check       (Easy Coding Standard)
@@ -371,11 +371,12 @@ stages:
     - export COMPOSER_CACHE_DIR="$CI_PROJECT_DIR/.composer-cache"
     - composer install --prefer-dist --no-progress --no-scripts
 
-# Code style does not depend on the PHP version: one run is enough.
+# One ECS run is enough, on the PHP version the project requires: some fixers depend on it
+# (on 8.4 MbStrFunctionsFixer asks for mb_trim() instead of trim()), so it must match local.
 ecs:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - composer lint
 
@@ -383,7 +384,7 @@ phpstan:
   extends: .lint
   parallel:
     matrix:
-      - PHP_VERSION: [ "8.2", "8.3", "8.4", "8.5" ]
+      - PHP_VERSION: [ "8.4", "8.5" ]
   script:
     - composer phpstan
 
@@ -392,7 +393,7 @@ phpstan:
 twig:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - php bin/console lint:twig public/theme/<theme_name>
 
@@ -401,7 +402,7 @@ twig:
 xliff:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - php bin/console lint:xliff translations
 
@@ -410,7 +411,7 @@ xliff:
 yaml:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - php bin/console lint:yaml config --parse-tags
 
@@ -419,7 +420,7 @@ yaml:
 composer-audit:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - composer audit --locked
 
@@ -489,3 +490,11 @@ make stancheck
   - **Doctrine `getResult()` / `getSingleColumnResult()`:** assign the result to a variable typed with `/** @var list<Entity> $rows */`. The DQL guarantees the type; PHPStan just can't see it.
   - **Casting `mixed`** (`(int) $value`, `(string) $value`) is itself an error at max: check first, then cast the scalar.
   - Don't reach max with a baseline or `@phpstan-ignore` comments.
+
+### Pitfall 5: Switching a Project to a New PHP Version
+- **Symptom:** after moving a project from PHP 8.2 to 8.4, CI fails on the old versions, ECS reports `MbStrFunctionsFixer` (`trim()` → `mb_trim()`), or a fresh `composer update` leaves dozens of new files behind.
+- **Solution:** change every pin together, then resolve the dependencies on the new PHP:
+  - `"php": "^8.4"` in `composer.json` (drop a direct `symfony/polyfill-php84` requirement, it only served 8.2 and 8.3), `ARG PHP_VERSION=8.4` in the `Dockerfile`, and the CI versions from Step 5.
+  - `composer update` running on PHP 8.4, then `make csfix` for the `mb_*` functions ECS asks for and `make stancheck`.
+  - Keep `symfony.lock`. Without it Flex treats every package as new and runs all its recipes again. They add skeleton files Bolt projects don't use, such as `src/ApiResource/`, `templates/`, `webpack.config.js`, extra `config/routes/*.yaml` and a Postgres service in `compose.yaml`. If it was deleted anyway, keep the regenerated lock, restore the changed tracked files (`git checkout -- .gitignore compose.yaml`) and delete the new untracked ones.
+  - Production must run the new PHP before the next deploy: Composer's platform check stops a `vendor/` built for `^8.4` with a fatal error on an older PHP.

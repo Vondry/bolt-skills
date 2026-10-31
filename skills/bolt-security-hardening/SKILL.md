@@ -298,7 +298,7 @@ and Redactor's inline styles need.
 * **Document root.** If the host lets you point the domain at `public/`, do it; otherwise the root `.htaccess` of `bolt-htaccess` forwards into `public/`. Check that `/.env`, `/composer.json` and `/var/data/bolt.sqlite` answer 403 or 404 (verify.sh does).
 * **Dependencies.** Prefer uploading a `vendor/` built with `composer install --no-dev --optimize-autoloader` (`make install_prod`), then restore the dev tools locally with `composer install`. With `APP_ENV=prod` the dev bundles are not loaded even if they are uploaded.
 * **After every upload** delete `var/cache/prod/` on the server (or run `bin/console cache:clear` where SSH exists) — config changes, including everything in this skill, take effect only then.
-* **PHP settings** in the host's panel: `display_errors` off, `expose_php` off, a supported PHP version (8.2+). `.htaccess` hides `X-Powered-By` anyway.
+* **PHP settings** in the host's panel: `display_errors` off, `expose_php` off, PHP 8.4 or newer (what the project requires in `composer.json`; Composer's platform check stops an older one). `.htaccess` hides `X-Powered-By` anyway.
 
 ---
 

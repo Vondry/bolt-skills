@@ -45,7 +45,7 @@ class LocaleLinkExtension extends AbstractExtension
      */
     public function localeLink(string $path): string
     {
-        $path = trim($path);
+        $path = mb_trim($path);
 
         // Absolute URLs (and protocol-relative ones) are external — leave them untouched,
         // as long as the scheme is one a link may safely use.

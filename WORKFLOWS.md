@@ -332,7 +332,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 **Goal:** the project boots with correct time handling, known locales, no public API, hardened security configuration and code-quality tooling in place.
 
 **Prerequisites:**
-- A Bolt 6.1 project that boots: `composer create-project bolt/project <dir>`, SQLite from Bolt's default `.env` (set `DATABASE_URL` in `.env.local` only for another local database), `php bin/console bolt:setup --no-fixtures` (no sample content), local server reachable at the URL recorded as `BOLT_BASE_URL`.
+- A Bolt 6.1 project that boots on PHP 8.4: `composer create-project bolt/project <dir>` run on PHP 8.4, with `"php": "^8.4"` in its `composer.json` (the `bolt-code-quality` CI tests 8.4–8.5), SQLite from Bolt's default `.env` (set `DATABASE_URL` in `.env.local` only for another local database), `php bin/console bolt:setup --no-fixtures` (no sample content), local server reachable at the URL recorded as `BOLT_BASE_URL`.
 - Skills installed: `composer require --dev tomvondracek/bolt-skills`.
 - Git initialised with a clean baseline commit.
 - Node.js and npm available (needed from Phase 4).

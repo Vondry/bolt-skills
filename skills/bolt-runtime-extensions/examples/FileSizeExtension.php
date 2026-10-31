@@ -56,7 +56,7 @@ class FileSizeExtension extends AbstractExtension
 
         $number = number_format($value, $power === 0 ? 0 : $decimals, $decimalPoint, '');
         if (str_contains($number, $decimalPoint)) {
-            $number = rtrim(rtrim($number, '0'), $decimalPoint);
+            $number = mb_rtrim(mb_rtrim($number, '0'), $decimalPoint);
         }
 
         return $number . ' ' . $units[$power];
@@ -80,7 +80,7 @@ class FileSizeExtension extends AbstractExtension
         }
 
         $publicDir = realpath($this->projectDir . '/public');
-        $realPath = realpath($this->projectDir . '/public/' . ltrim(rawurldecode($urlPath), '/'));
+        $realPath = realpath($this->projectDir . '/public/' . mb_ltrim(rawurldecode($urlPath), '/'));
 
         // realpath() resolves "..", so this also rejects paths climbing out of public/
         // (the value can come from editable content).

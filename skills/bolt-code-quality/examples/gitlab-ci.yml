@@ -1,4 +1,4 @@
-# GitLab CI: lint the Bolt CMS project (ECS + PHPStan) across PHP 8.2 – 8.5.
+# GitLab CI: lint the Bolt CMS project (ECS + PHPStan) across PHP 8.4 – 8.5.
 #
 # Linting is defined via the composer scripts in composer.json:
 #   composer lint     -> vendor/bin/ecs check       (Easy Coding Standard)
@@ -35,11 +35,12 @@ stages:
     - export COMPOSER_CACHE_DIR="$CI_PROJECT_DIR/.composer-cache"
     - composer install --prefer-dist --no-progress --no-scripts
 
-# Code style does not depend on the PHP version: one run is enough.
+# One ECS run is enough, on the PHP version the project requires: some fixers depend on it
+# (on 8.4 MbStrFunctionsFixer asks for mb_trim() instead of trim()), so it must match local.
 ecs:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - composer lint
 
@@ -47,7 +48,7 @@ phpstan:
   extends: .lint
   parallel:
     matrix:
-      - PHP_VERSION: [ "8.2", "8.3", "8.4", "8.5" ]
+      - PHP_VERSION: [ "8.4", "8.5" ]
   script:
     - composer phpstan
 
@@ -56,7 +57,7 @@ phpstan:
 twig:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - php bin/console lint:twig public/theme/<theme_name>
 
@@ -65,7 +66,7 @@ twig:
 xliff:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - php bin/console lint:xliff translations
 
@@ -74,7 +75,7 @@ xliff:
 yaml:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - php bin/console lint:yaml config --parse-tags
 
@@ -83,7 +84,7 @@ yaml:
 composer-audit:
   extends: .lint
   variables:
-    PHP_VERSION: "8.3"
+    PHP_VERSION: "8.4"
   script:
     - composer audit --locked
 

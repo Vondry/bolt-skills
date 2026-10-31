@@ -34,7 +34,13 @@ echo "bolt-build preflight"
 echo "Tools"
 if command -v php > /dev/null; then
     PHP_V=$(php -r 'echo PHP_VERSION;')
-    version_ge "$PHP_V" "8.2.0" && ok "php $PHP_V" || block "php $PHP_V — Bolt 6 needs PHP 8.2 or newer"
+    if ! version_ge "$PHP_V" "8.2.0"; then
+        block "php $PHP_V — Bolt 6 needs PHP 8.2 or newer"
+    elif ! version_ge "$PHP_V" "8.4.0"; then
+        warn "php $PHP_V — the sites require PHP ^8.4 (bolt-code-quality CI tests 8.4–8.5); switch before Phase 1"
+    else
+        ok "php $PHP_V"
+    fi
     for ext in pdo intl gd mbstring fileinfo; do
         php -m 2>/dev/null | grep -qi "^$ext$" || block "PHP extension '$ext' missing"
     done

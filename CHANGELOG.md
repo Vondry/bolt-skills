@@ -2,6 +2,22 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+The sites move to PHP 8.4: they require `"php": "^8.4"`, and the CI template tests 8.4 and 8.5. Bolt 6 itself still runs on 8.2, and so does this plugin.
+
+### Changed
+- `bolt-code-quality` `examples/gitlab-ci.yml` and Step 5: PHPStan on 8.4 and 8.5. ECS and the single jobs (Twig, XLIFF, YAML, `composer audit`) run on 8.4. ECS results depend on the PHP version (`MbStrFunctionsFixer` asks for `mb_trim()` only on 8.4+), so its comment no longer says they don't. Step 5 says the matrix starts at the project's required PHP. The description and the pipeline summary now say 8.4–8.5.
+- `bolt-runtime-extensions` examples use `mb_trim()` and `mb_rtrim()` where they used `trim()`, `rtrim()` and `ltrim()` (`LocaleLinkExtension`, `FileSizeExtension`), so ECS passes on 8.4. On 8.2 and 8.3 the functions come from `symfony/polyfill-php84`, which `bolt/core` requires.
+- `bolt-build` `preflight.sh` warns below PHP 8.4. It still blocks below 8.2.
+- WORKFLOWS Phase 1 prerequisites: the project boots on PHP 8.4 with `"php": "^8.4"`. `bolt-security-hardening` asks for PHP 8.4+ in the host's panel.
+
+### Added
+- Pitfall 5 in `bolt-code-quality`: switching a project to a new PHP version. Change every pin together, run `composer update` on the new PHP, then `make csfix`. Keep `symfony.lock`: without it Flex re-runs every recipe and adds skeleton files. Production must run the new PHP before the deploy.
+
+### Migrating a project
+- Run Pitfall 5 of `bolt-code-quality`: set `"php": "^8.4"`, drop a direct `symfony/polyfill-php84` requirement, set `ARG PHP_VERSION=8.4` in the `Dockerfile`, take the CI versions from `examples/gitlab-ci.yml`, run `composer update` on 8.4, then `make csfix` and `make stancheck`.
+
 ## 1.11.0 — 2026-10-30
 
 `bolt-code-quality` sets PHPStan to `level: max` instead of `level: 8`. Max adds one thing to level 8: no unchecked `mixed`, so values PHPStan can't type (Bolt config, `Content::getFieldValue()`, decoded JSON, Doctrine query results) are narrowed before use.
