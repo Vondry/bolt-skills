@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- `bolt-theme-templates`: `components/ui/lightbox-labels.twig` renders the translated PhotoSwipe labels. Every `.photoswipe-gallery` container includes it, so all galleries on all pages say the same; `product.record.twig` uses it and `scaffold.sh` copies it.
+
+### Fixed
+- `bolt-theme-templates` `check-search.php`: a page under `/<locale>/` is searched on `/<locale>/search` and compared with that locale's results. English headings were searched on the default-locale page, so multilingual sites failed.
+
 ## 1.13.1 — 2026-10-31
 
 When Bolt sets its session cookie, measured instead of assumed. Also fixes a 500 that the canonical override caused on Bolt's locale redirect.

@@ -104,6 +104,7 @@ $chrome = $hrefs($noMatch, true);
 $term = isset($options['term']) ? (string) $options['term'] : '';
 $target = null;
 $attempts = [];
+$chromes = [];
 if ($term !== '') {
     [$status, $html] = $get($searchUrl('', $term));
     $attempts[] = "„{$term}“ → HTTP $status";
@@ -139,9 +140,20 @@ if ($term !== '') {
         if (mb_strlen($word) < 4) {
             continue;
         }
-        [$status, $results] = $get($searchUrl('', $word));
+        // A page under /<locale>/ is searched in that locale: its heading is in that language, and
+        // only /<locale>/search links its results under /<locale>/ (the default search links /…).
+        $prefix = '';
+        foreach ($secondary as $locale) {
+            if (str_starts_with($path, "/$locale/")) {
+                $prefix = "/$locale";
+            }
+        }
+        if (! isset($chromes[$prefix])) {
+            $chromes[$prefix] = $prefix === '' ? $chrome : $hrefs($get($searchUrl($prefix, 'zzqxv' . random_int(1000, 9999)))[1], true);
+        }
+        [$status, $results] = $get($searchUrl($prefix, $word));
         // A singleton's record|link is /<contenttype>/<slug>, under its page /<contenttype>
-        $found = $status === 200 && array_filter($resultLinks($results, $chrome), static fn (string $p): bool => $p === $path || str_starts_with($p, $path . '/')) !== [];
+        $found = $status === 200 && array_filter($resultLinks($results, $chromes[$prefix]), static fn (string $p): bool => $p === $path || str_starts_with($p, $path . '/')) !== [];
         $attempts[] = "„{$word}“ (h1 of $path) → HTTP $status" . ($status === 200 ? ($found ? ', page found' : ', page not in the results') : '');
         if ($found) {
             [$term, $target] = [$word, $path];

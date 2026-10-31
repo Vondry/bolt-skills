@@ -94,7 +94,7 @@ copy_file() {
 }
 
 echo "1. Scaffolding pure UI components (components/ui/)..."
-for f in button badge picture card breadcrumbs pagination empty-state section-header; do
+for f in button badge picture card breadcrumbs pagination empty-state section-header lightbox-labels; do
     copy_file "$EXAMPLES_DIR/components/ui/$f.twig" "$THEME_DIR/components/ui/$f.twig"
 done
 

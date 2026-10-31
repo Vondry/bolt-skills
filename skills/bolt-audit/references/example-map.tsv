@@ -92,6 +92,7 @@ bolt-theme-templates	components/ui/button.twig	{theme}/components/ui/button.twig
 bolt-theme-templates	components/ui/card.twig	{theme}/components/ui/card.twig	design
 bolt-theme-templates	components/ui/picture.twig	{theme}/components/ui/picture.twig	logic
 bolt-theme-templates	components/ui/pagination.twig	{theme}/components/ui/pagination.twig	design
+bolt-theme-templates	components/ui/lightbox-labels.twig	{theme}/components/ui/lightbox-labels.twig	logic
 bolt-theme-templates	components/ui/section-header.twig	{theme}/components/ui/section-header.twig	design
 bolt-theme-templates	components/ui/badge.twig	{theme}/components/ui/badge.twig	design
 bolt-theme-templates	components/ui/breadcrumbs.twig	{theme}/components/ui/breadcrumbs.twig	design

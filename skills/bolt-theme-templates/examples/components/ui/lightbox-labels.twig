@@ -1,0 +1,10 @@
+{#
+  components/ui/lightbox-labels.twig — the lightbox's translated button titles and error message, as data
+  attributes for js/src/photoswipe.ts (PhotoSwipe's own are English). Put it on every
+  `.photoswipe-gallery` container, so all galleries on all pages show the same labels:
+
+    <div class="photoswipe-gallery …" {{ include('components/ui/lightbox-labels.twig') }}>
+
+  Units: gallery.close, gallery.zoom, gallery.previous, gallery.next, gallery.error.
+#}
+data-pswp-close-title="{{ __('gallery.close') }}" data-pswp-zoom-title="{{ __('gallery.zoom') }}" data-pswp-arrow-prev-title="{{ __('gallery.previous') }}" data-pswp-arrow-next-title="{{ __('gallery.next') }}" data-pswp-error-msg="{{ __('gallery.error') }}"
