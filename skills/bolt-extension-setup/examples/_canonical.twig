@@ -3,6 +3,10 @@
 
   The URL comes from partials/_canonical.macros.twig, which also feeds og:url and twitter:url.
   See there why it is needed, and when to remove it.
+
+  Named through @theme, like the config: Bolt also renders this template into a redirect it
+  answers without rendering a page (?_locale=xx, a record in a locale its ContentType lacks),
+  when the theme folder is not on Twig's default path yet (SKILL.md section 1.6).
 #}
-{% import 'partials/_canonical.macros.twig' as canonical_url %}
+{% import '@theme/partials/_canonical.macros.twig' as canonical_url %}
 <link rel="canonical" href="{{ canonical_url.url(seo.canonical()) }}">

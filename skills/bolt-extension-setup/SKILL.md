@@ -159,8 +159,9 @@ Point Bolt and bolt-seo at them:
 ```yaml
 # config/bolt/config.yaml
 # Workaround until https://github.com/bolt/core/pull/3735 is released, see
-# partials/_canonical.macros.twig in the theme.
-canonical_template: 'partials/_canonical.twig'
+# partials/_canonical.macros.twig in the theme. Named through @theme: Bolt also renders it into
+# redirects it answers without rendering a page, before the theme folder is on Twig's path.
+canonical_template: '@theme/partials/_canonical.twig'
 ```
 ```yaml
 # config/extensions/appolo-boltseo.yaml
@@ -171,6 +172,7 @@ templates:
 ```
 
 Rules:
+* **`@theme/`, not a bare theme path, in `canonical_template`** (and in `_canonical.twig`'s import). Bolt adds the theme folder to Twig's default path only when a controller renders a page. For an unsupported locale (`/?_locale=de`, or a record under `/<locale>/` that its ContentType's `locales` lack) the controller answers a redirect to the default locale without rendering, yet the canonical widget still renders `canonical_template` into that response. A bare `partials/_canonical.twig` is then not found and the redirect becomes a 500 that anyone can trigger with a query string. `@theme` (registered in `config/packages/twig.yaml`) always resolves. `verify.sh` fails on the bare path and, with `BOLT_BASE_URL`, requests `/?_locale=<unknown>`, which must redirect.
 * **Never fix a mismatch in the admin.** The SEO field's "Canonical Link" (and `override_default.<route>.canonical`) is meant for a page that really belongs under another URL. With the override it sets `<link rel="canonical">`, `og:url` and `twitter:url` alike, as written. Without the override it sets only `og:url`/`twitter:url`. Typing the clean URL into every record per locale would hard-code the host, miss listings (no record) and go stale.
 * **Pages that include `@seo/_metatags.html.twig` themselves** pass `canonical: seo.canonical()` (section 1.5). On their static routes the canonical needs no correction, and the line survives the removal.
 * **Check it:** with `bin/console cache:pool:clear cache.app` first (Bolt caches canonical links for 60 seconds, and `cache:clear` doesn't empty that pool), compare `<link rel="canonical">` with `og:url` on a singleton page, its translation and a listing. They must be equal, slugless and without `?order=…`, and the URL must answer 200.

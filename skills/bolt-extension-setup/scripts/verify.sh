@@ -327,11 +327,28 @@ for PARTIAL in _canonical.twig _canonical.macros.twig _seo_metatags.twig; do
     fi
 done
 
-if grep -qE "^canonical_template:[[:space:]]*['\"]?partials/_canonical\.twig['\"]?[[:space:]]*(#.*)?$" config/bolt/config.yaml 2>/dev/null; then
-    echo "  ✅ config/bolt/config.yaml: canonical_template is 'partials/_canonical.twig'"
-else
-    echo "  ❌ config/bolt/config.yaml: set canonical_template: 'partials/_canonical.twig'"
+# Through @theme: Bolt renders the canonical widget into the redirect it answers for an
+# unsupported locale without rendering a page, before the theme folder is on Twig's default path.
+if grep -qE "^canonical_template:[[:space:]]*['\"]?@theme/partials/_canonical\.twig['\"]?[[:space:]]*(#.*)?$" config/bolt/config.yaml 2>/dev/null; then
+    echo "  ✅ config/bolt/config.yaml: canonical_template is '@theme/partials/_canonical.twig'"
+elif grep -qE "^canonical_template:[[:space:]]*['\"]?partials/_canonical\.twig['\"]?" config/bolt/config.yaml 2>/dev/null; then
+    echo "  ❌ config/bolt/config.yaml: canonical_template 'partials/_canonical.twig' answers 500 to /?_locale=<unknown> — set '@theme/partials/_canonical.twig' (section 1.6)"
     FAILED=1
+else
+    echo "  ❌ config/bolt/config.yaml: set canonical_template: '@theme/partials/_canonical.twig'"
+    FAILED=1
+fi
+
+# Live, when a running site is given: an unknown locale must redirect to the default one, not 500.
+if [ -n "${BOLT_BASE_URL:-}" ] && curl -s -k -o /dev/null --max-time 10 "${BOLT_BASE_URL%/}/" 2>/dev/null; then
+    PROBE=$(curl -s -k -o /dev/null --max-time 20 -w "%{http_code}" "${BOLT_BASE_URL%/}/?_locale=bolt-probe" || true)
+    case "$PROBE" in
+        30[1278]) echo "  ✅ /?_locale=bolt-probe answers $PROBE (redirect to the default locale)" ;;
+        5*) echo "  ❌ /?_locale=bolt-probe answers $PROBE — the canonical template is not found during Bolt's locale redirect (section 1.6)"
+            FAILED=1 ;;
+        *) echo "  ⚠️  /?_locale=bolt-probe answers $PROBE (expected a redirect to the default locale)"
+           WARNINGS=$((WARNINGS+1)) ;;
+    esac
 fi
 
 if grep -qE '^templates:' config/extensions/appolo-boltseo.yaml 2>/dev/null \
