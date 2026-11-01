@@ -10,9 +10,13 @@
       src: 'https://www.youtube-nocookie.com/embed/VIDEO_ID',
       title: 'Prohlídka dílny',
       provider: 'YouTube (Google Ireland Limited)',
-      ratio: 'aspect-video',           {# optional, e.g. 'aspect-square' or 'h-96' for maps #}
-      category: 'third_party'          {# optional #}
+      ratio: 'aspect-video',
+      category: 'third_party'
   } only %}
+
+  ratio and category are optional: ratio defaults to 'aspect-video' (e.g. 'aspect-square', or 'h-96'
+  for maps), category to 'third_party'. Never write a Twig comment (or its closing mark) inside this
+  block: comments do not nest, so it would end this one early and print the rest into the page.
 
   theme.yaml privacy.cookies must list the provider's items in the same category (references/cookie-catalog.yaml → embeds).
   Translation keys: cookie.embed.*, cookie.settings
