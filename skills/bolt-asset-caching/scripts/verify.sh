@@ -153,7 +153,8 @@ elif grep -q "parameterPath()" "$CORE_CONTROLLER"; then
     echo "WARNING"
     echo "  bolt/core ${CORE_VERSION:-<unknown version>} saves thumbnails to public/thumbs/<w>_<h>_<q>_<fit>_<location>/,"
     echo "  a path no thumbnail URL points to: every /thumbs/ request still runs PHP despite save_files: true."
-    echo "  Fixed by bolt/core PR #3828 — upgrade once released, then delete the unused public/thumbs/*_files/ folders."
+    echo "  Upstream bug without a fix in 6.x (bolt/core PRs #3828 / #3829 closed; new thumbnail route planned for"
+    echo "  Bolt 7, bolt/core #3840) — list it as an expected warning; delete public/thumbs/*_files/ once fixed."
     WARNINGS=$((WARNINGS + 1))
 else
     echo "PASSED"

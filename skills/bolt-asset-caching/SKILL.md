@@ -117,7 +117,7 @@ thumbnails:
   1. **First request:** The file does not exist on disk in `public/thumbs/`. The request hits PHP, generates the thumbnail, streams it back to the user, and dumps the binary to `public/thumbs/{parameters}/{filename}`.
   2. **Subsequent requests:** Apache and Nginx find the file directly on disk via standard static file rules and serve it directly with 0 ms PHP overhead!
 
-* **bolt/core 6.0.1 – 6.1.x:** these versions save thumbnails to `public/thumbs/<w>_<h>_<q>_<fit>_<location>/` (e.g. `400_300_80_crop_files/`), a path no thumbnail URL points to. The web server never finds them, so **every `/thumbs/…` request still runs PHP** (with Glide's headers from section 1). Fixed by bolt/core PR #3828; thumbnail URLs stay the same, so after upgrading only delete the unused `public/thumbs/*_files/` folders (locally and on the server). `scripts/verify.sh` detects the affected versions in `vendor/`, and the delivery check (section 4) shows where each thumbnail actually comes from.
+* **bolt/core 6.0.1 – 6.1.x:** these versions save thumbnails to `public/thumbs/<w>_<h>_<q>_<fit>_<location>/` (e.g. `400_300_80_crop_files/`), a path no thumbnail URL points to. The web server never finds them, so **every `/thumbs/…` request still runs PHP** (with Glide's headers from section 1). No fix is coming in 6.x: bolt/core PRs #3828 and #3829 were closed unmerged, and the maintainers plan a new thumbnail route for Bolt 7 (bolt/core #3840). Thumbnails keep working, just through PHP; once a release fixes it, delete the unused `public/thumbs/*_files/` folders (locally and on the server). `scripts/verify.sh` detects the affected versions in `vendor/`, and the delivery check (section 4) shows where each thumbnail actually comes from.
 
 ---
 
@@ -293,7 +293,7 @@ curl -I https://example.com/theme/mytheme/css/index.css?v=1.1
 ### Pitfall 2: Thumbnails Still Served by PHP Despite `save_files: true`
 - **Symptom:** the delivery check reports thumbnails as `2nd PHP`; their responses have `Cache-Control: max-age=31536000, public` but no `ETag` / `Last-Modified`, and `public/thumbs/` fills with folders like `400_300_80_crop_files/`.
 - **Cause:** bolt/core 6.0.1 – 6.1.x save thumbnails to a path no thumbnail URL points to (Step 2).
-- **Fix:** upgrade bolt/core to a release with PR #3828, then delete the unused `public/thumbs/*_files/` folders. Until then thumbnails keep working, just through PHP.
+- **Fix:** none in the project — wait for a bolt/core release that fixes it (PRs #3828 / #3829 were closed unmerged; a new thumbnail route is planned for Bolt 7, bolt/core #3840), then delete the unused `public/thumbs/*_files/` folders. Until then thumbnails keep working through PHP, with Glide's year-long `Cache-Control`; list it as an expected warning in the site plan.
 
 ### Pitfall 3: `public/thumbs/` Directory Permissions
 - **Symptom:** Bolt logs `Cannot dump file public/thumbs/... Permission denied`.
