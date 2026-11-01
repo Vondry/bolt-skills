@@ -136,13 +136,19 @@ document.querySelectorAll<HTMLElement>(`[${DROPDOWN_TOGGLE}]`).forEach((button) 
         }
     });
 
-    // Escape inside the panel closes it and returns focus to the trigger.
-    panel.addEventListener('keydown', (event: KeyboardEvent) => {
-        if (event.key !== 'Escape' || !panel.clientHeight) return;
+    // Escape on the trigger or inside the open panel closes it and returns focus to the trigger.
+    // The trigger matters: a panel opened with the mouse keeps focus on its button, and a panel
+    // without links or buttons (an address card, a note) never receives focus at all.
+    // aria-expanded, not the height, tells whether it was opened: a panel that is always visible
+    // from a breakpoint up (a main menu) must not be collapsed there by a stray Escape.
+    const closeOnEscape = (event: KeyboardEvent): void => {
+        if (event.key !== 'Escape' || button.getAttribute('aria-expanded') !== 'true') return;
         event.preventDefault();
         closeDropdown(button, panel, '0px');
         button.focus();
-    });
+    };
+    button.addEventListener('keydown', closeOnEscape);
+    panel.addEventListener('keydown', closeOnEscape);
 });
 
 // Menus are deliberately not closed on window resize: on iOS, scrolling fires
@@ -184,9 +190,10 @@ if (opener && mobileMenu) {
         onPressOutside([opener, mobileMenu], () => {
             if (mobileMenu.clientHeight !== 0) setOpen(false);
         });
-        // Escape closes the open panel and returns focus to the menu button.
+        // Escape closes the open panel and returns focus to the menu button — unless a dropdown
+        // inside it already handled this Escape (one Escape closes one layer).
         document.addEventListener('keydown', (event: KeyboardEvent) => {
-            if (event.key !== 'Escape' || mobileMenu.clientHeight === 0) return;
+            if (event.key !== 'Escape' || event.defaultPrevented || mobileMenu.clientHeight === 0) return;
             setOpen(false);
             opener.focus();
         });
@@ -253,8 +260,10 @@ if (opener && mobileMenu) {
         opener.addEventListener('click', openDrawer);
         backdrop?.addEventListener('click', closeDrawer);
         closers.forEach((el) => el.addEventListener('click', closeDrawer));
+        // Escape closes the drawer, unless a dropdown inside it already handled this Escape
+        // (one Escape closes one layer: first the submenu, then the drawer).
         document.addEventListener('keydown', (event: KeyboardEvent) => {
-            if (event.key === 'Escape') closeDrawer();
+            if (event.key === 'Escape' && !event.defaultPrevented) closeDrawer();
         });
         // Close once a link inside the drawer is followed — most mobile links are
         // same-page anchors, which would otherwise leave the drawer open.

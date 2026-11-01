@@ -214,12 +214,29 @@ if [ ! -f "$THEME_DIR/css/tailwind/index.css" ]; then
     TOOL_ERRORS+=("Missing css/tailwind/index.css Tailwind entrypoint")
 fi
 
-# Check shared TS modules
-for ts_mod in auto-scroll.ts menu.ts locale-switcher.ts photoswipe.ts; do
+# Shared TS modules. auto-scroll and menu belong to every theme. locale-switcher and photoswipe
+# only where the site needs them (WORKFLOWS 4.5 removes them otherwise): a module is required
+# when js/src/index.ts imports it, and locale-switcher on every multilingual site.
+for ts_mod in auto-scroll.ts menu.ts; do
     if [ ! -f "$THEME_DIR/js/src/$ts_mod" ]; then
         TOOL_ERRORS+=("Missing shared TypeScript module js/src/$ts_mod")
     fi
 done
+for imported in $(grep -sE "^import '\./[A-Za-z0-9_-]+'" "$THEME_DIR/js/src/index.ts" | sed -E "s/^import '\.\/([A-Za-z0-9_-]+)'.*/\1/"); do
+    if [ ! -f "$THEME_DIR/js/src/$imported.ts" ]; then
+        TOOL_ERRORS+=("js/src/index.ts imports './$imported' but js/src/$imported.ts is missing")
+    fi
+done
+APP_LOCALES=$(grep -E '^[[:space:]]+app_locales:' config/services.yaml | head -n 1 | sed -E 's/^[[:space:]]+app_locales:[[:space:]]*//; s/["'"'"']//g; s/[[:space:]]*#.*$//')
+if [[ "$APP_LOCALES" == *"|"* ]] && ! grep -qsE "^import '\./locale-switcher'" "$THEME_DIR/js/src/index.ts"; then
+    TOOL_ERRORS+=("Multilingual site (app_locales: $APP_LOCALES) but js/src/index.ts does not import './locale-switcher'")
+fi
+
+# Twig cache warm-up and lint:twig compile every file of the theme folder, node_modules included
+# (typescript.js alone is 18 MB), and cache:clear runs out of memory: only *.twig are templates.
+if [ -f config/packages/twig.yaml ] && ! grep -qE "^[[:space:]]+file_name_pattern:[[:space:]]*['\"]?\*\.twig" config/packages/twig.yaml; then
+    TOOL_ERRORS+=("config/packages/twig.yaml has no \`file_name_pattern: '*.twig'\` under twig: — cache:clear compiles node_modules and runs out of memory")
+fi
 
 # A gallery in the templates needs the lightbox wired (import, npm dependency, CSS)
 if grep -rqs --include='*.twig' 'photoswipe-gallery' "$THEME_DIR" --exclude-dir=node_modules; then
@@ -246,7 +263,7 @@ if [ ${#TOOL_ERRORS[@]} -gt 0 ]; then
     done
     FAILED=1
 else
-    echo "PASSED (Tailwind v4 CLI, Rollup, shared TS modules & article CSS verified)"
+    echo "PASSED (Tailwind v4 CLI, Rollup, shared TS modules, Twig file pattern & article CSS verified)"
 fi
 
 # -------------------------------------------------------------

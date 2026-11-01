@@ -367,7 +367,7 @@ Every theme initialized with this skill automatically receives a production-test
    - Dynamically measures the sticky header height (`[data-sticky-header]`, `#main-menu`, or `#hlavni-menu`) and subtracts it so target sections are never obscured.
    - Safe against PhotoSwipe hashes (`#&gid=1&pid=2`) and updates URL without clobbering browser history.
 2. **`js/src/menu.ts`** — navigation behaviour for the markup rendered by `bolt-menu`:
-   - **Dropdown accordions** for every `[data-dropdown-toggle="<id>"]` → panel `#<id>` (submenus, locale switcher, breadcrumbs): sets `aria-expanded` / `aria-controls`, keeps closed panels `inert` (out of tab order and a11y tree), animates height 0 ↔ `scrollHeight` and then switches to `height: auto` so nested panels can grow, opens with click or ArrowDown (focusing the first link), closes with Escape (returning focus), a press outside the trigger and the panel, or a click on an in-page link. Panels use the `.dropdown` class (`overflow: hidden; height: 0; transition: height`).
+   - **Dropdown accordions** for every `[data-dropdown-toggle="<id>"]` → panel `#<id>` (submenus, locale switcher, breadcrumbs): sets `aria-expanded` / `aria-controls`, keeps closed panels `inert` (out of tab order and a11y tree), animates height 0 ↔ `scrollHeight` and then switches to `height: auto` so nested panels can grow, opens with click or ArrowDown (focusing the first link), closes with Escape — on the trigger or inside the panel, so also when it was opened with the mouse or holds no links — returning focus to the trigger, a press outside the trigger and the panel, a second click on the trigger, or a click on an in-page link (other links leave the page). Panels use the `.dropdown` class (`overflow: hidden; height: 0; transition: height`).
    - **Mobile menu**, one opener `[data-menu-toggle]` and one panel `[data-mobile-menu]`, in two modes:
      - `data-mobile-menu="drawer"` — slide-in drawer (`translate-x-full`) with `[data-menu-backdrop]`, body scroll lock, focus trap, Escape / backdrop / `[data-menu-close]` / link click closes it, focus returns to the opener.
      - `data-mobile-menu="collapse"` (or the legacy ids `#mobile-menu` / `#mobilni-menu`) — height-animated panel below the header bar between `0` and `scrollHeight`, `.menu-icon-open` / `.menu-icon-close` icon swap, Escape / link click / a press outside the panel and the opener closes it (Escape returns focus to the opener), recalculates height on resize.
@@ -384,7 +384,7 @@ Every theme initialized with this skill automatically receives a production-test
    - Localised UI: PhotoSwipe's English button titles and error message are replaced by the first gallery's `data-pswp-close-title`, `data-pswp-zoom-title`, `data-pswp-arrow-prev-title`, `data-pswp-arrow-next-title` and `data-pswp-error-msg` (rendered from the `gallery.*` translation keys by `components/ui/lightbox-labels.twig` of `bolt-theme-templates`, which every gallery container includes).
    - Keeps up to 12 slides decoded (`contentLoader.limit`) instead of PhotoSwipe's default 5.
    - **Every photo gallery gets this lightbox**, even when the design does not show one (a static design cannot show a click state) — same as the reference sites. Remove the module only when the site has no gallery at all.
-5. **`js/src/index.ts`**: imports the modules above; remove the ones the site does not need (e.g. `photoswipe` together with its npm dependency and CSS `@import` when the site has no gallery). `verify.sh` fails when templates use `.photoswipe-gallery` without the import, the dependency or the CSS. `bolt-cookie-consent` adds `import './cookie-consent';`.
+5. **`js/src/index.ts`**: imports the modules above; remove the ones the site does not need (e.g. `photoswipe` together with its npm dependency and CSS `@import` when the site has no gallery). Delete the file of a module you remove; `verify.sh` requires `locale-switcher.ts` only on multilingual sites and `photoswipe.ts` only where `index.ts` imports it. `verify.sh` fails when templates use `.photoswipe-gallery` without the import, the dependency or the CSS. `bolt-cookie-consent` adds `import './cookie-consent';`.
 6. **`js/splide_4.1.2.min.js` & `css/splide_4.1.2.min.css`**:
    - Standard carousel library and styles ready for immediate use (load them in `{% block head %}` of the pages that use a carousel).
 7. **`css/article/grid.css` & `css/article/utils.css`**:
@@ -433,6 +433,18 @@ php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
 Edit `config/bolt/config.yaml`:
 ```yaml
 theme: <theme-name>
+```
+
+Limit Twig's cache warm-up to templates in `config/packages/twig.yaml` (under `twig:`). The theme
+folder also holds `node_modules/`; without the pattern `bin/console cache:clear` compiles every file
+there as Twig (`typescript.js` alone is 18 MB) and runs out of PHP's 128 MB memory limit. The scaffold
+adds it; `verify.sh` step 6 checks it:
+```yaml
+twig:
+  default_path: '%kernel.project_dir%/vendor/bolt/core/templates'
+  # Warm up and lint only templates: the theme folder also holds node_modules (typescript.js
+  # alone is 18 MB), which the cache warm-up otherwise compiles until it runs out of memory.
+  file_name_pattern: '*.twig'
 ```
 
 ### Step 2: Scaffold Theme Directory Hierarchy
@@ -526,4 +538,5 @@ The script verifies:
 | **Dynamic Tailwind class strings** | Classes like `bg-{{ variant }}-500` are invisible to the Tailwind scanner. | Use static lookup dictionaries (`variant_classes[...]` in Twig). |
 | **Colour names outside the token set** (`stone-*`, `brand`, `ink-800`) | Undefined names generate no CSS; ad-hoc palettes drift from the design. | Use the token names of `bolt-tailwind-theme` (`canvas`, `surface`, `ink`, `accent`, `night`, …). |
 | **Scanning `css/index.css` in `@source`** | Causes a feedback loop where removed utility classes stay alive forever. | Add `@source not "../index.css";` to `css/tailwind/index.css`. |
+| **No `file_name_pattern` in `config/packages/twig.yaml`** | `cache:clear` dies with "Allowed memory size … exhausted" in `Twig/Source.php`: the warm-up compiles `node_modules/` of the theme. | `file_name_pattern: '*.twig'` under `twig:` (Step 1). |
 | **Hardcoding asset paths without `?v=`** | Browsers cache old stylesheets indefinitely after updates. | Use `{{ asset('css/index.css') }}?v={{ theme.assets_version }}` linked to `theme.yaml`. |

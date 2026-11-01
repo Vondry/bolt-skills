@@ -163,6 +163,18 @@ if [ -f "$BOLT_CONFIG" ]; then
     fi
 fi
 
+# 5b. Twig: warm up and lint only templates. The theme folder also holds node_modules (typescript.js
+#     alone is 18 MB); without the pattern the cache warm-up compiles every file and runs out of memory.
+TWIG_CONFIG="$PROJECT_ROOT/config/packages/twig.yaml"
+if [ -f "$TWIG_CONFIG" ] && ! grep -qE '^[[:space:]]+file_name_pattern:' "$TWIG_CONFIG"; then
+    echo "--> Limiting Twig cache warm-up to *.twig in config/packages/twig.yaml..."
+    if grep -qE '^  default_path:' "$TWIG_CONFIG"; then
+        awk '{ print } /^  default_path:/ && !done { print "  # Warm up and lint only templates: the theme folder also holds node_modules (typescript.js"; print "  # alone is 18 MB), which the cache warm-up otherwise compiles until it runs out of memory."; print "  file_name_pattern: '"'"'*.twig'"'"'"; done = 1 }' "$TWIG_CONFIG" > "$TWIG_CONFIG.tmp" && mv "$TWIG_CONFIG.tmp" "$TWIG_CONFIG"
+    else
+        echo "    WARNING: add \`file_name_pattern: '*.twig'\` under twig: in config/packages/twig.yaml by hand."
+    fi
+fi
+
 # 6. Install, update and build (npm)
 if command -v npm &>/dev/null; then
     echo "--> Installing theme npm dependencies..."
