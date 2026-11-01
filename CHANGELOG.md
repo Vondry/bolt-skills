@@ -2,6 +2,30 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.14.2 — 2026-11-01
+
+Fixes found while building pujcovna-dovolena.cz on Bolt 6, checked against six projects. Escape closes a dropdown that holds no links, the live checks work against a local Apache, and the thumbnail and timezone docs match bolt/core.
+
+### Added
+- `bolt-theme-init`: `scaffold.sh` adds `file_name_pattern: '*.twig'` to `config/packages/twig.yaml`, and `verify.sh` step 6 fails without it. Without the pattern, `cache:clear` compiles the theme's `node_modules/` as Twig (`typescript.js` alone is 18 MB) and runs out of memory. Every site so far had added it by hand. SKILL.md documents it in Step 1 and in the pitfalls table.
+
+### Fixed
+- `bolt-theme-init` `menu.ts`:
+  - Escape closes a dropdown when focus is on its trigger, too. Before, it worked only with focus inside the panel, so a panel opened with the mouse, or one with no links or buttons (an address card), could not be closed with the keyboard. The check now uses `aria-expanded` instead of the panel height, so a panel that is always visible from a breakpoint up is not collapsed by a stray Escape.
+  - One Escape closes one layer: the drawer and the collapse menu ignore an Escape that a dropdown inside them already handled. Before, the same Escape closed the submenu and the whole menu together.
+- `bolt-theme-init` `verify.sh`: `locale-switcher.ts` is required only on multilingual sites and `photoswipe.ts` only where `index.ts` imports it, as WORKFLOWS 4.5 says. It also fails when `index.ts` imports a module whose file is missing, and on a multilingual site whose `index.ts` does not import `./locale-switcher`.
+- `bolt-cookie-consent` `examples/_consent-embed.twig`: the usage example in the doc comment held nested `{# … #}` comments. Twig comments do not nest, so the unmodified example printed the rest of its comment into the page. The notes on the optional parameters are now plain text below the snippet, and the snippet can be copied as it is.
+- `bolt-disable-api` `verify.sh`, `bolt-security-hardening` `verify.sh`, `bolt-theme-templates` `check-search.php`: against a local `http://127.0.0.1` / `localhost` URL they send `X-Forwarded-Proto: https`, as the bolt-htaccess and delivery checks already did. A local Apache with the project's root `.htaccess` (`serve-apache.sh`) used to answer every probe with the HTTPS redirect (301). Public domains are not affected.
+- `bolt-timezone` SKILL.md: `Bolt\Entity\Content` stores its dates in UTC and converts them with PHP's zone. The old text said they are stored as zoneless wall time and suggested an `UPDATE` that shifts every date when the zones are aligned; that UPDATE would move every correct date. The warning now says not to shift stored record dates. Only records saved while the zones differed are wrong; fix those in the admin. Media, user and log timestamps are stored in local time.
+- Thumbnails docs (WORKFLOWS limitation 9, `bolt-asset-caching` SKILL.md, `verify.sh`, `check-delivery.php`, bolt-audit checklist): bolt/core PRs #3828 and #3829 were closed unmerged, and a new thumbnail route is planned for Bolt 7 (bolt/core #3840). The docs no longer promise a fix in 6.x: list the warning as expected in the site plan.
+
+### Migrating a project
+- `config/packages/twig.yaml`: add `file_name_pattern: '*.twig'` under `twig:` if it is missing (or run `scaffold.sh`).
+- `js/src/menu.ts` (from the bolt-theme-init example): replace the panel's Escape listener with `closeOnEscape` on both the trigger and the panel, and add `event.defaultPrevented` to the Escape listeners of the drawer and the collapse menu. A site with its own menu code makes the same two changes.
+- A single-language site may delete an unimported `js/src/locale-switcher.ts`, and a site without galleries `photoswipe.ts`.
+- `partials/_consent-embed.twig`: if its doc comment holds a `{# … #}`, replace it from the example.
+- Site plans: drop "fixed once bolt/core #3828 is released" from the expected thumbnail warning.
+
 ## 1.14.1 — 2026-10-31
 
 A tap outside an open menu closes it on phones too.
