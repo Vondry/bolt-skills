@@ -97,6 +97,10 @@ BASE_URL="${BASE_URL%/}"
 # -k: the probes below test the application, not TLS; the certificate of each host is checked
 # separately (without -k) in the host checks.
 CURL=(curl -s -k --max-time 15)
+# A local Apache with the project's root .htaccess (bolt-asset-caching/scripts/serve-apache.sh) answers
+# plain HTTP with the HTTPS redirect: tell it a TLS proxy is in front, as the bolt-htaccess and delivery
+# checks do — otherwise every probe below only sees that redirect. Public domains are not affected.
+echo "$BASE_URL" | grep -qE '^http://(127\.0\.0\.1|localhost|\[::1\])(:|/|$)' && CURL+=(-H "X-Forwarded-Proto: https")
 
 # Host part of a URL (no scheme, port or path).
 url_host() { local h="${1#*://}"; h="${h%%/*}"; echo "${h%%:*}"; }

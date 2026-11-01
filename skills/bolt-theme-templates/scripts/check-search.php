@@ -35,7 +35,14 @@ $ok = static fn (string $message) => print("  ✓ $message\n");
 
 /** @return array{0:int,1:string} status and body; redirects are not followed */
 $get = static function (string $path) use ($base): array {
-    $context = stream_context_create(['http' => ['ignore_errors' => true, 'follow_location' => 0, 'timeout' => 30, 'header' => "User-Agent: bolt-skills-check-search\r\n"]]);
+    // A local Apache with the project's root .htaccess (bolt-asset-caching/scripts/serve-apache.sh)
+    // answers plain HTTP with the HTTPS redirect: tell it a TLS proxy is in front, as the bolt-htaccess
+    // and delivery checks do. Public domains are not affected.
+    $headers = "User-Agent: bolt-skills-check-search\r\n";
+    if (preg_match('#^http://(127\.0\.0\.1|localhost|\[::1\])(:|/|$)#', $base)) {
+        $headers .= "X-Forwarded-Proto: https\r\n";
+    }
+    $context = stream_context_create(['http' => ['ignore_errors' => true, 'follow_location' => 0, 'timeout' => 30, 'header' => $headers]]);
     $body = @file_get_contents($base . $path, false, $context);
     $status = 0;
     foreach ($http_response_header ?? [] as $line) {

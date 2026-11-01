@@ -97,10 +97,16 @@ fi
 
 # 5. Check HTTP Endpoints if server is reachable
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
+# A local Apache with the project's root .htaccess (bolt-asset-caching/scripts/serve-apache.sh) answers
+# plain HTTP with the HTTPS redirect: tell it a TLS proxy is in front, as the bolt-htaccess and delivery
+# checks do — otherwise every probe below only sees that redirect. Public domains are not affected.
+LOCAL_PROTO="X-Forwarded-Proto:"  # curl: "Name:" sends no header
+echo "$BASE_URL" | grep -qE '^http://(127\.0\.0\.1|localhost|\[::1\])(:|/|$)' && LOCAL_PROTO="X-Forwarded-Proto: https"
+live_curl() { curl -H "$LOCAL_PROTO" "$@"; }
 echo -n "[5/5] Checking HTTP endpoints against $BASE_URL... "
 # 10 s: a production site on a cold cache (or behind a CDN) often needs more than 2 s; a closed
 # port still fails at once.
-if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
+if live_curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     echo ""
     # Data endpoints must be refused by the firewall (401/403). 404 there would mean the
     # routes are gone, which breaks the admin (check 1). Documentation and GraphiQL may
@@ -121,7 +127,7 @@ if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
 
     check_endpoint() {
         local ep="$1" allowed="$2" status
-        status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL$ep" || true)
+        status=$(live_curl -s -o /dev/null -w "%{http_code}" "$BASE_URL$ep" || true)
         if [[ " $allowed " == *" $status "* ]]; then
             echo "  $ep -> HTTP $status (BLOCKED/PASSED)"
         else
@@ -145,7 +151,7 @@ if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     # in Bolt's cached links (canonical, llms.txt) for the cache lifetime. The API firewall matches
     # the same path info as the router, so this path cannot bypass it.
     if grep -qE '^\s*RewriteCond\s+%\{THE_REQUEST\}.*index\\\.php' public/.htaccess 2>/dev/null; then
-        FC_RESULT=$(curl -s -o /dev/null -w "%{http_code}|%{content_type}|%{redirect_url}" "$BASE_URL/index.php/api/contents" || true)
+        FC_RESULT=$(live_curl -s -o /dev/null -w "%{http_code}|%{content_type}|%{redirect_url}" "$BASE_URL/index.php/api/contents" || true)
     else
         FC_RESULT="skip||"
     fi
@@ -174,7 +180,7 @@ if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     esac
 
     # Test GraphQL POST
-    GQL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/graphql" \
+    GQL_STATUS=$(live_curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/graphql" \
         -H "Content-Type: application/json" -d '{"query":"{ contents { edges { node { id } } } }"}' || true)
     if [ "$GQL_STATUS" = "401" ] || [ "$GQL_STATUS" = "403" ]; then
         echo "  /api/graphql (POST) -> HTTP $GQL_STATUS (BLOCKED/PASSED)"
