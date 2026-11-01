@@ -22,9 +22,9 @@ This skill details the architectural root cause, the four required configuration
 > **If PHP's runtime timezone and Bolt's configured `timezone` do not match, every save in the Bolt backend shifts publish dates by the timezone offset!**
 
 ### Why this happens:
-1. **Wall-time storage:** Bolt maps its dates (`publishedAt`, `depublishedAt`, `createdAt`, `modifiedAt`) as Doctrine `datetime` columns (`Types::DATETIME_MUTABLE`). They store the date and time **without a zone**: whatever PHP's default timezone says is "now" is what lands in the database.
+1. **UTC storage, converted with PHP's zone:** a record's dates (`publishedAt`, `depublishedAt`, `createdAt`, `modifiedAt`) are Doctrine `datetime` columns without a zone, and `Bolt\Entity\Content` keeps them in **UTC**: the setters convert the given `DateTime` to UTC, the getters read the stored value as UTC and return it in PHP's default timezone. (Other entities — media, users, the log — store PHP's local time as it is.)
 2. **Admin Display:** The Bolt Admin panel displays and accepts date inputs formatted in the timezone configured in `config/bolt/config.yaml` (`timezone: Europe/Prague`).
-3. **Normalization & Conversion:** During record persistence and form normalization, Bolt converts date strings back into `DateTime` objects using PHP's current runtime timezone (`date_default_timezone_get()`).
+3. **Normalization & Conversion:** On save, `ContentEditController` turns the posted date string — which carries no zone — into a `DateTime` with `new Carbon(…)`, i.e. in PHP's current runtime timezone (`date_default_timezone_get()`), and the setter converts that to UTC.
 4. **The Glitch:**
    If PHP's runtime timezone defaults to `UTC` (standard in bare Linux, Docker, or unconfigured PHP) while `config/bolt/config.yaml` is set to `Europe/Prague`:
    - An editor opens an article with publish date `14:00` Prague time.
@@ -32,9 +32,7 @@ This skill details the architectural root cause, the four required configuration
    - After saving the article 3 times in the admin, the publish date has shifted forward by **6 hours**, potentially pushing the article into the future and unpublishing it!
 
 > [!WARNING]
-> **Changing the zone of a live site moves every stored date.** Because the database holds wall time without a zone, switching PHP from `UTC` to `Europe/Prague` makes every existing `14:00` (meant as UTC) display as `14:00` Prague time — one or two hours off. Before changing a site that already has content, decide: shift the stored values once (`UPDATE … SET published_at = published_at + INTERVAL …`, per DST period), or accept the offset on old records. New sites have nothing to migrate.
->
-> Wall time also repeats one hour each October (DST end): two records saved at 02:30 in that hour cannot be ordered by the stored value. Harmless for publishing, worth knowing for logs.
+> **Do not shift stored record dates when you align the zones.** Record dates are stored in UTC and converted on read, so switching PHP from `UTC` to `Europe/Prague` keeps every instant: a record published at 10:18 UTC shows 12:18 in Prague before and after the change (checked against bolt/core 6.1 by reading the same record under both zones). An `UPDATE … SET published_at = published_at + INTERVAL …` would move every correct date by the offset. Only dates that the bug itself shifted (records saved while the zones differed) are wrong, by whole hours per save — fix those record by record in the admin. Media, user and log timestamps are stored in PHP's local time, so their display moves by the offset once; nothing depends on them for publishing.
 
 **Other zones:** the skill uses `Europe/Prague` as the house default. For another zone, use the same value in every layer below and run the verification with `--timezone=Area/City`.
 
