@@ -49,7 +49,7 @@ composer require --dev \
   phpstan/phpstan-deprecation-rules:^2.0
 ```
 
-Enable the extension installer plugin and add scripts to `composer.json`:
+Enable the extension installer plugin, add the scripts and let `composer audit` report abandoned packages instead of failing on them:
 
 ```json
 {
@@ -61,12 +61,17 @@ Enable the extension installer plugin and add scripts to `composer.json`:
   "config": {
     "allow-plugins": {
       "phpstan/extension-installer": true
+    },
+    "audit": {
+      "abandoned": "report"
     }
   }
 }
 ```
 
 *Note: With `phpstan/extension-installer: true`, Symfony and Doctrine extension rules are loaded automatically by PHPStan.*
+
+*Note: `audit.abandoned: report` (or `composer config audit.abandoned report`) is required for `make audit` and the `composer-audit` CI job. Composer's default for `audit.abandoned` is `fail`, so `composer audit` exits 1 for an abandoned package even when there is no security advisory, and bolt/core 6 requires the abandoned `composer/package-versions-deprecated`, so without it the audit fails on every Bolt 6 project. Security advisories still fail the audit.*
 
 ---
 
@@ -292,6 +297,7 @@ csfix: ## to fix coding style
 stancheck: ## to run phpstan
 	composer phpstan
 
+# composer.json needs config.audit.abandoned "report": bolt/core 6 requires an abandoned package (Step 1)
 audit: ## to check PHP and npm dependencies for known vulnerabilities (bolt-security-hardening)
 	composer audit --locked
 	cd public/theme/<theme_name> && npm audit --omit=dev
@@ -417,6 +423,8 @@ yaml:
 
 # Known vulnerabilities in the locked PHP packages (bolt-security-hardening, Step 8). Also add a
 # weekly pipeline schedule (Build → Pipeline schedules) so new advisories show up without a commit.
+# Needs config.audit.abandoned "report" in composer.json: bolt/core 6 requires the abandoned
+# composer/package-versions-deprecated, which fails the audit by default (audit.abandoned: fail).
 composer-audit:
   extends: .lint
   variables:
@@ -446,7 +454,7 @@ skills/bolt-code-quality/scripts/verify.sh
 The script verifies:
 1. `ecs.php` existence, PHP syntax validity, and paths configuration; warns on the deprecated `BracesFixer` / `NewWithBracesFixer` (older copies of the example — take the current `examples/ecs.php`).
 2. `phpstan.dist.neon` existence, `level: max` verification (`level: 8` is a warning), and paths configuration.
-3. `composer.json` scripts (`lint`, `lint:fix`, `phpstan`) and dev dependencies.
+3. `composer.json` scripts (`lint`, `lint:fix`, `phpstan`) and dev dependencies; fails when the Makefile or `.gitlab-ci.yml` runs `composer audit` but `config.audit.abandoned` is not `report` / `ignore`.
 4. `Makefile` targets (`cscheck`, `csfix`, `stancheck`, `csclear`, `db-update`; `db-migrate` recommended for production).
 5. `.gitlab-ci.yml` lint stage and validation jobs (ECS, PHPStan, Twig, XLIFF, YAML).
 6. Executes dry-run linting and static analysis if binaries are installed.

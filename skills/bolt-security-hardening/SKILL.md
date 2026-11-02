@@ -310,7 +310,9 @@ composer audit                                  # advisories for Bolt, Symfony a
 composer outdated 'bolt/*'                      # Bolt releases security fixes in minor versions
 ```
 
-`bolt-code-quality` adds both audits as `make audit` and as a CI job. Bolt 5 projects should move to
+`bolt-code-quality` adds both audits as `make audit` and as a CI job, with `config.audit.abandoned: report`
+in `composer.json`: bolt/core 6 requires the abandoned `composer/package-versions-deprecated`, which
+otherwise fails `composer audit` with no advisory (Composer's default is `audit.abandoned: fail`). Bolt 5 projects should move to
 Bolt 6: the skills target 6, and Bolt 5's `security.yaml` has no login throttling at all.
 
 ---

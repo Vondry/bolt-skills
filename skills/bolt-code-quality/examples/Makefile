@@ -41,6 +41,7 @@ csfix: ## to fix coding style
 stancheck: ## to run phpstan
 	composer phpstan
 
+# composer.json needs config.audit.abandoned "report": bolt/core 6 requires an abandoned package (Step 1)
 audit: ## to check PHP and npm dependencies for known vulnerabilities (bolt-security-hardening)
 	composer audit --locked
 	cd public/theme/<theme_name> && npm audit --omit=dev

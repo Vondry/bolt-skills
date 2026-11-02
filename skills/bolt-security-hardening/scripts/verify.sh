@@ -83,6 +83,12 @@ if command -v composer > /dev/null 2>&1 && [ -f composer.lock ]; then
     else
         echo "  - composer audit could not run (offline?) — run it manually."
     fi
+    # Abandoned packages fail `composer audit` (exit 1) by default (audit.abandoned: fail), which breaks
+    # `make audit` and the CI job although there is no advisory (bolt/core 6 requires one).
+    if echo "$AUDIT_OUTPUT" | grep -qiE "Found [0-9]+ abandoned package" \
+        && ! php -r '$j = json_decode((string) file_get_contents("composer.json"), true); exit(in_array($j["config"]["audit"]["abandoned"] ?? "", ["report", "ignore"], true) ? 0 : 1);' 2>/dev/null; then
+        warn "composer audit fails on abandoned packages (bolt/core requires composer/package-versions-deprecated) — run 'composer config audit.abandoned report' (bolt-code-quality Step 1)."
+    fi
 else
     echo "  - composer or composer.lock not available — run 'composer audit' manually."
 fi

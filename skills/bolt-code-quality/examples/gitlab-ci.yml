@@ -81,6 +81,8 @@ yaml:
 
 # Known vulnerabilities in the locked PHP packages (bolt-security-hardening, Step 8). Also add a
 # weekly pipeline schedule (Build → Pipeline schedules) so new advisories show up without a commit.
+# Needs config.audit.abandoned "report" in composer.json: bolt/core 6 requires the abandoned
+# composer/package-versions-deprecated, which fails the audit by default (audit.abandoned: fail).
 composer-audit:
   extends: .lint
   variables:

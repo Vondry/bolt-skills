@@ -47,7 +47,17 @@ else
     HAS_LINT_FIX_SCRIPT=$(grep -E "\"lint:fix\":\s*\"" "$COMPOSER_JSON" || true)
     HAS_STAN_SCRIPT=$(grep -E "\"phpstan\":\s*\"" "$COMPOSER_JSON" || true)
 
-    if [ -n "$HAS_ECS_PKG" ] && [ -n "$HAS_STAN_PKG" ] && [ -n "$HAS_LINT_SCRIPT" ] && [ -n "$HAS_LINT_FIX_SCRIPT" ] && [ -n "$HAS_STAN_SCRIPT" ]; then
+    # `composer audit` fails on abandoned packages by default (audit.abandoned: fail), and bolt/core 6
+    # requires the abandoned composer/package-versions-deprecated: without audit.abandoned
+    # report/ignore, `make audit` and the composer-audit CI job fail with no advisory at all.
+    RUNS_AUDIT=$(grep -lE "composer audit" Makefile .gitlab-ci.yml 2>/dev/null | tr '\n' ' ' || true)
+    ABANDONED_MODE=$(php -r '$j = json_decode((string) file_get_contents("composer.json"), true); echo $j["config"]["audit"]["abandoned"] ?? "";' 2>/dev/null || true)
+    AUDIT_OK=1
+    if [ -n "$RUNS_AUDIT" ] && [ "$ABANDONED_MODE" != "report" ] && [ "$ABANDONED_MODE" != "ignore" ]; then
+        AUDIT_OK=0
+    fi
+
+    if [ -n "$HAS_ECS_PKG" ] && [ -n "$HAS_STAN_PKG" ] && [ -n "$HAS_LINT_SCRIPT" ] && [ -n "$HAS_LINT_FIX_SCRIPT" ] && [ -n "$HAS_STAN_SCRIPT" ] && [ "$AUDIT_OK" -eq 1 ]; then
         echo "PASSED"
     else
         echo "FAILED"
@@ -56,6 +66,7 @@ else
         [ -z "$HAS_LINT_SCRIPT" ] && echo "  - Missing composer script: 'lint'"
         [ -z "$HAS_LINT_FIX_SCRIPT" ] && echo "  - Missing composer script: 'lint:fix'"
         [ -z "$HAS_STAN_SCRIPT" ] && echo "  - Missing composer script: 'phpstan'"
+        [ "$AUDIT_OK" -eq 0 ] && echo "  - ${RUNS_AUDIT}runs 'composer audit', but composer.json has no config.audit.abandoned \"report\" — the audit fails on bolt/core's abandoned composer/package-versions-deprecated. Fix: composer config audit.abandoned report"
         FAILED=1
     fi
 fi
