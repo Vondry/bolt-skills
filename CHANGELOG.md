@@ -2,6 +2,17 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.14.3 — 2026-11-02
+
+`composer audit` no longer fails on Bolt 6 projects that have no security advisory.
+
+### Fixed
+- `bolt-code-quality`: `make audit` and the `composer-audit` CI job failed on every Bolt 6 project although there was no advisory. Composer's default for `audit.abandoned` is `fail`, and bolt/core 6 requires the abandoned `composer/package-versions-deprecated`. `examples/composer_snippet.json` and Step 1 now set `config.audit.abandoned: report`: abandoned packages are listed, security advisories still fail the audit. The Makefile and CI examples point to the setting, and `verify.sh` step 1 fails when the Makefile or `.gitlab-ci.yml` runs `composer audit` without it.
+- `bolt-security-hardening`: `verify.sh` step 7 read only the text of `composer audit`, so it passed while the audit exited 1. It now warns when abandoned packages would fail the audit and the setting is missing. Step 8 mentions the setting.
+
+### Migrating a project
+- `composer config audit.abandoned report` (adds `"audit": { "abandoned": "report" }` under `config` in `composer.json`), then `composer audit --locked` exits 0 again. pujcovna-dovolena, akvelmez, eurodeck, portfolio, fmautoservis and rockfest-kurim already have it.
+
 ## 1.14.2 — 2026-11-01
 
 Fixes found while building pujcovna-dovolena.cz on Bolt 6, checked against six projects. Escape closes a dropdown that holds no links, the live checks work against a local Apache, and the thumbnail and timezone docs match bolt/core.
