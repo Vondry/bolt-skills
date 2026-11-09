@@ -118,6 +118,9 @@ fi
 if ! grep -qE "\.cms-redactor\b" "$CSS_ENTRY"; then
     UTIL_ERRORS+=("Missing .cms-redactor prose styling class")
 fi
+if ! grep -qE "touch-action:[[:space:]]*manipulation" "$CSS_ENTRY"; then
+    UTIL_ERRORS+=("Missing touch-action: manipulation on links and buttons (quick taps zoom the page on phones, SKILL.md 5 I)")
+fi
 
 if [ ${#UTIL_ERRORS[@]} -gt 0 ]; then
     echo "WARNING"

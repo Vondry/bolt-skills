@@ -2,6 +2,11 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- `bolt-tailwind-theme`, `bolt-theme-init`: `touch-action: manipulation` on links and buttons, so quick repeated taps on slider arrows no longer zoom the page on phones. `bolt-tailwind-theme`'s `verify.sh` step 5 warns when it is missing.
+
 ## 1.14.3 — 2026-11-02
 
 `composer audit` no longer fails on Bolt 6 projects that have no security advisory.

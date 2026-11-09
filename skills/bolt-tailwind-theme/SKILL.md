@@ -44,6 +44,7 @@ css/tailwind/index.css
 ├── 4. Base Layer Resets & Fonts (@layer base)
 │      ├── Self-hosted Latin + Latin-ext WOFF2 font-faces (Czech glyphs)
 │      ├── Sticky header anchor scroll offset (:where([id]))
+│      ├── No double-tap zoom on links and buttons (touch-action)
 │      └── Accessible focus-visible & text selection
 │
 └── 5. Repeating Utility Classes (@utility & @layer components)
@@ -486,6 +487,20 @@ Every photo gallery opens in the PhotoSwipe 5 lightbox (`js/src/photoswipe.ts` o
     @apply font-body text-sm text-night-ink text-center text-pretty pointer-events-none;
 }
 ```
+
+---
+
+### I. Double-Tap Zoom on Controls
+
+Quick repeated taps on a control — slider arrows above all — zoom the page on phones, because the browser reads them as a double-tap. Every theme sets this in `@layer base`:
+
+```css
+a, button, summary, label, input, select, textarea, [role="button"] {
+    touch-action: manipulation;
+}
+```
+
+Pinch zoom keeps working, so never replace this with `user-scalable=no` or `maximum-scale=1` in the viewport meta tag: those block zooming for people who need it (WCAG 1.4.4). Swiping is unaffected: a slider's track sets its own `touch-action`.
 
 ---
 

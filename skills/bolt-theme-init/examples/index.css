@@ -80,6 +80,11 @@
         scroll-margin-top: var(--spacing-header);
     }
 
+    /* Quick repeated taps (slider arrows) must not trigger double-tap zoom. Pinch zoom keeps working. */
+    a, button, summary, label, input, select, textarea, [role="button"] {
+        touch-action: manipulation;
+    }
+
     :focus-visible {
         outline: 0.125rem solid var(--color-accent);
         outline-offset: 0.1875rem;
