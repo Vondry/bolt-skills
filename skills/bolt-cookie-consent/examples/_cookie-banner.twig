@@ -52,7 +52,9 @@
         {% endif %}
     {% endfor %}
 
-    {# ---------------------------------------------------------------- Layer 1 #}
+    {# ---------------------------------------------------------------- Layer 1
+       The section is a transparent full-width strip around the narrower panel: pointer-events-none lets
+       clicks through it to the page, pointer-events-auto gives them back to the panel (CB-03). #}
     <section id="cookie-banner"
              data-cookie-banner
              role="dialog"
@@ -60,8 +62,8 @@
              aria-labelledby="cookie-banner-title"
              aria-describedby="cookie-banner-desc"
              hidden
-             class="fixed inset-x-0 bottom-0 z-40 p-2 font-body sm:p-4 print:hidden">
-        <div class="mx-auto flex max-w-5xl flex-col gap-4 rounded-md border border-night-stroke bg-night p-4 text-night-ink shadow-2xl sm:p-5 lg:flex-row lg:items-end lg:gap-8">
+             class="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-2 font-body sm:p-4 print:hidden">
+        <div class="pointer-events-auto mx-auto flex max-w-5xl flex-col gap-4 rounded-md border border-night-stroke bg-night p-4 text-night-ink shadow-2xl sm:p-5 lg:flex-row lg:items-end lg:gap-8">
 
             {# Scrolls on small screens so the buttons always stay visible at 360 px (CB-15) #}
             <div class="max-h-[38vh] overflow-y-auto lg:max-h-none">

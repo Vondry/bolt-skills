@@ -11,8 +11,12 @@ A location map that needs no cookies or consent, so it always shows.
 - `bolt-cookie-consent`: the `map_display` purpose and the OpenFreeMap recipient for the privacy page.
 - `bolt-security-hardening`: the strict CSP's directives for the map.
 
+### Fixed
+- `bolt-cookie-consent`: the banner's transparent full-width wrapper no longer blocks clicks on the page beside the panel. `verify.sh` fails when a full-width wrapper lacks `pointer-events-none`.
+
 ### Migrating a project
 - To replace a Google Maps or Mapy.com embed, run `bolt-map`, remove the embed and its `partials/_consent-embed.twig` include, remove the embed's entries from `privacy:` in `theme.yaml`, add the `map_display` purpose and increase `config_version`.
+- In `partials/_cookie-banner.twig`, add `pointer-events-none` to the `[data-cookie-banner]` section and `pointer-events-auto` to the panel `<div>` directly inside it, then rebuild the CSS.
 
 ## 1.16.0 — 2026-11-10
 
