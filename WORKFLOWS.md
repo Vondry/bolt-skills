@@ -1,6 +1,6 @@
 # Bolt CMS End-to-End Website Build Workflow
 
-This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 18 skills in this repository.
+This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 19 skills in this repository.
 
 The phases are ordered by real dependencies: every step only needs what earlier steps produced. Each phase ends with a **gate** (verifications that must pass, then a commit). Steps marked **[if …]** depend on the answers recorded in the Phase 0 site plan.
 
@@ -92,6 +92,7 @@ flowchart TD
         S65["bolt-cookie-consent"]
         S66["bolt-legal-cz"]
         S67["bolt-performance — fragment cache [optional]"]
+        S68["bolt-edit-links — editor pencils, last"]
     end
     P6 -.-> D6
 
@@ -571,6 +572,13 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - Test once: save a record of each tagged ContentType in the admin and reload — the change is there.
 - *Verify:* `bash $SKILLS/bolt-performance/scripts/verify.sh` (passes when no `{% cache %}` is used).
 
+### 6.8 Editor Pencils (`bolt-edit-links`)
+- Last step of the phase, once every page exists. `bash $SKILLS/bolt-edit-links/scripts/scaffold.sh` installs or upgrades the `edit` macro in `macros.twig` and prints the places still missing a pencil, with the tabs of each ContentType.
+- A record that feeds two or more sections gets one `group:` per section in `contenttypes.yaml`; it changes only the editor, so no migration is needed.
+- Apply the macro by the placement table of the skill: `macros.edit(record)` on the `<h1>`, `title_suffix: macros.edit(record, '<group>')` per section, `macros.editList(items|first)` on the heading of a list without pages of its own, once per record in containers. Never one per row or card. Never inside a link, a button, `helper-pages/`, `extensions/` or a cached fragment.
+- Rebuild the CSS (Gate 6 does).
+- *Verify:* `bash $SKILLS/bolt-edit-links/scripts/verify.sh`. The logged-in browser check needs content, so it runs in 8.4.
+
 ### Gate 6
 - `cd public/theme/<theme> && npm run prod && cd -`
 - `bash $SKILLS/bolt-theme-templates/scripts/verify.sh` passes, including the undefined-class check [7/10] against the fresh build and the search check [10/10].
@@ -667,6 +675,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 - Maintenance page: set `maintenance_mode: true`, check in a private window (logged-in editors still see the site), set it back.
 - 500 page: only rendered with `APP_ENV=prod`; check it on staging.
 - Admin: save a record twice and confirm its publish date did not shift (timezone).
+- Editor pencils: logged in, run `$SKILLS/bolt-edit-links/scripts/edit-links-browser.js` on a frontend page — `missingTabs` and `errors` are empty. Click one pencil per ContentType (right tab, right language); a private window shows none.
 
 ### 8.5 Definition of Done
 - `verify-all.sh`: zero FAIL; warnings fixed or justified in the site plan.
@@ -700,6 +709,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | Everyone is locked out after a few failed logins | A proxy in front of the site is not in `SYMFONY_TRUSTED_PROXIES`; all visitors share its IP (1.5) |
 | `bolt-add-language` fails in `verify-all.sh` | A secondary locale is missing from ContentTypes, menu labels or catalogs; run `bash $SKILLS/bolt-add-language/scripts/verify.sh <code>` for details |
 | A verification fails in an early phase about files a later phase creates | Expected; see Appendix A for when it should pass |
+| The admin editor opens without a selected tab and its scripts stop | A pencil's hash matches no tab, usually a renamed `group` (`bolt-edit-links`) |
 | Any skill failed in `verify-all.sh` | Run `verify-all.sh --verbose`, or the individual `$SKILLS/<skill>/scripts/verify.sh`, for the exact checks and remediation |
 
 ---
@@ -709,6 +719,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | Skill | Applied in | Verification expected to pass in | Applies to |
 | :--- | :--- | :--- | :--- |
 | `bolt-timezone` | 1.1 | 1.1, 8.2 | every site |
+| `bolt-edit-links` | 6.8 | 6.8, 8.2 (logged-in browser check 8.4) | every site |
 | `bolt-add-language` | 1.2 (Step 1), 5.1 (Step 2), 5.5 (Step 3), 5.4 (Step 4), 6.3 (Step 6), 7.2–7.3 (Steps 5, 7) | 8.2, once per secondary locale | multilingual sites |
 | `bolt-disable-api` | 1.3 | 1.3 (configuration), 8.2 (HTTP) | every site (lock-down variant when the API has consumers) |
 | `bolt-code-quality` | 1.4 (setup) | 1.4, 3.2, 8.1, 8.2 | every site |

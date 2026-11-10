@@ -39,7 +39,6 @@
                             badge: item.category|default(null),
                             description: item.perex|default(item.teaser|default(null)),
                             price: item.price is defined and item.price ? macros.formatPrice(item.price) : null,
-                            edit_url: item|edit_link
                         } %}
                     </li>
                 {% endfor %}

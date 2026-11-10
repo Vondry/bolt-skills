@@ -66,7 +66,7 @@ function themeFiles(string $themeDir, string $extension): array
     return $files;
 }
 
-const UNCACHEABLE = '/csrf_token|form_start|form\(|app\.user|app\.session|app\.flashes|is_granted/';
+const UNCACHEABLE = '/csrf_token|form_start|form\(|app\.user|app\.session|app\.flashes|is_granted|edit_link|(?<![\w.])(?:\w+\.)?edit\s*\(/';
 
 /**
  * Searches $source and every theme template it includes (literal names only, any depth) for

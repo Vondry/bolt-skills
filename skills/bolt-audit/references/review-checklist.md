@@ -120,7 +120,12 @@ never "keep, record as deviation".
   - Ask the operator what the script cannot know: consumers or B2B, employees (whistleblowing, accessibility), regulated profession — or list it under *Not checked*. For a regulated profession (advocates, doctors, architects) pass `--operator=profession`: the register entry is the chamber list and number („Ev. č. ČAK: 12345“), and REG-01 asks for the chamber, the title and the professional rules.
 - **Severity hints:** IČO, name, seat or register entry missing or wrong; no ADR information on a consumer site; no withdrawal button on an online shop from 1. 1. 2027 → High (fines up to CZK 1 M / 5 M); EU ODR link, reviews without a statement, identity only on the contact page → Medium; not using the skill's data model → Low (one deviation).
 
-## 18. bolt-add-language *(multilingual only — once per secondary locale)*
+## 18. bolt-edit-links
+- **Script:** the `edit` macro (`edit_link`, tab, `edit_locale`, `aria-label`, `print:hidden`), each call imported and outside links, buttons, `helper-pages/` and `extensions/`, every literal tab an existing `group`, a pencil on every record, singleton and homepage template; warnings for a pencil repeated on every item of a list, unreachable singletons and tabs shown without a pencil.
+- **Review:** run `php $SKILLS/bolt-edit-links/scripts/edit-links.php scan <project>` for the places still missing one. A long singleton without groups is a form a pencil can only open at the top. If you can log in, run `scripts/edit-links-browser.js`; otherwise list it under *Not checked*.
+- **Severity hints:** a tab that does not exist (the editor's scripts stop on that page) → Medium; pages without a pencil, a pencil on every row or card, or a macro without tab / locale → Low. It is an editor convenience, never higher unless a pencil shows to visitors.
+
+## 19. bolt-add-language *(multilingual only — once per secondary locale)*
 - **Script:** locale in `services.yaml`, ContentType `locales`, catalog existence and unit parity, XLIFF lint, `menu.yaml` labels, locale switcher, `partials/_hreflang.twig` in the master layout.
 - **Review:** in the browser (with `--base-url`), a few `/<code>/…` pages show translated text, not keys or Czech fallbacks (Appendix B.4); `hreflang` alternates in the SEO tags; the switcher keeps the current page instead of jumping home.
 - **Severity hints:** untranslated keys visible → High; missing `hreflang` → Medium; parity gaps in rarely used units → Low.

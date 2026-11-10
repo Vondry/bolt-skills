@@ -177,7 +177,6 @@ Composes pure components and page-scoped components; the only markup is layout w
                             description: item.teaser|default(item|excerpt(100)),
                             price: item.price is defined and item.price ? macros.formatPrice(item.price) : null,
                             badge_markup: include('pages/product/components/stock-badge.twig', { stock: item.stock|default(0) }),
-                            edit_url: item|edit_link
                         } %}
                     </li>
                 {% endfor %}
@@ -406,7 +405,8 @@ The single layout every page, static page and 404/403 helper page extends. It de
 The partials owned by other skills are included with `ignore missing`, so the shell renders as soon as this skill has run and fills in as later skills add their files. The full file is `examples/_master.twig`.
 
 ### F. Macros (`macros.twig`)
-- `macros.edit(record)` — admin quick-edit button, rendered only for logged-in editors (`record|edit_link` is empty otherwise).
+- `macros.editList(items|first)` — one pencil for a list of records without pages of their own, opening the ContentType's overview.
+- `macros.edit(record, tab, class)` — the editor's pencil, rendered only for logged-in editors (`record|edit_link` is empty otherwise). It opens the record in the language of the page, on the tab named by `tab` (the field's `group`). `bolt-edit-links` applies it across the finished theme.
 - `macros.typo(text)` — Czech typography glue: escapes the text and inserts `&nbsp;` after one-letter prepositions and conjunctions (`a i k o s u v z`, upper- and lowercase) and `&`. Twig string literals do not support `\u` escapes — `' '` would render literally as `u00A0` — so the macro uses the HTML entity.
 - `macros.formatPrice(price)` — `1290` → `1 290 Kč`.
 - `macros.linkAttributes(href)` — `href` through `locale_link()` for internal paths, `target="_blank" rel="noopener noreferrer"` for external URLs.

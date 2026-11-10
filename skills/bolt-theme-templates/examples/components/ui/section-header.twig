@@ -12,6 +12,7 @@
     - layout (string|optional): 'stacked' (default) | 'split' | 'center'
     - link (object|optional): { label, href } — rendered as a secondary button ('split' layout)
     - heading_level (int|optional): 2 (default) or 1 for page titles
+    - title_suffix (markup|optional): printed after the title — the editor's pencil (bolt-edit-links)
     - class (string|optional)
 
   Translation keys: section.show_all (default label of the link)
@@ -27,7 +28,7 @@
     {% endif %}
     <{{ tag }} {% if title_id is defined %}id="{{ title_id }}"{% endif %}
         class="font-display text-section font-semibold tracking-tight text-ink">
-        {{ macros.typo(title) }}
+        {{ macros.typo(title) }} {{ title_suffix|default('') }}
     </{{ tag }}>
     {% if lead is defined and lead is not empty %}
         <p class="mt-3 text-lead text-ink-2">{{ lead|sanitise|raw }}</p>
