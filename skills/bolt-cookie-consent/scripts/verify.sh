@@ -203,6 +203,16 @@ if [ $HAS_CONSENT -eq 1 ] && [ -f "$BANNER_FILE" ]; then
         esac
     done <<< "$RESULT"
 
+    # A full-width fixed wrapper around a narrower panel is invisible but still catches clicks.
+    BANNER_TAG=$(php -r 'preg_match("~<\w+\b[^>]*\bdata-cookie-banner(?!-)\b[^>]*>~s", file_get_contents($argv[1]), $m); echo $m[0] ?? "";' "$BANNER_FILE" 2>/dev/null || true)
+    if echo "$BANNER_TAG" | grep -qE '[[:space:]"](inset-0|inset-x-0|w-full|w-screen)[[:space:]"]'; then
+        if echo "$BANNER_TAG" | grep -q "pointer-events-none" && grep -q "pointer-events-auto" "$BANNER_FILE"; then
+            pass "the transparent banner wrapper lets clicks through to the page (CB-03)."
+        else
+            fail "the full-width [data-cookie-banner] wrapper blocks clicks beside the panel — add pointer-events-none to it and pointer-events-auto to the panel (CB-03)."
+        fi
+    fi
+
     grep -q "data-cookie-settings" "$BANNER_FILE" && pass "layer 1 offers \"Nastavení cookies\" (CB-13)." || fail "layer 1 has no [data-cookie-settings] button (CB-13)."
     grep -q "data-cookie-save" "$BANNER_FILE" && grep -q "data-cookie-dialog" "$BANNER_FILE" \
         && pass "layer 2 dialog with \"Uložit výběr\" (CB-22)." || fail "layer 2 ([data-cookie-dialog] with [data-cookie-save]) missing (CB-22)."
