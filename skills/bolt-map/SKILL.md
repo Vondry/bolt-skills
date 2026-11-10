@@ -112,7 +112,7 @@ bash $SKILLS/bolt-map/scripts/verify.sh
 
 | Checks | Result |
 | :--- | :--- |
-| `js/map.js` and the component exist, the style is OpenFreeMap, nothing is stored in the browser | FAIL when not |
+| `js/map.js` and the component exist, the style is OpenFreeMap, nothing is stored in the browser, the wrapper has `isolate` | FAIL when not |
 | The library is built under `js/maplibre/`, is part of `npm run prod`, stays out of `js/app.js` and out of Tailwind's scan | FAIL when not |
 | Light or dark follows the visitor's system | FAIL when not |
 | No Google Maps or Mapy.com embed remains | FAIL when not |
@@ -139,6 +139,9 @@ Then open the page in a private window and confirm what only a browser can:
 * **The map follows the site's theme toggle instead of the system** → `dark:` was used, and a theme can
   redefine it with `@custom-variant dark`. The rule in `css/tailwind/index.css` is plain
   `prefers-color-scheme` CSS for that reason, so keep it there.
+* **"Use ⌘ + scroll to zoom" shows over the cookie banner or a sticky header** → the wrapper in
+  `components/ui/map.twig` lost `isolate`. MapLibre puts that text at z-index 99999, and `isolate` keeps
+  it inside the map. Do not raise the banner's z-index to compete with it.
 * **The whole map is inverted, pin included** → the filter was put on the map element. It belongs on
   its `canvas`.
 * **Tailwind's build is slow or the CSS grows** → `js/maplibre` is being scanned for classes.

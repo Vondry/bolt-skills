@@ -87,6 +87,11 @@ else
 fi
 if [ -f "$THEME_DIR/components/ui/map.twig" ]; then
     pass "components/ui/map.twig exists"
+    if grep -qE '[" ]isolate[" ]' "$THEME_DIR/components/ui/map.twig"; then
+        pass "the map's z-indexes stay inside the map (isolate)"
+    else
+        fail "components/ui/map.twig has no isolate on its wrapper: MapLibre's help text (z-index 99999) shows over the cookie banner"
+    fi
     if grep -q '\[data-map\] canvas' "$THEME_DIR/css/tailwind/index.css" 2>/dev/null; then
         pass "light or dark follows the visitor's system"
     else
