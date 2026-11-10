@@ -108,6 +108,7 @@ content — are in [`examples/fragment-cache.twig`](examples/fragment-cache.twig
   through plain SQL without a save event; the passing of time (upcoming events) does not fire one
   either — use a short `ttl` or put the date into the key.
 * **Never cache** anything with a form or CSRF token, `app.user`, `app.session`, `app.flashes`, the
+  editor's pencil (`macros.edit()`, `|edit_link` — put it beside the cached include), the
   header / menus (their active state depends on the current URL) or the `seo` block. Cache
   containers inside `{% block main %}`, not the layout.
 * **Deploys clear it.** The pool lives in `var/cache/prod/`, which is deleted after each upload
@@ -130,7 +131,7 @@ Passes without further checks when the theme has no `{% cache %}`. Otherwise:
 | :--- | :--- |
 | `twig/cache-extra` installed | missing — templates with `{% cache %}` do not compile |
 | `twig.runtime.cache` overridden to `@cache.app.taggable` | missing — fragments ignore content saves |
-| contents of every `{% cache %}` block, and the `template:` of every `partials/_cached.twig` call, following literal includes to any depth | a form, `csrf_token`, `app.user`, `app.session`, `app.flashes` or `is_granted` inside |
+| contents of every `{% cache %}` block, and the `template:` of every `partials/_cached.twig` call, following literal includes to any depth | a form, `csrf_token`, `app.user`, `app.session`, `app.flashes`, `is_granted` or an edit pencil (`edit_link`, `macros.edit()`) inside |
 | `tags()` present, GET-only rendering, literal tags are ContentType slugs | — (warnings) |
 
 ## Common Pitfalls

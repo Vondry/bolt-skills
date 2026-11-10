@@ -1,0 +1,37 @@
+{#
+  Pencil linking to the record in the Bolt editor (bolt-edit-links). Renders nothing unless the
+  visitor is logged in and may edit the record (`edit_link` is null otherwise). The editor opens
+  in the language of the page being viewed.
+
+  content — the record (a Bolt Content). Never a set or collection item, or a theme.yaml value:
+            `edit_link` accepts only a record or null, anything else is a 500
+  tab     — optional editor tab, the field's `group` from contenttypes.yaml ('Ceník'). It has to
+            exist on the ContentType: Bolt's editor throws on a hash that matches no tab
+  class   — extra classes; `relative z-10` lifts the pencil above the stretched link of a card
+#}
+{% macro edit(content, tab = null, class = '', label = "✏️") %}{% apply spaceless %}
+    {% set link = content|edit_link %}
+    {% if link %}
+        {% set title = __('general.phrase.edit') ~ ' ' ~ content.definition.singular_name ~ ' "' ~ content|title ~ '"' %}
+        <a href="{{ link }}?edit_locale={{ app.request.locale }}{{ tab ? '#' ~ tab|slug }}"
+           class="inline-flex items-center justify-center backdrop-blur-md text-card leading-none p-1 hover:underline decoration-current print:hidden {{ class }}"
+           title="{{ title }}"
+           aria-label="{{ title }}">{{ label }}</a>
+    {% endif %}
+{% endapply %}{% endmacro %}
+
+{#
+  Pencil for a list of records without pages of their own (prices, reviews, videos): one on the
+  section heading opens the ContentType's overview in the admin. Same visibility as `edit`.
+
+  content — any record of the list: `items|first`
+#}
+{% macro editList(content, class = '', label = "✏️") %}{% apply spaceless %}
+    {% if content|edit_link %}
+        {% set title = __('general.phrase.edit') ~ ' ' ~ content.definition.name %}
+        <a href="{{ path('bolt_content_overview', { contentType: content.contentType }) }}"
+           class="inline-flex items-center justify-center backdrop-blur-md text-card leading-none p-1 hover:underline decoration-current print:hidden {{ class }}"
+           title="{{ title }}"
+           aria-label="{{ title }}">{{ label }}</a>
+    {% endif %}
+{% endapply %}{% endmacro %}

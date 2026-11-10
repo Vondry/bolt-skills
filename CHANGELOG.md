@@ -4,9 +4,16 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 
 ## Unreleased
 
-The Google tag loads only after consent, and Consent Mode Advanced is gone.
+The Google tag loads only after consent, and Consent Mode Advanced is gone. Editors get a pencil next to everything they can change.
+
+### Added
+- `bolt-edit-links`: new skill, run last among the template work. Installs or upgrades the `edit` macro, which opens the record in the language of the page and on the tab of the section. `scaffold.sh` lists every place in the theme still missing a pencil, `verify.sh` checks the calls, that every tab exists and that every record page has one, and `edit-links-browser.js` confirms it while logged in.
+- `bolt-theme-templates`: `section-header.twig` takes `title_suffix`, printed after the heading.
+- `bolt-theme-templates`: cards no longer take `edit_url`. A list gets one pencil on its section heading, never one per card.
 
 ### Changed
+- `bolt-theme-init`: `macros.twig` ships the new `edit` macro. Its second parameter is now the tab, not the label.
+- `bolt-performance`: `verify.sh` fails on an edit pencil inside a cached fragment.
 - `bolt-cookie-consent`: the site's Google tag (GA4, Google Ads or a Tag Manager container) lives in the new `partials/_google-tag.twig`, with the site's own ID, blocked until its consent category is granted. `analytics.ga4_id` and `analytics.google_ads_id` are no longer read.
 - `bolt-cookie-consent`: CB-50 is now a MUST. `verify.sh` fails on `analytics.consent_mode: advanced`, on a Google tag script that is not blocked, and on a placeholder ID.
 
@@ -14,6 +21,7 @@ The Google tag loads only after consent, and Consent Mode Advanced is gone.
 - `bolt-cookie-consent`: Consent Mode Advanced and `analytics.consent_mode`.
 
 ### Migrating a project
+- Run `bolt-edit-links` to get the new macro and the pencils. A call that passes a label as the second argument becomes `macros.edit(record, null, '', 'Label')`.
 - Copy `examples/_google-tag.twig` to `partials/_google-tag.twig` with the site's own ID, include it first in `<head>` of `partials/_master.twig`, and remove `ga4_id`, `google_ads_id` and `consent_mode` from `theme.yaml`.
 - Replace `js/src/cookie-consent.ts` and `partials/_consent-mode.twig` with the new examples, update `gdpr.twig`, remove the `privacy.cookies.consent_mode_advanced` units, then `npm run prod` and bump `assets_version`.
 

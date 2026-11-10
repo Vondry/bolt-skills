@@ -75,6 +75,7 @@ bolt-tailwind-theme	index.css	{theme}/css/tailwind/index.css	design
 bolt-tailwind-theme	fonts_snippet.css	{theme}/css/tailwind/index.css	snippet
 bolt-theme-init	_master.twig	{theme}/partials/_master.twig	design
 bolt-theme-init	macros.twig	{theme}/macros.twig	logic
+bolt-edit-links	macro-edit.twig	{theme}/macros.twig	snippet
 bolt-theme-init	record.twig	{theme}/record.twig	logic
 bolt-theme-init	listing.twig	{theme}/listing.twig	logic
 bolt-theme-init	js/src/index.ts	{theme}/js/src/index.ts	design

@@ -15,7 +15,6 @@
     <unit id="gallery_next" name="gallery.next"><segment><source>gallery.next</source><target>Další fotografie</target></segment></unit>
     <unit id="gallery_error" name="gallery.error"><segment><source>gallery.error</source><target>Fotografii se nepodařilo načíst.</target></segment></unit>
     <unit id="card_read_more" name="card.read_more"><segment><source>card.read_more</source><target>Detail</target></segment></unit>
-    <unit id="card_edit" name="card.edit"><segment><source>card.edit</source><target>Upravit</target></segment></unit>
     <unit id="section_show_all" name="section.show_all"><segment><source>section.show_all</source><target>Zobrazit vše</target></segment></unit>
     <unit id="empty_title" name="empty.title"><segment><source>empty.title</source><target>Nenalezeny žádné záznamy</target></segment></unit>
     <unit id="empty_message" name="empty.message"><segment><source>empty.message</source><target>V této kategorii se momentálně nenachází žádný obsah.</target></segment></unit>

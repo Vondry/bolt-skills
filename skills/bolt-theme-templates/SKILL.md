@@ -244,27 +244,16 @@ The stretched link (`absolute inset-0` on the title link) makes the whole card c
         badge_markup: include('pages/product/components/stock-badge.twig', { stock: item.stock })
     - description (string|optional): Excerpt / summary (HTML is stripped)
     - price (string|optional): Pre-formatted price, e.g. macros.formatPrice(item.price)
-    - edit_url (string|optional): Bolt admin edit URL (item|edit_link — empty for visitors)
     - class (string|optional): Extra wrapper classes
 
   The whole card is clickable through a stretched link on the title: the overlay
   (`absolute inset-0`) needs the `relative` on <article> to stay inside the card.
 
-  Translation keys: card.read_more, card.edit
+  Translation keys: card.read_more
 #}
 {% import 'macros.twig' as macros %}
 
 <article class="card relative flex flex-col group overflow-hidden {{ class|default('') }}">
-    {# Admin quick edit button (above the stretched link) #}
-    {% if edit_url is defined and edit_url is not empty %}
-        <div class="absolute top-3 right-3 z-20">
-            <a href="{{ edit_url }}"
-               class="inline-flex items-center px-2 py-0.5 text-xs font-semibold text-ink bg-surface rounded-sm border border-stroke hover:bg-surface-2 shadow-xs">
-                ✏️ {{ __('card.edit') }}
-            </a>
-        </div>
-    {% endif %}
-
     {% if image is defined and image is not empty %}
         <div class="relative overflow-hidden aspect-16/10 bg-surface">
             {% include 'components/ui/picture.twig' with {
@@ -484,6 +473,7 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
     - layout (string|optional): 'stacked' (default) | 'split' | 'center'
     - link (object|optional): { label, href } — rendered as a secondary button ('split' layout)
     - heading_level (int|optional): 2 (default) or 1 for page titles
+    - title_suffix (markup|optional): printed after the title — the editor's pencil (bolt-edit-links)
     - class (string|optional)
 
   Translation keys: section.show_all (default label of the link)
@@ -499,7 +489,7 @@ Bolt 6 listings receive `records` as a Pagerfanta object (`haveToPaginate`, `cur
     {% endif %}
     <{{ tag }} {% if title_id is defined %}id="{{ title_id }}"{% endif %}
         class="font-display text-section font-semibold tracking-tight text-ink">
-        {{ macros.typo(title) }}
+        {{ macros.typo(title) }} {{ title_suffix|default('') }}
     </{{ tag }}>
     {% if lead is defined and lead is not empty %}
         <p class="mt-3 text-lead text-ink-2">{{ lead|sanitise|raw }}</p>
@@ -827,7 +817,6 @@ The homepage stays free of `setcontent`: the query lives in this container.
                             badge: item.category|default(null),
                             description: item.perex|default(item.teaser|default(null)),
                             price: item.price is defined and item.price ? macros.formatPrice(item.price) : null,
-                            edit_url: item|edit_link
                         } %}
                     </li>
                 {% endfor %}
@@ -995,7 +984,6 @@ The homepage stays free of `setcontent`: the query lives in this container.
                                 : null,
                             description: item.perex|default(item.teaser|default(item|excerpt(100))),
                             price: item.price is defined and item.price ? macros.formatPrice(item.price) : null,
-                            edit_url: item|edit_link
                         } %}
                     </li>
                 {% endfor %}
