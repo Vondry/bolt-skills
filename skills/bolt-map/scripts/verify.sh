@@ -92,6 +92,24 @@ if [ -f "$THEME_DIR/components/ui/map.twig" ]; then
     else
         fail "components/ui/map.twig has no isolate on its wrapper: MapLibre's help text (z-index 99999) shows over the cookie banner"
     fi
+    # Tailwind writes no rule for a class whose token the theme lacks (a theme older than the
+    # Integration Contract), so the button or the pin silently loses the theme's colour.
+    BUILT_CSS="$THEME_DIR/css/index.css"
+    if [ -f "$BUILT_CSS" ]; then
+        MISSING_CLASSES=""
+        for class in $(grep -oE 'class="[^"]*"' "$THEME_DIR/components/ui/map.twig" | sed -E 's/^class="//; s/"$//' | tr ' ' '\n' \
+            | grep -E '^(btn-[a-z0-9-]+|(bg|text|border)-[a-z][a-z0-9-]*)$' \
+            | grep -vE '^border-([xytblrse]|solid|dashed|none)$|^text-(xs|sm|base|lg|[0-9]?xl|left|center|right)$' | sort -u); do
+            grep -qF ".$class{" "$BUILT_CSS" || grep -qF ".$class " "$BUILT_CSS" || grep -qF ".$class:" "$BUILT_CSS" || MISSING_CLASSES="$MISSING_CLASSES $class"
+        done
+        if [ -z "$MISSING_CLASSES" ]; then
+            pass "every colour class of the map is in css/index.css (button and pin in the theme's colours)"
+        else
+            fail "css/index.css has no rule for:$MISSING_CLASSES — the theme lacks the token or utility; use one it has in components/ui/map.twig, or run npm run prod"
+        fi
+    else
+        warn "css/index.css is not built: the map's colour classes cannot be checked"
+    fi
     if grep -q '\[data-map\] canvas' "$THEME_DIR/css/tailwind/index.css" 2>/dev/null; then
         pass "light or dark follows the visitor's system"
     else

@@ -2,20 +2,26 @@
   components/ui/map.twig — 3D city map with a pin (bolt-map). No cookies, no consent, always shown.
 
   Props (all optional, the defaults come from theme.yaml):
-    - latitude, longitude (number): position of the pin; theme.location by default
+    - latitude, longitude (number): position of the pin; location: in theme.yaml by default
     - zoom (number): 17 by default, close to the place; 3D buildings appear from 14
     - class (string): extra classes on the wrapper
 
   The button opens Google Maps with directions to the pin. A plain link: nothing loads until it is clicked.
+
+  theme.yaml is read through config.get('theme/…'), a Twig global, not through `theme`, which Bolt
+  passes only in the page's context, so the component also works when included with `only`.
+
+  Uses the colour tokens surface-2, stroke and accent and the btn-primary utility of the Integration
+  Contract (bolt-tailwind-theme); verify.sh fails when the theme's CSS has none of them.
 
   Renders nothing without coordinates. The map is light or dark by the visitor's system setting,
   whatever the site does. That rule is in css/tailwind/index.css as plain CSS, because a theme can
   redefine Tailwind's dark: variant to follow its own toggle.
   The pin takes the element's text colour, so change `text-accent` to change the pin.
 #}
-{% set map_latitude = latitude|default(theme.location.latitude|default(null)) %}
-{% set map_longitude = longitude|default(theme.location.longitude|default(null)) %}
-{% set map_zoom = zoom|default(theme.location.zoom|default(17)) %}
+{% set map_latitude = latitude|default(config.get('theme/location/latitude')) %}
+{% set map_longitude = longitude|default(config.get('theme/location/longitude')) %}
+{% set map_zoom = zoom|default(config.get('theme/location/zoom')|default(17)) %}
 {% set map_i18n = {
     'Map.Title': __('map.title'),
     'Marker.Title': __('map.marker'),
@@ -48,6 +54,6 @@
                 <path d="M7 17 17 7"/>
             </svg>
         </a>
-        <script type="module" src="{{ asset('js/map.js') }}?v={{ theme.assets_version|default('1.0') }}"></script>
+        <script type="module" src="{{ asset('js/map.js') }}?v={{ config.get('theme/assets_version')|default('1.0') }}"></script>
     </div>
 {% endif %}
