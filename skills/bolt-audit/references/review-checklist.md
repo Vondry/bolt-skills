@@ -125,7 +125,12 @@ never "keep, record as deviation".
 - **Review:** run `php $SKILLS/bolt-edit-links/scripts/edit-links.php scan <project>` for the places still missing one. A long singleton without groups is a form a pencil can only open at the top. If you can log in, run `scripts/edit-links-browser.js`; otherwise list it under *Not checked*.
 - **Severity hints:** a tab that does not exist (the editor's scripts stop on that page) → Medium; pages without a pencil, a pencil on every row or card, or a macro without tab / locale → Low. It is an editor convenience, never higher unless a pencil shows to visitors.
 
-## 19. bolt-add-language *(multilingual only — once per secondary locale)*
+## 19. bolt-map *(only when the theme shows a map)*
+- **Script:** `js/map.js` and the component, an OpenFreeMap style, nothing stored in the browser, the library built under `js/maplibre/` and outside `js/app.js` and Tailwind's scan, light or dark by the visitor's system, no Google Maps or Mapy.com embed left, the map labels in every catalog, a strict CSP that allows the map.
+- **Review:** open the page in a private window: 3D map without a banner or placeholder, no cookie or storage key from the map, other pages do not load the library. Check that the privacy page lists OpenFreeMap.
+- **Severity hints:** a map embed still loading before consent → High; the library on every page → Medium; missing labels or a missing privacy entry → Low to Medium.
+
+## 20. bolt-add-language *(multilingual only — once per secondary locale)*
 - **Script:** locale in `services.yaml`, ContentType `locales`, catalog existence and unit parity, XLIFF lint, `menu.yaml` labels, locale switcher, `partials/_hreflang.twig` in the master layout.
 - **Review:** in the browser (with `--base-url`), a few `/<code>/…` pages show translated text, not keys or Czech fallbacks (Appendix B.4); `hreflang` alternates in the SEO tags; the switcher keeps the current page instead of jumping home.
 - **Severity hints:** untranslated keys visible → High; missing `hreflang` → Medium; parity gaps in rarely used units → Low.

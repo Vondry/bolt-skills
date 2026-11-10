@@ -32,7 +32,7 @@ $options = getopt('', ['model:', 'trackers::', 'embeds::', 'purposes::', 'contro
 
 if (isset($options['help'])) {
     echo "Usage: php privacy-config.php --model=single|joint|separate|hybrid [--trackers=ga4,google_ads,sklik,meta_pixel]\n";
-    echo "       [--embeds=youtube,google_maps,mapy_com] [--purposes=web_operation,contact_form,contract,accounting,newsletter,legal_claims]\n";
+    echo "       [--embeds=youtube,google_maps,mapy_com] [--purposes=web_operation,contact_form,contract,accounting,newsletter,legal_claims,map_display]\n";
     echo "       [--controllers=N] [--necessary=session] [--locales=cs,en] [--write=path/to/theme.yaml]\n";
     exit(0);
 }

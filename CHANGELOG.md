@@ -2,6 +2,18 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+A location map that needs no cookies or consent, so it always shows.
+
+### Added
+- `bolt-map`: new skill. A 3D city map with a pin (MapLibre GL JS, OpenFreeMap's hosted Liberty style, no API key). Labels and controls follow the page's language, light or dark follows the visitor's system, a button opens directions in Google Maps, the pin takes the accent colour, and the library loads only when a map comes into view.
+- `bolt-cookie-consent`: the `map_display` purpose and the OpenFreeMap recipient for the privacy page.
+- `bolt-security-hardening`: the strict CSP's directives for the map.
+
+### Migrating a project
+- To replace a Google Maps or Mapy.com embed, run `bolt-map`, remove the embed and its `partials/_consent-embed.twig` include, remove the embed's entries from `privacy:` in `theme.yaml`, add the `map_display` purpose and increase `config_version`.
+
 ## 1.16.0 — 2026-11-10
 
 Editors get a pencil on each section of the site that opens the right record, tab and language. The Google tag loads only after consent, and Consent Mode Advanced is gone.

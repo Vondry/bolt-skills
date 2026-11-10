@@ -247,6 +247,7 @@ scripts, but every tracker and embed must be listed. Introduce it in two stages:
    | Sklik | `script-src https://c.seznam.cz`; `connect-src https://c.seznam.cz` |
    | Meta Pixel | `script-src https://connect.facebook.net`; `img-src https://www.facebook.com`; `connect-src https://www.facebook.com` |
    | YouTube / Google Maps embeds | `frame-src https://www.youtube-nocookie.com https://www.google.com` |
+   | Location map (`bolt-map`) | `connect-src https://tiles.openfreemap.org`; `img-src blob:` |
 
 2. **Enforce on the public site only.** When the log stays clean for a while, move the directives
    from `report:` to `enforce:` and limit the CSP to non-admin paths, because the Bolt admin needs

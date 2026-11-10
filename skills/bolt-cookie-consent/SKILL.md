@@ -30,7 +30,7 @@ Ask the operator (or the user acting for them) these questions — with your que
 | # | Question | Typical answer | Becomes |
 | :- | :--- | :--- | :--- |
 | 1 | **Which measuring and advertising tools will the site use?** Google Analytics 4 · Google Ads (conversions, remarketing) · Seznam Sklik (retargeting, conversions) · Meta Pixel · other (Hotjar, Microsoft Clarity, LinkedIn, TikTok …) · none | Google Ads, often GA4; Sklik optional | `--trackers=ga4,google_ads,sklik,meta_pixel` |
-| 2 | **Is third-party content embedded?** YouTube / Vimeo video · Google Maps · Mapy.com · social widgets · none. (External fonts and CDNs: self-host them instead — `bolt-tailwind-theme`.) | a YouTube video, a map on the contact page | `--embeds=youtube,google_maps,mapy_com` |
+| 2 | **Is third-party content embedded?** YouTube / Vimeo video · Google Maps · Mapy.com · social widgets · none. (External fonts and CDNs: self-host them instead — `bolt-tailwind-theme`. A location map needs no consent with `bolt-map`: offer it before Google Maps or Mapy.com.) | a YouTube video, a map on the contact page | `--embeds=youtube,google_maps,mapy_com` |
 | 3 | **The site's own Google tag ID** (with GA4 or Google Ads): a GA4 ID (`G-…`) or a Tag Manager container (`GTM-…`). Never reuse an ID from another site: it mixes the data of both. | `G-XXXXXXXXXX` | `partials/_google-tag.twig` |
 | 4 | **Is more than one business presented on the website?** If yes: (a) Do they decide **together** about the website (content, forms, analytics, cookie banner)? (b) Does each handle **its own clients** (contracts, invoicing, files)? Never guess the answer (AG-02). | one business | `--model=` (table below) |
 | 5 | **Controller identity**, for every business: legal name or trade name, legal form, registered office / place of business, IČO, registry entry (obchodní / živnostenský rejstřík, ČAK …), e-mail for privacy questions, data protection officer (if appointed). A private person without a business (a personal website): name and e-mail only — ask before publishing a home address. | from the operator; `contact:` in `theme.yaml` prefills the first one | `privacy.controllers` (`business: false` for a private person) |
@@ -46,7 +46,7 @@ Controller model from question 4 (guidelines, *Varianty*):
 | 2+ | each separately (shared shop window) | each separately | B2 — separate controllers | `separate` |
 | 2+ | together | each separately | B1 + B2 | `hybrid` |
 
-Purposes for `--purposes=` (from `references/cookie-catalog.yaml`): `web_operation` (server logs — every site), `contact_form`, `contract`, `accounting`, `newsletter`, `legal_claims`. The consent purposes `analytics`, `marketing` and `third_party` are added automatically from the trackers and embeds.
+Purposes for `--purposes=` (from `references/cookie-catalog.yaml`): `web_operation` (server logs — every site), `contact_form`, `contract`, `accounting`, `newsletter`, `legal_claims`, `map_display` (the map of `bolt-map`). The consent purposes `analytics`, `marketing` and `third_party` are added automatically from the trackers and embeds.
 
 ---
 
@@ -217,6 +217,8 @@ Never write a YouTube, Vimeo or map iframe directly into a template. Use the pla
     provider: 'YouTube (Google Ireland Limited)'
 } only %}
 ```
+
+A location map from `bolt-map` sets no cookies, so it needs neither this placeholder nor the banner.
 
 ### Consent record, re-asking and withdrawal
 
