@@ -30,7 +30,8 @@
 } %}
 
 {% if map_latitude is not null and map_longitude is not null %}
-    <div class="relative {{ class|default('') }}">
+    {# isolate keeps MapLibre's z-index of 99999 inside the map, so the map stays under the cookie banner and sticky headers #}
+    <div class="relative isolate {{ class|default('') }}">
         <div data-map
              data-map-lat="{{ map_latitude }}"
              data-map-lng="{{ map_longitude }}"
