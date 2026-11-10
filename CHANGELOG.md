@@ -2,6 +2,15 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+- `bolt-map`: the component reads `location:` and `assets_version` through `config.get('theme/…')`, so it no longer renders nothing when included with `only` (Bolt passes `theme` only in the page's context).
+- `bolt-map`: `verify.sh` fails when the built CSS has no rule for a colour class of the component (`btn-primary`, `text-accent`, `bg-surface-2`, `border-stroke`): a theme older than the Integration Contract lacks the token, and the directions button or the pin silently lost the theme's colour.
+
+### Migrating a project
+- In `components/ui/map.twig`, replace `theme.location.latitude`, `theme.location.longitude`, `theme.location.zoom` and `theme.assets_version` with `config.get('theme/location/latitude')`, `config.get('theme/location/longitude')`, `config.get('theme/location/zoom')` and `config.get('theme/assets_version')`.
+
 ## 1.17.0 — 2026-11-10
 
 A location map that needs no cookies or consent, so it always shows. The cookie banner no longer blocks clicks beside its panel.

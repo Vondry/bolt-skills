@@ -62,7 +62,8 @@ catalog into `messages.<code>.xlf` and translate the targets.
 {{ include('components/ui/map.twig', { class: 'mt-8' }) }}
 ```
 
-It reads `theme.location`. For a site with several places, pass them from the page or container:
+It reads `location:` from `theme.yaml` through `config`, so it also works when included with `only`.
+For a site with several places, pass them from the page or container:
 
 ```twig
 {{ include('components/ui/map.twig', { latitude: branch.lat, longitude: branch.lng, zoom: 16 }) }}
@@ -151,4 +152,12 @@ Then open the page in a private window and confirm what only a browser can:
   label falls back to the local name. The data comes from OpenStreetMap.
 * **The console warns `Image "atm" could not be loaded`** → the hosted Liberty style names a few icons
   its sprite does not contain. Those icons are simply not drawn, and the map works.
+* **The button has no background, or the pin is black** → the theme was built before the Integration
+  Contract and lacks a token the component uses (`surface-2`, `stroke`, `accent`) or the `btn-primary`
+  utility, so Tailwind writes no rule for it. `verify.sh` names the class; replace it in
+  `components/ui/map.twig` with the theme's own (for example `bg-surface`, or the button class the theme
+  uses).
+* **The zoom buttons disappear under a `clip-path` or a cut corner** → MapLibre places them top right.
+  Move `.maplibregl-ctrl-top-right` with plain CSS outside any `@layer`, because `maplibre-gl.css` is
+  unlayered and wins over every layered rule.
 * **"© OpenStreetMap" was hidden** → the attribution is required by the data's licence. Keep it.
