@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shared by scaffold.sh and verify.sh.
 
+# shellcheck disable=SC2034  # used by verify.sh, which sources this file
 MAP_TRANSLATION_KEYS="map.directions map.title map.marker map.zoom_in map.zoom_out map.reset_view map.attribution map.feedback map.scroll_windows map.scroll_mac map.two_fingers"
 
 # Finds the Bolt project root from the current directory upwards; prints nothing when there is none.
