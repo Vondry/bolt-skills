@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="en">
+  <file id="messages.en">
+    <!-- bolt-map: units used by components/ui/map.twig. Merge into translations/messages.<locale>.xlf with scripts/merge-xliff.php. -->
+    <unit id="map_directions" name="map.directions"><segment><source>map.directions</source><target>Navigate</target></segment></unit>
+    <unit id="map_title" name="map.title"><segment><source>map.title</source><target>Map</target></segment></unit>
+    <unit id="map_marker" name="map.marker"><segment><source>map.marker</source><target>Map marker</target></segment></unit>
+    <unit id="map_zoom_in" name="map.zoom_in"><segment><source>map.zoom_in</source><target>Zoom in</target></segment></unit>
+    <unit id="map_zoom_out" name="map.zoom_out"><segment><source>map.zoom_out</source><target>Zoom out</target></segment></unit>
+    <unit id="map_reset_view" name="map.reset_view"><segment><source>map.reset_view</source><target>Drag to rotate the map, click to reset north</target></segment></unit>
+    <unit id="map_attribution" name="map.attribution"><segment><source>map.attribution</source><target>Show map sources</target></segment></unit>
+    <unit id="map_feedback" name="map.feedback"><segment><source>map.feedback</source><target>Report a map error</target></segment></unit>
+    <unit id="map_scroll_windows" name="map.scroll_windows"><segment><source>map.scroll_windows</source><target>Use Ctrl + scroll to zoom the map</target></segment></unit>
+    <unit id="map_scroll_mac" name="map.scroll_mac"><segment><source>map.scroll_mac</source><target>Use ⌘ + scroll to zoom the map</target></segment></unit>
+    <unit id="map_two_fingers" name="map.two_fingers"><segment><source>map.two_fingers</source><target>Use two fingers to move the map</target></segment></unit>
+  </file>
+</xliff>

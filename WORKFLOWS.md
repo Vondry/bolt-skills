@@ -1,6 +1,6 @@
 # Bolt CMS End-to-End Website Build Workflow
 
-This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 19 skills in this repository.
+This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 20 skills in this repository.
 
 The phases are ordered by real dependencies: every step only needs what earlier steps produced. Each phase ends with a **gate** (verifications that must pass, then a commit). Steps marked **[if …]** depend on the answers recorded in the Phase 0 site plan.
 
@@ -92,6 +92,7 @@ flowchart TD
         S65["bolt-cookie-consent"]
         S66["bolt-legal-cz"]
         S67["bolt-performance — fragment cache [optional]"]
+        S6M["bolt-map — 3D location map [if the site shows a map]"]
         S68["bolt-edit-links — editor pencils, last"]
     end
     P6 -.-> D6
@@ -134,9 +135,9 @@ The skills meet in a few shared places: the master layout, the theme folder stru
 | Extension templates | `extensions/llms.txt.twig` (the sitemap needs no theme template) |
 | Template binding | ContentType `record_template` / `listing_template` point either directly at `pages/<name>/…` or at a one-line root entrypoint that `{% extends %}` it (for example `product.twig`). The generic root `index.twig`, `record.twig` and `listing.twig` are fallbacks and never point at one specific ContentType's pages |
 | CSS | Source `css/tailwind/index.css` → build output `css/index.css` (never edit the output) |
-| JavaScript | Source `js/src/index.ts` (imports the modules) → build output `js/app.js` |
+| JavaScript | Source `js/src/index.ts` (imports the modules) → build output `js/app.js`. `js/map.js` (`bolt-map`) is a native module outside the bundle, loaded only by pages with a map |
 | Asset URLs | `{{ asset('css/index.css') }}?v={{ theme.assets_version }}`. Bolt registers the active theme as the default asset package on frontend and error pages, so paths are relative to the theme folder. Bump `assets_version` in `theme.yaml` with every CSS/JS release |
-| Site facts | `theme.yaml` → `contact:` (email, phone, registered address, company ID), `socials:`, `analytics:` (tracking IDs), `privacy:` (controllers, purposes, recipients, cookie inventory — the single source for the cookie banner and the privacy page, `bolt-cookie-consent`), `legal:` (operator type, register entry, DIČ, consumer information — the footer identity of `bolt-legal-cz`). Read in Twig as `theme.contact.email` or `config.get('theme/contact/email')`. A whole block (`config.get('theme/legal')`) comes as a Bolt collection: convert it first — `{% set legal = legal.toArray is defined ? legal.toArray() : legal|default({}) %}` — otherwise a key set to `~` throws on access (the page answers 500) and `|column()` finds nothing |
+| Site facts | `theme.yaml` → `contact:` (email, phone, registered address, company ID), `socials:`, `analytics:` (tracking IDs), `privacy:` (controllers, purposes, recipients, cookie inventory — the single source for the cookie banner and the privacy page, `bolt-cookie-consent`), `legal:` (operator type, register entry, DIČ, consumer information — the footer identity of `bolt-legal-cz`), `location:` (the pin of the map, `bolt-map`). Read in Twig as `theme.contact.email` or `config.get('theme/contact/email')`. A whole block (`config.get('theme/legal')`) comes as a Bolt collection: convert it first — `{% set legal = legal.toArray is defined ? legal.toArray() : legal|default({}) %}` — otherwise a key set to `~` throws on access (the page answers 500) and `|column()` finds nothing |
 
 ### Master Layout Skeleton (`partials/_master.twig`)
 
@@ -235,6 +236,7 @@ All behaviour ships with `bolt-theme-init` (`js/src/*.ts`) and `bolt-cookie-cons
 | `[data-cookie-settings]` | Banner, footer "Nastavení cookies" button, privacy page, embed placeholders | Opens the consent settings (`cookie-consent.ts`; also `window.cookieConsent.open()`) |
 | `[data-consent-embed]`, `[data-consent-embed-load]`, `script[type="text/plain"][data-consent-category]` | `partials/_consent-embed.twig`, further trackers | Load only after consent with their category (`cookie-consent.ts`) |
 | `[data-cookie-banner-defer]` | Privacy page | The banner does not cover that page |
+| `[data-map]` with `data-map-lat`, `data-map-lng`, `data-map-zoom`, `data-map-i18n` | `components/ui/map.twig` | 3D map, loaded when it comes into view (`js/map.js`, `bolt-map`) |
 
 ### Links, Locales & Translations
 
@@ -294,6 +296,7 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 - Features: gallery yes/no, downloads yes/no, carousel yes/no, catalog/products yes/no, articles yes/no
 - Tracking: none | GA4 <id> | Google Ads <id> | Sklik <id> | Meta <id> (each site's own ID)
 - Embeds: none | YouTube | Google Maps | Mapy.com
+- Location map (bolt-map, no consent): none | <latitude>, <longitude>
 - Legal (bolt-legal-cz intake): operator trade | company | profession | other; IČO; consumers yes/no (ADR body); online contracts yes/no; reviews yes/no; whistleblowing / accessibility / regulated profession
 - Privacy (bolt-cookie-consent intake): controller model single | joint | separate | hybrid; controllers; purposes; recipients; open [DOPLNIT] questions for the operator
 - Public API consumers: none (disable) | <who> (lock down instead)
@@ -572,7 +575,13 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - Test once: save a record of each tagged ContentType in the admin and reload — the change is there.
 - *Verify:* `bash $SKILLS/bolt-performance/scripts/verify.sh` (passes when no `{% cache %}` is used).
 
-### 6.8 Editor Pencils (`bolt-edit-links`)
+### 6.8 Location Map (`bolt-map`) **[if the site shows a map]**
+- `bash $SKILLS/bolt-map/scripts/scaffold.sh --lat=<latitude> --lng=<longitude>` copies `js/map.js` and `components/ui/map.twig`, adds the library and its build step, and writes `location:` to `theme.yaml`.
+- Merge `$SKILLS/bolt-map/examples/translations.<locale>.xlf` (`map.*`) and include the component on the page that shows the location. No Google Maps or Mapy.com embed, and no consent placeholder.
+- Add `map_display` to `--purposes=` of `bolt-cookie-consent` (6.5): the map sets no cookies, but the visitor's IP address reaches the tile host.
+- *Verify:* `bash $SKILLS/bolt-map/scripts/verify.sh`, then the browser checks of the skill once Gate 6 has built the theme.
+
+### 6.9 Editor Pencils (`bolt-edit-links`)
 - Last step of the phase, once every page exists. `bash $SKILLS/bolt-edit-links/scripts/scaffold.sh` installs or upgrades the `edit` macro in `macros.twig` and prints the places still missing a pencil, with the tabs of each ContentType.
 - A record that feeds two or more sections gets one `group:` per section in `contenttypes.yaml`; it changes only the editor, so no migration is needed.
 - Apply the macro by the placement table of the skill: `macros.edit(record)` on the `<h1>`, `title_suffix: macros.edit(record, '<group>')` per section, `macros.editList(items|first)` on the heading of a list without pages of its own, once per record in containers. Never one per row or card. Never inside a link, a button, `helper-pages/`, `extensions/` or a cached fragment.
@@ -719,7 +728,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | Skill | Applied in | Verification expected to pass in | Applies to |
 | :--- | :--- | :--- | :--- |
 | `bolt-timezone` | 1.1 | 1.1, 8.2 | every site |
-| `bolt-edit-links` | 6.8 | 6.8, 8.2 (logged-in browser check 8.4) | every site |
+| `bolt-edit-links` | 6.9 | 6.9, 8.2 (logged-in browser check 8.4) | every site |
 | `bolt-add-language` | 1.2 (Step 1), 5.1 (Step 2), 5.5 (Step 3), 5.4 (Step 4), 6.3 (Step 6), 7.2–7.3 (Steps 5, 7) | 8.2, once per secondary locale | multilingual sites |
 | `bolt-disable-api` | 1.3 | 1.3 (configuration), 8.2 (HTTP) | every site (lock-down variant when the API has consumers) |
 | `bolt-code-quality` | 1.4 (setup) | 1.4, 3.2, 8.1, 8.2 | every site |
@@ -727,6 +736,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `bolt-asset-caching` | 2.2 (Steps 1–4), 4.1 (Step 5 through the master layout, `assets_version` in 4.2 / 7.4) | 2.2, 8.2 | every site |
 | `bolt-security-hardening` | 1.5 (Steps 1–5), 2.3 (Step 6), 7.5 (Step 7), 8.1 (`make audit`) | 1.5 (file sections), 8.2 and against production (live section) | every site |
 | `bolt-performance` | 6.7 | 6.7, 8.2 | optional — pages with a high query count |
+| `bolt-map` | 6.8 | 6.8, 8.2 | sites that show a location map |
 | `bolt-extension-setup` | 3.1 (Part A), 5.2, 6.2 (Part B) | 6.2, 8.2 | every site |
 | `bolt-runtime-extensions` | 3.2 | 3.2, 8.2 | `LocaleLinkExtension` everywhere; the others per features |
 | `bolt-theme-init` | 4.1, 4.2, 4.5 | Gate 4, 8.2 | every site |

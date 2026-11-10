@@ -74,7 +74,7 @@ Ask **L1 first** — who operates the website decides which legal information th
 | L5 | Special cases: 50+ employees or AML obliged person (whistleblowing page), 10+ employees or turnover above EUR 2 M (accessibility, with online contracts), regulated profession (chamber, title) | none | 6.6 |
 | O1 | Contact details shown on the site: name, phone, e-mail, address, opening hours, one-sentence bio, social links | — *operator* | 4.2 `theme.yaml` `contact:`, `socials:` |
 | O2 | `bolt-cookie-consent` intake Q1: measuring / advertising tools | Google Ads · GA4 · Sklik · Meta Pixel · other · none | 6.5 |
-| O3 | Q2: embedded third-party content | YouTube · Google Maps · Mapy.com · none | 6.5 |
+| O3 | Q2: embedded third-party content. A location map defaults to `bolt-map`, which needs no consent: ask for the address or city | YouTube · location map (`bolt-map`) · Google Maps · Mapy.com · none | 6.5, 6.8 |
 | O4 | Q3: The site's own Google tag ID | `G-…` or `GTM-…`, never another site's | 6.5 |
 | O5 | Q4: more than one business on the site? (two follow-up questions → controller model) | single — never guess | 6.5 |
 | O6 | Q5: controller identity for each business (legal name, form, address, IČO, registry entry, privacy e-mail, DPO) | — *operator* | 6.5 privacy page |

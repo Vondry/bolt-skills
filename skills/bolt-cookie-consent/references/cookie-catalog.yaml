@@ -285,6 +285,13 @@ recipients:
     country: { cs: 'Česká republika', en: 'Czech Republic' }
     transfer: ~
 
+  openfreemap:
+    name: 'Hyperknot Software Kft. (OpenFreeMap), doručení přes Cloudflare'
+    role: controller
+    purpose: { cs: 'Poskytnutí mapových podkladů pro mapu na webu', en: 'Providing the map data for the map on the website' }
+    country: { cs: 'Maďarsko (EU); CDN Cloudflare může údaje zpracovávat i v USA', en: 'Hungary (EU); the Cloudflare CDN may process the data in the USA as well' }
+    transfer: adequacy
+
 # Purposes of processing (GDPR čl. 13). The key is the value for --purposes=; analytics,
 # marketing and third_party are added automatically from the trackers and embeds.
 # `legal_basis`: art6_1_a (consent) | art6_1_b (contract) | art6_1_c (legal obligation) |
@@ -338,6 +345,14 @@ purposes:
     retention: '[DOPLNIT např. po dobu promlčecí lhůty]'
     recipients: []
     provision: { cs: 'Údaje nevyžadujeme zvlášť; používáme ty, které už máme.', en: 'We do not request this data separately; we use what we already hold.' }
+  map_display:
+    title: { cs: 'Zobrazení polohy na mapě', en: 'Showing the location on a map' }
+    data: { cs: 'IP adresa, datum a čas požadavku, adresa stránky, typ prohlížeče', en: 'IP address, date and time of the request, page address, browser type' }
+    legal_basis: art6_1_f
+    legitimate_interest: { cs: 'snadné nalezení provozovny přímo na webu', en: 'making the premises easy to find directly on the website' }
+    retention: { cs: 'u poskytovatele mapy běžně nejvýše 7 dní, při bezpečnostním incidentu nejvýše 30 dní', en: 'with the map provider normally up to 7 days, up to 30 days during a security incident' }
+    recipients: [openfreemap]
+    provision: { cs: 'Údaje se předají automaticky při zobrazení mapy; mapa nepoužívá cookies.', en: 'The data is passed on automatically when the map is shown; the map uses no cookies.' }
   analytics:
     title: { cs: 'Měření návštěvnosti', en: 'Measuring website traffic' }
     data: { cs: 'online identifikátory (cookies), IP adresa, údaje o zařízení a prohlížeči, zobrazené stránky', en: 'online identifiers (cookies), IP address, device and browser details, pages viewed' }

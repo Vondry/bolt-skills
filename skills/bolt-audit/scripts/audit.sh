@@ -192,7 +192,7 @@ EOF
 SKILLS=(bolt-timezone bolt-disable-api bolt-code-quality bolt-htaccess bolt-asset-caching
         bolt-security-hardening bolt-performance bolt-extension-setup bolt-runtime-extensions bolt-theme-init
         bolt-tailwind-theme bolt-contenttypes bolt-menu bolt-theme-templates bolt-helper-pages
-        bolt-cookie-consent bolt-legal-cz bolt-edit-links bolt-add-language)
+        bolt-cookie-consent bolt-legal-cz bolt-map bolt-edit-links bolt-add-language)
 
 printf "skill\tstatus\tfailures\twarnings\tnote\n" > "$OUT/summary.tsv"
 

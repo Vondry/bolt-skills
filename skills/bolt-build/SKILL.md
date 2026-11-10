@@ -3,7 +3,7 @@ name: bolt-build
 description: >-
   Build a complete Bolt CMS 6 website from a supplied design — Figma (Figma MCP), Pencil / pen.dev
   (.pen via Pencil MCP), exported images or PDF, an existing website, or a brief — by running the
-  whole WORKFLOWS.md (Phases 0–8, all 19 skills) autonomously. Reads the design first, asks every
+  whole WORKFLOWS.md (Phases 0–8, all 20 skills) autonomously. Reads the design first, asks every
   question the workflow needs in one upfront intake, writes the site plan, then builds, verifies,
   commits gate by gate and keeps a resumable progress log. Use when asked to create, build or
   implement a website (or "make this design into a Bolt site").
@@ -24,7 +24,7 @@ to end with as little interruption as possible*:
 
 | File | Use |
 | :--- | :--- |
-| [`references/intake.md`](references/intake.md) | Every question the 19 skills need, in five rounds, with defaults and the phase that uses each answer |
+| [`references/intake.md`](references/intake.md) | Every question the 20 skills need, in five rounds, with defaults and the phase that uses each answer |
 | [`references/design-sources.md`](references/design-sources.md) | What to extract from Figma MCP, Pencil MCP, images/PDF, an existing site or a brief; token mapping; visual QA loop |
 | [`references/site-plan-template.md`](references/site-plan-template.md) | Site plan, build progress, decisions log, open issues and handover — written into the project's `AGENTS.md` |
 | `scripts/preflight.sh` | Tools, PHP extensions, Bolt version, console, database, git, local URL — before Phase 1 |

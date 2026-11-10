@@ -1,0 +1,52 @@
+{#
+  components/ui/map.twig — 3D city map with a pin (bolt-map). No cookies, no consent, always shown.
+
+  Props (all optional, the defaults come from theme.yaml):
+    - latitude, longitude (number): position of the pin; theme.location by default
+    - zoom (number): 17 by default, close to the place; 3D buildings appear from 14
+    - class (string): extra classes on the wrapper
+
+  The button opens Google Maps with directions to the pin. A plain link: nothing loads until it is clicked.
+
+  Renders nothing without coordinates. The map is light or dark by the visitor's system setting,
+  whatever the site does. That rule is in css/tailwind/index.css as plain CSS, because a theme can
+  redefine Tailwind's dark: variant to follow its own toggle.
+  The pin takes the element's text colour, so change `text-accent` to change the pin.
+#}
+{% set map_latitude = latitude|default(theme.location.latitude|default(null)) %}
+{% set map_longitude = longitude|default(theme.location.longitude|default(null)) %}
+{% set map_zoom = zoom|default(theme.location.zoom|default(17)) %}
+{% set map_i18n = {
+    'Map.Title': __('map.title'),
+    'Marker.Title': __('map.marker'),
+    'NavigationControl.ZoomIn': __('map.zoom_in'),
+    'NavigationControl.ZoomOut': __('map.zoom_out'),
+    'NavigationControl.ResetBearing': __('map.reset_view'),
+    'AttributionControl.ToggleAttribution': __('map.attribution'),
+    'AttributionControl.MapFeedback': __('map.feedback'),
+    'CooperativeGesturesHandler.WindowsHelpText': __('map.scroll_windows'),
+    'CooperativeGesturesHandler.MacHelpText': __('map.scroll_mac'),
+    'CooperativeGesturesHandler.MobileHelpText': __('map.two_fingers'),
+} %}
+
+{% if map_latitude is not null and map_longitude is not null %}
+    <div class="relative {{ class|default('') }}">
+        <div data-map
+             data-map-lat="{{ map_latitude }}"
+             data-map-lng="{{ map_longitude }}"
+             data-map-zoom="{{ map_zoom }}"
+             data-map-i18n="{{ map_i18n|json_encode }}"
+             class="h-96 overflow-hidden rounded-lg border border-stroke bg-surface-2 text-accent print:hidden"></div>
+        <a class="btn-primary group absolute top-4 left-4 z-10 inline-flex items-center gap-1.5 print:hidden"
+           href="https://www.google.com/maps/dir/?api=1&destination={{ map_latitude }},{{ map_longitude }}"
+           target="_blank"
+           rel="noopener">
+            {{ __('map.directions') }}
+            <svg class="size-4 transition-transform duration-200 ease-out motion-safe:group-hover:translate-x-0.5 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-focus-visible:translate-x-0.5 motion-safe:group-focus-visible:-translate-y-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M7 7h10v10"/>
+                <path d="M7 17 17 7"/>
+            </svg>
+        </a>
+        <script type="module" src="{{ asset('js/map.js') }}?v={{ theme.assets_version|default('1.0') }}"></script>
+    </div>
+{% endif %}
