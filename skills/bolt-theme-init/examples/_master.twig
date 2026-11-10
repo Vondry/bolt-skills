@@ -18,6 +18,8 @@
 {# motion-safe: smooth anchor scrolling only for visitors who have not asked the system for reduced motion. #}
 <html lang="{{ htmllang() }}" class="motion-safe:scroll-smooth antialiased">
 <head>
+    {# bolt-cookie-consent: the site's Google tag, inert until the visitor consents. #}
+    {% include 'partials/_google-tag.twig' ignore missing %}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 

@@ -115,6 +115,11 @@ if [ $BANNER -eq 1 ]; then
     copy_if_missing "$EXAMPLES_DIR/_consent-mode.twig" "$THEME_DIR/partials/_consent-mode.twig"
     copy_if_missing "$EXAMPLES_DIR/_consent-embed.twig" "$THEME_DIR/partials/_consent-embed.twig"
 
+    # The site's Google tag (its own ID goes into the partial, not into theme.yaml)
+    if printf '%s\n' ${CONFIG_ARGS[@]+"${CONFIG_ARGS[@]}"} | grep -qE '^--trackers=.*(ga4|google_ads)'; then
+        copy_if_missing "$EXAMPLES_DIR/_google-tag.twig" "$THEME_DIR/partials/_google-tag.twig"
+    fi
+
     if [ -d "$THEME_DIR/js/src" ]; then
         copy_if_missing "$EXAMPLES_DIR/cookie-consent.ts" "$THEME_DIR/js/src/cookie-consent.ts"
 
@@ -180,7 +185,9 @@ fi
 # 7. Check _master.twig inclusion
 MASTER_FILE="$THEME_DIR/partials/_master.twig"
 if [ -f "$MASTER_FILE" ]; then
-    for partial in _cookie-banner.twig _consent-mode.twig; do
+    PARTIALS=(_cookie-banner.twig _consent-mode.twig)
+    [ -f "$THEME_DIR/partials/_google-tag.twig" ] && PARTIALS+=(_google-tag.twig)
+    for partial in "${PARTIALS[@]}"; do
         if grep -q "$partial" "$MASTER_FILE"; then
             echo "Verified: $MASTER_FILE includes partials/$partial."
         else
@@ -195,7 +202,8 @@ echo "Translations: merge the cookie.* and privacy.* units into every catalog (C
 echo "  php <bolt-skills>/scripts/merge-xliff.php $EXAMPLES_DIR/translations.cs.xlf translations/messages.cs.xlf"
 echo "  php <bolt-skills>/scripts/merge-xliff.php $EXAMPLES_DIR/translations.en.xlf translations/messages.en.xlf"
 echo "Next: fill every [DOPLNIT] in $THEME_YAML with the operator, measure every [OVĚŘIT] item in a"
-echo "clean browser profile (DM-02), set the tracker IDs under analytics:, and hand the operator the"
+echo "clean browser profile (DM-02), put this site's own Google tag ID in partials/_google-tag.twig"
+echo "(never another site's), set any other tracker ID under analytics:, and hand the operator the"
 echo "list of open questions (AG-05)."
 echo "----------------------------------------------------------"
 echo "Done! Rebuild the theme (npm run prod), clear the cache, then run scripts/verify.sh (--draft while placeholders remain)."

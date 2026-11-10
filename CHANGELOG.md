@@ -2,6 +2,21 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+The Google tag loads only after consent, and Consent Mode Advanced is gone.
+
+### Changed
+- `bolt-cookie-consent`: the site's Google tag (GA4, Google Ads or a Tag Manager container) lives in the new `partials/_google-tag.twig`, with the site's own ID, blocked until its consent category is granted. `analytics.ga4_id` and `analytics.google_ads_id` are no longer read.
+- `bolt-cookie-consent`: CB-50 is now a MUST. `verify.sh` fails on `analytics.consent_mode: advanced`, on a Google tag script that is not blocked, and on a placeholder ID.
+
+### Removed
+- `bolt-cookie-consent`: Consent Mode Advanced and `analytics.consent_mode`.
+
+### Migrating a project
+- Copy `examples/_google-tag.twig` to `partials/_google-tag.twig` with the site's own ID, include it first in `<head>` of `partials/_master.twig`, and remove `ga4_id`, `google_ads_id` and `consent_mode` from `theme.yaml`.
+- Replace `js/src/cookie-consent.ts` and `partials/_consent-mode.twig` with the new examples, update `gdpr.twig`, remove the `privacy.cookies.consent_mode_advanced` units, then `npm run prod` and bump `assets_version`.
+
 ## 1.15.0 — 2026-11-09
 
 Quick repeated taps on slider arrows no longer zoom the page on phones.

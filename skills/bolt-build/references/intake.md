@@ -75,7 +75,7 @@ Ask **L1 first** — who operates the website decides which legal information th
 | O1 | Contact details shown on the site: name, phone, e-mail, address, opening hours, one-sentence bio, social links | — *operator* | 4.2 `theme.yaml` `contact:`, `socials:` |
 | O2 | `bolt-cookie-consent` intake Q1: measuring / advertising tools | Google Ads · GA4 · Sklik · Meta Pixel · other · none | 6.5 |
 | O3 | Q2: embedded third-party content | YouTube · Google Maps · Mapy.com · none | 6.5 |
-| O4 | Q3: Google Consent Mode | basic (recommended) · advanced (operator's explicit decision) | 6.5 |
+| O4 | Q3: The site's own Google tag ID | `G-…` or `GTM-…`, never another site's | 6.5 |
 | O5 | Q4: more than one business on the site? (two follow-up questions → controller model) | single — never guess | 6.5 |
 | O6 | Q5: controller identity for each business (legal name, form, address, IČO, registry entry, privacy e-mail, DPO) | — *operator* | 6.5 privacy page |
 | O7 | Q6: processing besides cookies (forms, orders, accounting, newsletter, jobs, client agenda), retention, recipients (hosting, e-mail, accountant, tools) | web operation + contact form | 6.5 |

@@ -219,10 +219,12 @@ if (! is_file($writeTo)) {
 
 $yaml = file_get_contents($writeTo);
 
-// analytics: ID keys for the selected trackers (theme-init ships ga4_id / sklik_id / consent_mode)
-$idKeys = ['consent_mode' => "basic           # basic: Google tags load only after consent | advanced: cookieless pings before consent (operator's explicit decision, CB-50)"];
+// analytics: ID keys for the selected trackers (the Google tag's ID lives in partials/_google-tag.twig)
+$idKeys = [];
 foreach ($trackers as $key) {
-    $idKeys[$catalog['trackers'][$key]['analytics_key']] = "~                  # {$catalog['trackers'][$key]['label']}";
+    if (isset($catalog['trackers'][$key]['analytics_key'])) {
+        $idKeys[$catalog['trackers'][$key]['analytics_key']] = "~                  # {$catalog['trackers'][$key]['label']}";
+    }
 }
 $analytics = (Yaml::parse($yaml)['analytics'] ?? []) ?: [];
 $missing = [];

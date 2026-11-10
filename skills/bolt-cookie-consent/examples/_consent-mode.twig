@@ -7,8 +7,8 @@
   items: no banner is needed, the footer then shows only the privacy policy link).
 
   Everything comes from theme.yaml:
-    analytics.ga4_id / google_ads_id / sklik_id   tracker IDs
-    analytics.consent_mode                        basic (default) | advanced — operator's decision (CB-50)
+    analytics.sklik_id                            Sklik retargeting ID (the Google tag and its ID
+                                                  live in partials/_google-tag.twig)
     privacy.cookies                               inventory; a tracker runs only when its category
                                                   has items there (INV-03: nothing unclassified)
     privacy.config_version / privacy.consent      re-ask rules (CB-41, CB-42)
@@ -37,19 +37,14 @@
         {% set first_party = first_party|merge({(category): names}) %}
     {% endfor %}
 
-    {# gaCookieExpires: 13 months in seconds instead of GA's 2-year default (CB-24). #}
     <script type="application/json" id="cookie-consent-config">
         {{- {
             version: privacy.config_version|default(1),
             validityMonths: privacy.consent.validity_months|default(12),
             reaskMonths: privacy.consent.reask_after_reject_months|default(6),
-            mode: analytics.consent_mode|default('basic') == 'advanced' ? 'advanced' : 'basic',
             categories: consent_categories,
             cookies: first_party,
-            ga4: 'analytics' in consent_categories ? analytics.ga4_id|default(null) : null,
-            googleAds: 'marketing' in consent_categories ? analytics.google_ads_id|default(null) : null,
             sklik: 'marketing' in consent_categories ? analytics.sklik_id|default(null) : null,
-            gaCookieExpires: 34128000,
         }|json_encode|raw -}}
     </script>
 {% endif %}

@@ -31,7 +31,7 @@ Ask the operator (or the user acting for them) these questions — with your que
 | :- | :--- | :--- | :--- |
 | 1 | **Which measuring and advertising tools will the site use?** Google Analytics 4 · Google Ads (conversions, remarketing) · Seznam Sklik (retargeting, conversions) · Meta Pixel · other (Hotjar, Microsoft Clarity, LinkedIn, TikTok …) · none | Google Ads, often GA4; Sklik optional | `--trackers=ga4,google_ads,sklik,meta_pixel` |
 | 2 | **Is third-party content embedded?** YouTube / Vimeo video · Google Maps · Mapy.com · social widgets · none. (External fonts and CDNs: self-host them instead — `bolt-tailwind-theme`.) | a YouTube video, a map on the contact page | `--embeds=youtube,google_maps,mapy_com` |
-| 3 | **Google Consent Mode: basic or advanced?** Basic = Google tags load only after consent (recommended, matches CB-01). Advanced = tags load before consent and send cookieless pings with IP address and browser data — only on the operator's explicit decision (CB-50). | basic | `analytics.consent_mode` |
+| 3 | **The site's own Google tag ID** (with GA4 or Google Ads): a GA4 ID (`G-…`) or a Tag Manager container (`GTM-…`). Never reuse an ID from another site: it mixes the data of both. | `G-XXXXXXXXXX` | `partials/_google-tag.twig` |
 | 4 | **Is more than one business presented on the website?** If yes: (a) Do they decide **together** about the website (content, forms, analytics, cookie banner)? (b) Does each handle **its own clients** (contracts, invoicing, files)? Never guess the answer (AG-02). | one business | `--model=` (table below) |
 | 5 | **Controller identity**, for every business: legal name or trade name, legal form, registered office / place of business, IČO, registry entry (obchodní / živnostenský rejstřík, ČAK …), e-mail for privacy questions, data protection officer (if appointed). A private person without a business (a personal website): name and e-mail only — ask before publishing a home address. | from the operator; `contact:` in `theme.yaml` prefills the first one | `privacy.controllers` (`business: false` for a private person) |
 | 6 | **What personal data does the site handle besides cookies?** Contact form / e-mail · orders and contracts · accounting · newsletter · job applications · client agenda per business. For each: retention period, and who receives it (hosting, e-mail provider, accountant, newsletter tool, CRM). | contact form + server logs | `--purposes=…`, `privacy.recipients` |
@@ -54,7 +54,7 @@ Purposes for `--purposes=` (from `references/cookie-catalog.yaml`): `web_operati
 
 ```
 theme.yaml
-├── analytics:  ga4_id, google_ads_id, sklik_id, consent_mode
+├── analytics:  sklik_id (the Google tag and its ID live in partials/_google-tag.twig)
 └── privacy:    controllers, purposes, recipients, cookies (inventory), consent rules, changelog
       │
       ├── partials/_consent-mode.twig ── <script type="application/json" id="cookie-consent-config">
@@ -67,7 +67,7 @@ theme.yaml
 
 **One source of truth (data model, DM-01).** The banner text (controllers, purposes, named third parties), the cookie list in both layers and on the page, the purposes table and the recipients table are all rendered from `privacy:`. Never copy these facts into templates or translation catalogs — the two would drift apart, which is exactly what ÚOOÚ fined (cookies on the site that the banner did not describe). Translation catalogs (`cookie.*`, `privacy.*`) hold only the fixed wording: labels, rights, legal references.
 
-**A tracker runs only when it is inventoried.** `_consent-mode.twig` passes an ID to the script only if `privacy.cookies` has items in the tracker's category (GA4 → `analytics`; Google Ads, Sklik, Meta → `marketing`). An ID without inventory never loads, and `verify.sh` reports it (INV-01, INV-03).
+**A tracker runs only when it is inventoried.** A consent category exists only if `privacy.cookies` has items in it, and the blocked Google tag and Sklik run only through their category (GA4 → `analytics`; Google Ads, Sklik, Meta → `marketing`). A tracker without inventory never loads, and `verify.sh` reports it (INV-01, INV-03).
 
 **No inline JavaScript.** The head partial prints JSON only, the banner has no `onclick`, so a strict Content-Security-Policy keeps working. Nothing contacts a third party before consent — no `preconnect` / `dns-prefetch` to tracker domains either (CB-01).
 
@@ -75,6 +75,7 @@ theme.yaml
 | :--- | :--- | :--- |
 | `theme.yaml` → `analytics:`, `privacy:` | `scripts/privacy-config.php` (via scaffold) | The data model. Shape: `examples/theme.privacy.yaml` |
 | `partials/_consent-mode.twig` | `examples/` | Consent configuration as JSON, in `<head>` of `partials/_master.twig` |
+| `partials/_google-tag.twig` | `examples/` | The site's Google tag with its own ID, blocked until consent; first in `<head>` of `partials/_master.twig` |
 | `partials/_cookie-banner.twig` | `examples/` | Layer 1 bar and layer 2 dialog; included right after the skip link in `partials/_master.twig` |
 | `partials/_cookie-table.twig` | `examples/` | Items of one category — shared by the banner and the page |
 | `partials/_privacy-macros.twig` | `examples/` | `privacy_ui.t(value)` (localized value), `privacy_ui.date(value)` |
@@ -108,7 +109,7 @@ When the editors should maintain the policy in the admin, the same data can live
 | `cookies` collection | One set per item with `category` (`necessary`, `preferences`, `analytics`, `marketing`, `third_party`), a name (`name` or `cookie_name`; `name` and `label` are reserved inside a set — bolt-contenttypes rule 8), `technology`, `party` (`first`, `third`), `provider`, purpose (`purpose` or `cookie_purpose`), `expiry`, optional `transfer`. The same rules as `privacy.cookies` (INV-01–INV-03, CB-21) |
 | Controllers, purposes, recipients, joint arrangement, change history | Fields of the record, rendered by the site's templates; the page must still have every section anchor (`#spravce` … `#historie-zmen`) |
 | Banner | `partials/_master.twig` (or `_consent-mode.twig`) reads the consent categories from the **same record** (`{% setcontent privacy_policy = 'privacy' returnsingle %}`), so the banner, the cookie table and the page never disagree |
-| Tracker IDs | Stay in the `analytics:` block of `theme.yaml` |
+| Tracker IDs | The Google tag and its ID in `partials/_google-tag.twig`; other trackers in the `analytics:` block of `theme.yaml` |
 
 `verify.sh` detects the model: a `theme.yaml` without `privacy:` and a ContentType whose `cookies` collection has a `category` field. It reads the published record through the project's kernel and Doctrine, validates the inventory like `privacy.cookies`, and checks the sections, the footer link and the cookies on the rendered page. Content of the record lives in the database: a change made locally must be repeated in the production admin, because the database is not uploaded.
 
@@ -142,7 +143,7 @@ The scaffold:
 `php scripts/privacy-config.php … ` (without `--write`) prints the block instead, e.g. to compare with an existing one. `--necessary=session` adds a session-cookie item for forms with CSRF protection; measure its real name.
 
 After the scaffold:
-1. Set the IDs under `analytics:` (`G-…`, `AW-…`, Sklik retargeting ID as a number).
+1. Put the site's own Google tag ID in `partials/_google-tag.twig` (replace every `G-XXXXXXXXXX`; never another site's ID), and the Sklik retargeting ID, as a number, under `analytics:`.
 2. Go through `privacy:` with the operator; replace every `[DOPLNIT …]`. For `separate` / `hybrid`, move each business's client purposes to `section: <controller id>` with `controllers: [<that id>]`.
 3. Measure every `[OVĚŘIT …]` item (section 7) and correct names and lifetimes that differ from the catalog.
 4. Clear Bolt's cache (`bin/console cache:clear`) — `theme.yaml` is cached.
@@ -166,17 +167,23 @@ Never: pre-enabled switches (DP-03), "legitimate interest" toggles switched on (
 
 ## 5. Trackers, embeds and consent behaviour
 
-### Google Analytics 4 and Google Ads (Consent Mode v2)
+### The Google tag (GA4, Google Ads, Tag Manager)
 
-`cookie-consent.ts` defines `gtag` with all four consent signals **denied** (`analytics_storage`, `ad_storage`, `ad_user_data`, `ad_personalization`) and `ads_data_redaction`, then follows the stored choice:
+The site's Google tag lives in `partials/_google-tag.twig`, included first in `<head>` of `partials/_master.twig`, with its ID written in that file. `theme.yaml` holds no Google ID. Every site has its own ID: **never copy one from another project**, it mixes the data of both sites.
 
-| | `basic` (default) | `advanced` |
-| :--- | :--- | :--- |
-| Before consent | `gtag.js` is not loaded | `gtag.js` loads, GA4 and Ads configured with everything denied (cookieless pings) |
-| Analytics consent | loads `gtag.js`, configures GA4 (`cookie_expires` 13 months, CB-24) | consent update |
-| Marketing consent | loads `gtag.js`, configures Google Ads (conversions, remarketing) | consent update |
+Each script in the partial is inert (`type="text/plain" data-consent-category="analytics"`). `cookie-consent.ts` runs them in order once the category is granted, and nothing is requested from Google before that (CB-01, CB-50). The partial defines `gtag` with all four consent signals **denied** (`analytics_storage`, `ad_storage`, `ad_user_data`, `ad_personalization`) plus `ads_data_redaction`, and the module then sends a Consent Mode v2 update from the stored choice.
 
-The privacy page describes the active mode automatically (`privacy.cookies.consent_mode_*`). Do not paste Google's gtag or Google Tag Manager snippet into a template — `verify.sh` fails on it. GTM is deliberately not supported: tags inside a container would bypass the per-category loading; configure GA4 and Google Ads through `analytics:` instead.
+| Visitor | Google tag |
+| :--- | :--- |
+| No choice, or Reject | not loaded, nothing sent to Google |
+| Grants the category | loaded, signals follow the granted categories |
+| Withdraws | first-party cookies deleted, page reloads, tag gone |
+
+- **GA4 (the example):** `gtag/js` plus the `config` call with `cookie_expires` of 13 months (CB-24).
+- **Tag Manager container:** change the script to `gtm.js?id=GTM-…`, remove the `config` call, and set the cookie expiry in the container's GA4 tag. Every tag in the container runs under the partial's one category, and non-Google tags ignore Consent Mode, so a container may hold only tags of that category.
+- **Google Ads:** a second pair of blocked scripts with `data-consent-category="marketing"` and the `AW-…` ID, with its cookies in the inventory.
+
+Consent Mode **Advanced is not supported**: it loads the tag before consent and sends the IP address and browser data to Google, which conflicts with CB-01. Never paste Google's snippet into a template unblocked — `verify.sh` fails on it.
 
 **Conversions** (form sent, order placed) go through the module, which does nothing without marketing consent:
 
@@ -246,7 +253,7 @@ Markup hooks (`data-cookie-*`, `data-consent-*`) are listed at the top of `examp
 | 6. Rights, complaint to ÚOOÚ | `#prava` | `privacy.rights.*` |
 | 7. Right to object | `#namitka` — separate, visually distinct block (čl. 21/4) | `privacy.objection.*` |
 | 8. Automated decision-making | end of `#ucely` | `automated_decision_making` |
-| 9. Cookies | `#cookies` — same tables as layer 2, Consent Mode note, "Nastavení cookies" button | `cookies`, `analytics.consent_mode` |
+| 9. Cookies | `#cookies` — same tables as layer 2, Consent Mode note, "Nastavení cookies" button | `cookies` |
 | 10. Exercising rights | `#kontakt` — one contact channel, reply within one month (VAR-32) | `joint_arrangement.contact_controller` or the first controller |
 | 11. Joint controllers | `#spolecne-spravcovstvi` — essence of the arrangement, rights against any controller | `joint_arrangement` |
 
@@ -298,7 +305,7 @@ bash $SKILLS/bolt-cookie-consent/scripts/verify.sh           # sign-off: placeho
 | 3 | Banner partials present, `_consent-mode.twig` in `<head>`, banner included in the master layout |
 | 4 | Reject / Accept (layer 1) and Reject / Save / Accept (layer 2) share identical classes; settings button; layer-2 dialog; switches start off; `role="dialog"`, `aria-labelledby`, `role="switch"` |
 | 5 | No implied-consent wording; one label for "Nastavení cookies" |
-| 6 | No tracker script, gtag call or third-party iframe hard-coded in any template |
+| 6 | No tracker script, gtag call or third-party iframe outside a blocked `type="text/plain"` script; `_google-tag.twig` is in `<head>` and fully blocked |
 | 7 | `cookie-consent.ts` present and imported; no auto-hide |
 | 8 | Footer links the policy (or, in the ContentType model, a record with `|link`) and has `[data-cookie-settings]` |
 | 9 | Privacy page: `theme.yaml` model — route, rendered from `privacy:`, all section anchors; ContentType model — `record_template` exists, the layout reads the same record; banner deferred on the page |
@@ -312,7 +319,7 @@ Without trackers and embeds the banner checks are skipped and the privacy page i
 
 - **No banner, no consent configuration, privacy page 500.** `theme.yaml` blocks come as Bolt collections: `|column('category')` finds nothing in them (no consent categories, so the banner and `_consent-mode.twig` render nothing) and a key set to `~` (`summary: ~`, `dpo: ~`) throws on access. Every template converts `privacy:` and `analytics:` with `toArray()` before use; `verify.sh` step 3 fails on a copy that does not. Found 2026-10-22 by rendering the examples with their own `theme.privacy.yaml` in Bolt 6.1.9.
 - **A tracker ID without inventory never loads.** That is intended: add the items to `privacy.cookies` first.
-- **…and inventory without a tracker ID asks for consent to nothing.** `_ga` items with an empty `analytics.ga4_id` still make the banner ask for analytics consent, and the policy describes processing (and a transfer to Google) that never happens. When the tracker is not used, remove its cookies together with the purpose and recipient that describe it; the banner and "Nastavení cookies" then disappear on their own. `verify.sh` step 2 warns. Found 2026-10-31 in an audit of a site prepared for GA that never got an ID.
+- **…and inventory without a tracker ID asks for consent to nothing.** `_ga` items with no Google tag in `partials/_google-tag.twig` still make the banner ask for analytics consent, and the policy describes processing (and a transfer to Google) that never happens. When the tracker is not used, remove its cookies together with the purpose and recipient that describe it; the banner and "Nastavení cookies" then disappear on their own. `verify.sh` step 2 warns. Found 2026-10-31 in an audit of a site prepared for GA that never got an ID.
 - **Multilingual sites set a session cookie.** Bolt's `LocaleSubscriber` writes the request's locale into the session (`PHPSESSID`, lifetime `framework.session.cookie_lifetime`, 8 h with bolt-security-hardening) whenever the URL names one, even on a site without forms. Bolt's documentation does not mention it. Measured on bolt/core 6.1.10, `APP_ENV=prod`:
 
   | Request | Session cookie |
@@ -330,5 +337,5 @@ Without trackers and embeds the banner checks are skipped and the privacy page i
 - **`preconnect` / `dns-prefetch` to `googletagmanager.com`, `c.seznam.cz` …** contacts the provider before consent. Do not add them.
 - **Inline blocked scripts** (`<script type="text/plain">…code…</script>`) need `'unsafe-inline'` or a nonce under a strict CSP; prefer `src=` files.
 - **Analytics on a subdomain or with a custom cookie domain**: deletion on withdrawal covers the host and its parent domains; cookies set for other hosts cannot be deleted from this site.
-- **Advanced Consent Mode** is the operator's documented decision, not a default (CB-50); `verify.sh` warns while it is on.
+- **Advanced Consent Mode is not allowed** (CB-01, CB-50): `verify.sh` fails on `analytics.consent_mode: advanced`.
 - **The banner include sits right after the skip link** in `partials/_master.twig` (bolt-theme-init) so keyboard users reach it early; it never takes focus on its own (CB-60).

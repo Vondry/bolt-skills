@@ -53,12 +53,11 @@ necessary_optional:
       transfer: false
 
 # Trackers: the key is the value for --trackers=. `analytics_key` is the theme.yaml key holding
-# the ID, `recipient` the entry from `recipients:` below, `purpose` the entry from `purposes:`.
+# the ID (none for Google: its ID lives in partials/_google-tag.twig), `recipient` the entry from `recipients:` below, `purpose` the entry from `purposes:`.
 trackers:
   ga4:
     label: 'Google Analytics 4'
     category: analytics
-    analytics_key: ga4_id
     recipient: google_analytics
     purpose: analytics
     cookies:
@@ -82,7 +81,6 @@ trackers:
   google_ads:
     label: 'Google Ads (konverze a remarketing)'
     category: marketing
-    analytics_key: google_ads_id
     recipient: google_ads
     purpose: marketing
     cookies:

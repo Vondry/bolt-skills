@@ -101,7 +101,7 @@ Lišta má dvě vrstvy a jednu trvalou vstupní bránu v patičce. První vrstva
 
 ### Google Consent Mode v2
 
-- **CB-50 (MĚL BY)** Používá-li web GA4 nebo Google Ads, napojit lištu na Consent Mode v2 v režimu Basic: v něm se tagy Google nenačtou, dokud uživatel nesouhlasí. Režim Advanced spouští tagy už před souhlasem ([Lawwwing](https://lawwwing.com/en/blog/consent-mode-v2-resolvemos-tus-dudas)); s ohledem na CB-01 ho agent použije jen po výslovném rozhodnutí provozovatele.
+- **CB-50 (MUSÍ)** Používá-li web GA4, Google Ads nebo Google Tag Manager, značka Google se načte až po souhlasu (režim Basic Consent Mode v2) a lišta řídí signály Consent Mode v2. Režim Advanced spouští značky už před souhlasem a odesílá Googlu IP adresu a údaje o prohlížeči ([Lawwwing](https://lawwwing.com/en/blog/consent-mode-v2-resolvemos-tus-dudas)); s ohledem na CB-01 se nepoužívá.
 
 ### Přístupnost
 

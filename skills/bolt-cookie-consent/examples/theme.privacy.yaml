@@ -5,12 +5,10 @@
 # on a cs + en site. Every [DOPLNIT …] is answered by the operator, every [OVĚŘIT …] measured in a
 # clean browser profile, before sign-off (scripts/verify.sh without --draft).
 
-# Tracking IDs. A tracker runs only when privacy.cookies lists items in its category.
+# A tracker runs only when privacy.cookies lists items in its category. The Google tag and its ID
+# live in partials/_google-tag.twig, not here.
 analytics:
-  ga4_id: ~                     # 'G-XXXXXXXXXX'                   → category analytics
-  google_ads_id: ~              # 'AW-XXXXXXXXX'                   → category marketing
   sklik_id: ~                   # Sklik retargeting ID (number)    → category marketing
-  consent_mode: basic           # basic: Google tags load only after consent | advanced: cookieless pings before consent (operator's explicit decision, CB-50)
 
 # --------------------------------------------------------------------------------------------
 # Privacy & cookie consent (bolt-cookie-consent). Single source of truth for the cookie banner,

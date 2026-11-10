@@ -345,10 +345,7 @@ contact:
 # Tracking IDs (bolt-cookie-consent; its scaffold also appends the privacy: block —
 # controllers, purposes, recipients and the cookie inventory)
 analytics:
-  ga4_id: ~
-  google_ads_id: ~
   sklik_id: ~
-  consent_mode: basic
 
 # Social networks
 socials:

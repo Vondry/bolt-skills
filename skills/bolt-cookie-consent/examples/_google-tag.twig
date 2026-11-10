@@ -1,0 +1,20 @@
+{#
+  partials/_google-tag.twig — this site's Google tag, behind the cookie consent
+  (bolt-cookie-consent, CB-01, CB-50). Included first in <head> of partials/_master.twig.
+
+  Replace every G-XXXXXXXXXX with THIS site's own ID. Never copy an ID from another
+  project: it mixes the data of both sites.
+
+  Both scripts stay inert (type="text/plain") until js/src/cookie-consent.ts runs them,
+  in this order, once the visitor grants the category. Nothing is sent to Google before
+  that. The module then updates the consent signals from the stored choice.
+
+  A Tag Manager container: load gtm.js?id=GTM-… instead, remove the config call, and set
+  the cookie expiry in the container's GA4 tag (CB-24). Keep only tags of this category
+  in the container.
+
+  Each tracker call stays on the line of its blocked script tag: verify.sh checks line
+  by line. A strict script-src would need a nonce for the inline part.
+#}
+<script type="text/plain" data-consent-category="analytics">window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('consent', 'default', {analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied'}); gtag('set', 'ads_data_redaction', true); gtag('js', new Date()); gtag('config', 'G-XXXXXXXXXX', {allow_ad_personalization_signals: false, allow_google_signals: false, cookie_expires: 34128000});</script>
+<script type="text/plain" data-consent-category="analytics" async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>

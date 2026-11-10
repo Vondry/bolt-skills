@@ -263,6 +263,21 @@ else
     pass "no tracker script or third-party iframe hard-coded in templates."
 fi
 
+# The site's Google tag: first in <head>, and every script blocked until its category is granted
+GOOGLE_TAG_FILE="$THEME_DIR/partials/_google-tag.twig"
+if [ -f "$GOOGLE_TAG_FILE" ]; then
+    if [ -f "$MASTER_FILE" ] && sed -n '1,/<\/head>/p' "$MASTER_FILE" | grep -q "_google-tag.twig"; then
+        pass "_google-tag.twig included in <head>."
+    else
+        fail "partials/_master.twig must include partials/_google-tag.twig inside <head> (CB-50)."
+    fi
+    if grep -E '^[[:space:]]*<script' "$GOOGLE_TAG_FILE" | grep -qvE 'type="text/plain" data-consent-category="[a-z_]+"'; then
+        fail "partials/_google-tag.twig has a script that is not blocked until consent (CB-01, CB-50)."
+    else
+        pass "the Google tag is blocked until its consent category is granted."
+    fi
+fi
+
 # -------------------------------------------------------------
 # 7. JavaScript module
 # -------------------------------------------------------------
@@ -390,7 +405,7 @@ BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"
 # port still fails at once.
 if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     HOME_HTML=$(curl -s --max-time 10 "$BASE_URL/" || true)
-    if echo "$HOME_HTML" | grep -qE "<script[^>]+src=\"[^\"]*($TRACKER_RE)"; then
+    if echo "$HOME_HTML" | grep -v 'type="text/plain"' | grep -qE "<script[^>]+src=\"[^\"]*($TRACKER_RE)"; then
         fail "$BASE_URL/ loads a tracker script before consent (CB-01)."
     else
         pass "$BASE_URL/ loads no tracker script before consent (CB-01)."

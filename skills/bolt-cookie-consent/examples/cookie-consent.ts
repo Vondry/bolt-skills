@@ -7,11 +7,10 @@
  * JSON (#cookie-consent-config, generated from the `analytics:` and `privacy:` blocks of
  * theme.yaml), so a strict Content-Security-Policy keeps working.
  *
- * Before a choice nothing non-essential loads (CB-01). Google tags follow Consent Mode v2:
- *   basic (default)  gtag.js is injected only after analytics or marketing consent
- *   advanced         gtag.js loads on every visit with all storage denied (operator's
- *                    explicit decision only, CB-50)
- * Seznam Sklik, blocked <script type="text/plain"> tags and embeds always wait for consent.
+ * Before a choice nothing non-essential loads (CB-01, CB-50). The site's Google tag sits in
+ * partials/_google-tag.twig as blocked <script type="text/plain"> tags: they run only when their
+ * category is granted, and this module then keeps the Consent Mode v2 signals in step with the
+ * stored choice. Seznam Sklik and embeds wait for consent in the same way.
  *
  * Markup contract (partials/_cookie-banner.twig, partials/_consent-embed.twig, footer):
  *   [data-cookie-banner]                         first layer, non-modal, never steals focus (CB-60)
@@ -40,14 +39,10 @@ interface ConsentConfig {
     version: number;
     validityMonths: number;
     reaskMonths: number;
-    mode: 'basic' | 'advanced';
     categories: Category[];
     /** First-party cookie names per category (`_ga_*` = prefix), deleted on withdrawal (CB-31). */
     cookies: { [category: string]: string[] };
-    ga4: string | null;
-    googleAds: string | null;
     sklik: number | null;
-    gaCookieExpires: number;
 }
 
 export interface ConsentRecord {
@@ -84,7 +79,6 @@ declare global {
 }
 
 const STORAGE_KEY = 'bolt-cookie-consent';
-const GTAG_SRC = 'https://www.googletagmanager.com/gtag/js?id=';
 const SKLIK_SRC = 'https://c.seznam.cz/js/rc.js';
 
 function readConfig(): ConsentConfig | null {
@@ -190,8 +184,6 @@ class ConsentManager {
     private record: ConsentRecord | null;
     /** Categories whose scripts already run on this page view — a withdrawal needs a reload. */
     private readonly active: { [category: string]: boolean } = {};
-    private gtagLoaded = false;
-    private readonly googleConfigured: { [id: string]: boolean } = {};
     private sklikReady: Promise<void> | null = null;
 
     constructor(private readonly config: ConsentConfig) {
@@ -227,65 +219,29 @@ class ConsentManager {
 
     /** Runs everything the current record allows. Safe to call repeatedly. */
     apply(): void {
-        const analytics = this.has('analytics');
-        const marketing = this.has('marketing');
-
-        this.applyGoogle(analytics, marketing);
-        if (marketing) this.loadSklik();
+        if (this.has('marketing')) this.loadSklik();
         this.config.categories.forEach((category) => {
             if (this.has(category)) {
                 this.activateScripts(category);
                 this.activateEmbeds(category);
             }
         });
+        this.updateGoogleConsent();
 
         window.dispatchEvent(new CustomEvent('cookie-consent', { detail: this.record }));
     }
 
-    /** Google Consent Mode v2 (CB-50). Defaults are always denied; updates follow the record. */
-    private applyGoogle(analytics: boolean, marketing: boolean): void {
-        const { ga4, googleAds, mode } = this.config;
-        if (!ga4 && !googleAds) return;
-
-        if (!window.gtag) {
-            window.dataLayer = window.dataLayer || [];
-            window.gtag = function gtag() {
-                // gtag.js expects the Arguments object, not an array
-                // eslint-disable-next-line prefer-rest-params
-                window.dataLayer!.push(arguments);
-            };
-            window.gtag('consent', 'default', {
-                analytics_storage: 'denied',
-                ad_storage: 'denied',
-                ad_user_data: 'denied',
-                ad_personalization: 'denied',
-            });
-            window.gtag('set', 'ads_data_redaction', true);
-            window.gtag('js', new Date());
-        }
-
+    /** Consent Mode v2 (CB-50): partials/_google-tag.twig defines gtag with every signal denied. */
+    private updateGoogleConsent(): void {
+        if (!window.gtag) return;
+        const analytics = this.has('analytics') ? 'granted' : 'denied';
+        const marketing = this.has('marketing') ? 'granted' : 'denied';
         window.gtag('consent', 'update', {
-            analytics_storage: analytics ? 'granted' : 'denied',
-            ad_storage: marketing ? 'granted' : 'denied',
-            ad_user_data: marketing ? 'granted' : 'denied',
-            ad_personalization: marketing ? 'granted' : 'denied',
+            analytics_storage: analytics,
+            ad_storage: marketing,
+            ad_user_data: marketing,
+            ad_personalization: marketing,
         });
-
-        const advanced = mode === 'advanced';
-        if (ga4 && (analytics || advanced)) this.configureGoogle(ga4, { cookie_expires: this.config.gaCookieExpires });
-        if (googleAds && (marketing || advanced)) this.configureGoogle(googleAds, {});
-        if (analytics && ga4) this.active.analytics = true;
-        if (marketing && googleAds) this.active.marketing = true;
-    }
-
-    private configureGoogle(id: string, options: Record<string, unknown>): void {
-        if (this.googleConfigured[id]) return;
-        this.googleConfigured[id] = true;
-        window.gtag!('config', id, options);
-        if (!this.gtagLoaded) {
-            this.gtagLoaded = true;
-            loadScript(GTAG_SRC + encodeURIComponent(id)).catch(() => { /* blocked by the visitor's browser */ });
-        }
     }
 
     /** Seznam Sklik retargeting: rc.js only with marketing consent, every hit with consent=1. */

@@ -11,8 +11,8 @@ declare(strict_types=1);
  *
  * The data model is the `privacy:` block of theme.yaml, or the published record of a ContentType
  * with a `cookies` collection (SKILL.md, "Data model in a ContentType"). The record is read through
- * the project's kernel and Doctrine, so it needs vendor/ and the database. Tracker IDs stay in
- * the `analytics:` block of theme.yaml in both models.
+ * the project's kernel and Doctrine, so it needs vendor/ and the database. In both models the
+ * Google tag and its ID live in partials/_google-tag.twig, other tracker IDs in `analytics:`.
  *
  * Prints one finding per line — "FAIL: …", "WARN: …", "OK: …" — then
  * "CATEGORIES: analytics,marketing" (the consent categories in use, empty when none) and
@@ -267,6 +267,21 @@ if ($contentType === null && $consentCategories && ! $consentPurpose) {
 }
 
 // Trackers must be inventoried, otherwise they never load (and must not be added elsewhere)
+// The site's Google tag: its IDs and its consent categories come from the partial (comments ignored)
+$googleTagFile = dirname($file) . '/partials/_google-tag.twig';
+$googleTag = is_file($googleTagFile) ? (string) preg_replace('/\{#.*?#\}/s', '', (string) file_get_contents($googleTagFile)) : '';
+$googleTagHas = static fn (string $pattern): bool => preg_match($pattern, $googleTag) === 1;
+if ($googleTagHas('~\b(G|AW|GTM)-X{4,}~')) {
+    ($draft ? $warn : $fail)("partials/_google-tag.twig still has a placeholder ID: put in this site's own Google tag ID (never another site's)");
+}
+preg_match_all('~data-consent-category="([a-z_]+)"~', $googleTag, $googleTagCategories);
+foreach (array_unique($googleTagCategories[1]) as $category) {
+    if (! isset($used[$category])) {
+        $fail("partials/_google-tag.twig waits for '$category' but the cookie inventory has no such items — inventory it (INV-01) or it never loads");
+    }
+}
+
+// Trackers must be inventoried, otherwise they never load (and must not be added elsewhere)
 $trackerCategories = ['ga4_id' => 'analytics', 'google_ads_id' => 'marketing', 'sklik_id' => 'marketing', 'meta_pixel_id' => 'marketing'];
 $configured = static fn (string $key): bool => ! empty($analytics[$key]) && ! str_contains((string) $analytics[$key], '[');
 foreach ($trackerCategories as $key => $category) {
@@ -274,17 +289,27 @@ foreach ($trackerCategories as $key => $category) {
         $fail("analytics.$key is set but the cookie inventory has no '$category' items — inventory it (INV-01) or it never loads");
     }
 }
-// …and the reverse: a tracker's cookies listed while its ID is empty. The banner then asks for
+foreach (['ga4_id', 'google_ads_id'] as $key) {
+    if ($configured($key)) {
+        $warn("analytics.$key is set: the current consent module no longer reads it — move this site's own ID to partials/_google-tag.twig (CB-50)");
+    }
+}
+// …and the reverse: a tracker's cookies listed while nothing loads it. The banner then asks for
 // consent to something that never loads, and the policy describes processing that does not happen.
 $trackerCookies = ['ga4_id' => '~^_ga(_|$)|^_gid$~', 'google_ads_id' => '~^_gcl_|^_gac_~', 'meta_pixel_id' => '~^_fb[pc]$~', 'sklik_id' => '~^sid$|^_sklik~'];
+$loaded = static fn (string $key): bool => $configured($key) || match ($key) {
+    'ga4_id' => $googleTagHas('~\b(G|GTM)-[A-Z0-9]{4,}~'),
+    'google_ads_id' => $googleTagHas('~\b(AW|GTM)-[A-Z0-9]{4,}~'),
+    default => false,
+};
 foreach ($trackerCookies as $key => $pattern) {
     $names = array_values(array_filter($inventory, static fn (string $name) => preg_match($pattern, $name) === 1));
-    if ($names && ! $configured($key)) {
-        $warn('the inventory lists ' . implode(', ', $names) . " but analytics.$key is empty — the tracker never loads: set the ID, or remove the items (and the purpose and recipient that describe them) (INV-01)");
+    if ($names && ! $loaded($key)) {
+        $warn('the inventory lists ' . implode(', ', $names) . " but nothing loads its tracker ($key) — add it (Google: partials/_google-tag.twig, others: analytics:), or remove the items (and the purpose and recipient that describe them) (INV-01)");
     }
 }
 if (($analytics['consent_mode'] ?? 'basic') === 'advanced') {
-    $warn('analytics.consent_mode is advanced: Google tags load before consent — allowed only as the operator\'s explicit, documented decision (CB-50)');
+    $fail('analytics.consent_mode is advanced: Google tags would load before consent and send the IP address to Google — not allowed (CB-01, CB-50)');
 }
 
 if ($contentType === null) {
