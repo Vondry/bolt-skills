@@ -2,7 +2,9 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.17.1 — 2026-11-10
+
+The location map also renders when included with `only`, and `verify.sh` catches a theme that lacks the map's colours.
 
 ### Fixed
 - `bolt-map`: the component reads `location:` and `assets_version` through `config.get('theme/…')`, so it no longer renders nothing when included with `only` (Bolt passes `theme` only in the page's context).
