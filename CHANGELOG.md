@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.17.2 — 2026-11-11
 
 The footer's author credit comes from `bolt-menu`, and its link follows the page's language.
 
