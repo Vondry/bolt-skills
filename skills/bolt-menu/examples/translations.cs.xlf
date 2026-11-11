@@ -13,5 +13,6 @@
     <unit id="footer_rights" name="footer.rights"><segment><source>footer.rights</source><target>Všechna práva vyhrazena.</target></segment></unit>
     <unit id="footer_privacy" name="footer.privacy"><segment><source>footer.privacy</source><target>Zásady ochrany osobních údajů</target></segment></unit>
     <unit id="footer_cookie_settings" name="footer.cookie_settings"><segment><source>footer.cookie_settings</source><target>Nastavení cookies</target></segment></unit>
+    <unit id="footer_credit" name="footer.credit"><segment><source>footer.credit</source><target>Vytvořil</target></segment></unit>
   </file>
 </xliff>

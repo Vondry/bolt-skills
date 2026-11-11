@@ -2,6 +2,16 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+The footer's author credit comes from `bolt-menu`, and its link follows the page's language.
+
+### Added
+- `bolt-menu`: the footer's bottom bar ends with the author credit (`footer.credit`, „Vytvořil“ / “Created by”). A Czech page links `https://tvondracek.cz`; every other language (`en`, `de`, `sk`, …) links `https://tvondracek.cz/en`, because the portfolio exists in Czech and English only. On a site with another language than `cs`, `verify.sh` warns when the theme links the portfolio without following the page's language.
+
+### Migrating a project
+- In `containers/footer/_footer.twig`, change the credit's link to `href="https://tvondracek.cz{{ app.request.locale|default('cs') == 'cs' ? '' : '/en' }}"`. A Czech-only site renders the same link as before.
+
 ## 1.17.1 — 2026-11-10
 
 The location map also renders when included with `only`, and `verify.sh` catches a theme that lacks the map's colours.

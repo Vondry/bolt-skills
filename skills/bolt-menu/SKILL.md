@@ -251,7 +251,7 @@ The containers use these keys; `examples/translations.cs.xlf` and `examples/tran
 php vendor/tomvondracek/bolt-skills/scripts/merge-xliff.php \
     vendor/tomvondracek/bolt-skills/skills/bolt-menu/examples/translations.cs.xlf translations/messages.cs.xlf
 ```
-`nav.main_label`, `nav.open_menu`, `nav.close_menu`, `nav.mobile_label`, `nav.menu`, `footer.socials`, `footer.rights`, `footer.privacy`, `footer.cookie_settings`.
+`nav.main_label`, `nav.open_menu`, `nav.close_menu`, `nav.mobile_label`, `nav.menu`, `footer.socials`, `footer.rights`, `footer.privacy`, `footer.cookie_settings`, `footer.credit`.
 
 ### 1. Smart Container: `containers/header/_menu.twig`
 The smart container retrieves data using `menu_array('main')`, applies business rules (CTA split, homepage-link guard by route `homepage` / `homepage_locale`, active state compared through `locale_link()` so it also works on `/en/…` pages), and renders the header with the desktop navigation and the mobile drawer:
@@ -505,7 +505,17 @@ Accessible dropdown driven by the accordion in `menu.ts`:
 ```
 
 ### 4. Smart Container: `containers/footer/_footer.twig`
-Footer columns from `menu_array('footer')`, brand column with logo, bio, phone and e-mail, social links and the legal bottom bar. Uses the dark `night` palette of `bolt-tailwind-theme`:
+Footer columns from `menu_array('footer')`, brand column with logo, bio, phone and e-mail, social links and the legal bottom bar. Uses the dark `night` palette of `bolt-tailwind-theme`.
+
+The bottom bar ends with the author credit („Vytvořil Tomáš Vondráček“, `footer.credit`). The portfolio it links exists in Czech and English only, so the link follows the page's language instead of the site's locale list:
+
+| Page language | Link |
+| :--- | :--- |
+| `cs` (also the only language of a Czech-only site) | `https://tvondracek.cz` |
+| any other (`en`, `de`, `sk`, …) | `https://tvondracek.cz/en` |
+
+Keep the link absolute and outside `locale_link()`: that function prefixes the site's own paths, and would send a German page to `/de`, which the portfolio does not have.
+
 
 ```twig
 {# public/theme/<theme>/containers/footer/_footer.twig #}
@@ -523,7 +533,12 @@ Footer columns from `menu_array('footer')`, brand column with logo, bio, phone a
   The operator's legal identity (name, seat, IČO, register entry, ADR body for consumer sites)
   comes from partials/_legal-identity.twig (bolt-legal-cz), on every page above the bottom bar.
 
-  Translation keys: footer.socials, footer.rights, footer.privacy, footer.cookie_settings
+  The author credit closes the bottom bar. Its link follows the page's language: the portfolio
+  exists in cs and en only, so a Czech page links https://tvondracek.cz and every other
+  language (en, de, sk, …) links https://tvondracek.cz/en.
+
+  Translation keys: footer.socials, footer.rights, footer.privacy, footer.cookie_settings,
+  footer.credit
 #}
 
 {% set footer_columns = menu_array('footer')|default([]) %}
@@ -600,8 +615,8 @@ Footer columns from `menu_array('footer')`, brand column with logo, bio, phone a
         {# Legal identity: § 435 OZ data and consumer information from theme.yaml (bolt-legal-cz) #}
         {% include 'partials/_legal-identity.twig' ignore missing %}
 
-        {# Bottom Bar: Copyright & Legal links #}
-        <div class="pt-8 border-t border-night-stroke flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-night-ink-3">
+        {# Bottom Bar: Copyright, Legal links & Author credit #}
+        <div class="pt-8 border-t border-night-stroke flex flex-col sm:flex-row sm:flex-wrap items-center justify-between gap-4 text-xs text-night-ink-3">
             <p>© {{ 'now'|date('Y') }} {{ config.get('general/sitename') }}. {{ __('footer.rights') }}</p>
 
             <ul class="flex flex-wrap items-center gap-6 list-none m-0 p-0">
@@ -618,6 +633,15 @@ Footer columns from `menu_array('footer')`, brand column with logo, bio, phone a
                     </li>
                 {% endif %}
             </ul>
+
+            {# Author credit: Czech pages link the Czech portfolio, every other language the English one. #}
+            <p>
+                {{ __('footer.credit') }}
+                <a href="https://tvondracek.cz{{ app.request.locale|default('cs') == 'cs' ? '' : '/en' }}"
+                   target="_blank"
+                   rel="noopener"
+                   class="hover:text-night-ink hover:underline transition-colors">Tomáš Vondráček</a>
+            </p>
         </div>
     </div>
 </footer>
@@ -694,7 +718,7 @@ bash skills/bolt-menu/scripts/verify.sh
 4. Checks multilingual parity: warns if a locale from `app_locales` in `config/services.yaml` is missing in a `label:` map (falls back to `locales:` in `config/bolt/config.yaml` on older projects).
 5. Checks anchor formatting: errors on bare `#section` and enforces `/#section`.
 6. Checks clean paths: warns if a link starts with a hardcoded prefix of one of the configured locales (`/cs/`, `/en/`, …).
-7. Theme integration check: verifies `menu_array('main')` is called in the active theme, and warns when `js/src/menu.ts` has no Escape handling (an opened mobile menu or dropdown cannot be closed from the keyboard).
+7. Theme integration check: verifies `menu_array('main')` is called in the active theme, warns when `js/src/menu.ts` has no Escape handling (an opened mobile menu or dropdown cannot be closed from the keyboard), and warns on a site with another language than `cs` when the author credit links the portfolio without following the page's language.
 8. Verifies all menu URLs are wrapped in `locale_link(...)`.
 
 ---

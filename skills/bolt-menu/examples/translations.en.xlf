@@ -13,5 +13,6 @@
     <unit id="footer_rights" name="footer.rights"><segment><source>footer.rights</source><target>All rights reserved.</target></segment></unit>
     <unit id="footer_privacy" name="footer.privacy"><segment><source>footer.privacy</source><target>Privacy policy</target></segment></unit>
     <unit id="footer_cookie_settings" name="footer.cookie_settings"><segment><source>footer.cookie_settings</source><target>Cookie settings</target></segment></unit>
+    <unit id="footer_credit" name="footer.credit"><segment><source>footer.credit</source><target>Created by</target></segment></unit>
   </file>
 </xliff>

@@ -282,6 +282,19 @@ if [ -n "$ACTIVE_THEME" ] && [ -d "public/theme/$ACTIVE_THEME" ]; then
         echo "           from the keyboard. Port the Escape handling of bolt-theme-init's examples/js/src/menu.ts."
         WARNINGS=$((WARNINGS + 1))
     fi
+    # Author credit: the portfolio has cs and en only, so its link follows the page's language
+    # (cs -> https://tvondracek.cz, every other language -> https://tvondracek.cz/en).
+    # A Czech-only site keeps the plain link, so it is checked only when another locale is configured.
+    OTHER_LOCALES=$(grep -E "^[[:space:]]*app_locales:" config/services.yaml 2>/dev/null | head -n 1 \
+        | sed -E "s/^[^:]*:[[:space:]]*//; s/[[:space:]]*#.*$//" | tr -d "\"'" | tr '|' '\n' | grep -v -x "cs" || true)
+    while IFS= read -r CREDIT_FILE; do
+        [ -n "$CREDIT_FILE" ] && [ -n "$OTHER_LOCALES" ] || continue
+        if ! grep "tvondracek\.cz" "$CREDIT_FILE" | grep -q "locale"; then
+            echo "  WARNING: $CREDIT_FILE links tvondracek.cz without the page's language. Use the href of"
+            echo "           bolt-menu's examples/templates/containers/footer/_footer.twig (other languages -> /en)."
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    done <<< "$(grep -rl "tvondracek\.cz" "$THEME_DIR" --include="*.twig" 2>/dev/null || true)"
 else
     echo "SKIPPED (No active theme directory detected)"
 fi

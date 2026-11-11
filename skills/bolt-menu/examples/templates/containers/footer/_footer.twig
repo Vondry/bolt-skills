@@ -12,7 +12,12 @@
   The operator's legal identity (name, seat, IČO, register entry, ADR body for consumer sites)
   comes from partials/_legal-identity.twig (bolt-legal-cz), on every page above the bottom bar.
 
-  Translation keys: footer.socials, footer.rights, footer.privacy, footer.cookie_settings
+  The author credit closes the bottom bar. Its link follows the page's language: the portfolio
+  exists in cs and en only, so a Czech page links https://tvondracek.cz and every other
+  language (en, de, sk, …) links https://tvondracek.cz/en.
+
+  Translation keys: footer.socials, footer.rights, footer.privacy, footer.cookie_settings,
+  footer.credit
 #}
 
 {% set footer_columns = menu_array('footer')|default([]) %}
@@ -89,8 +94,8 @@
         {# Legal identity: § 435 OZ data and consumer information from theme.yaml (bolt-legal-cz) #}
         {% include 'partials/_legal-identity.twig' ignore missing %}
 
-        {# Bottom Bar: Copyright & Legal links #}
-        <div class="pt-8 border-t border-night-stroke flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-night-ink-3">
+        {# Bottom Bar: Copyright, Legal links & Author credit #}
+        <div class="pt-8 border-t border-night-stroke flex flex-col sm:flex-row sm:flex-wrap items-center justify-between gap-4 text-xs text-night-ink-3">
             <p>© {{ 'now'|date('Y') }} {{ config.get('general/sitename') }}. {{ __('footer.rights') }}</p>
 
             <ul class="flex flex-wrap items-center gap-6 list-none m-0 p-0">
@@ -107,6 +112,15 @@
                     </li>
                 {% endif %}
             </ul>
+
+            {# Author credit: Czech pages link the Czech portfolio, every other language the English one. #}
+            <p>
+                {{ __('footer.credit') }}
+                <a href="https://tvondracek.cz{{ app.request.locale|default('cs') == 'cs' ? '' : '/en' }}"
+                   target="_blank"
+                   rel="noopener"
+                   class="hover:text-night-ink hover:underline transition-colors">Tomáš Vondráček</a>
+            </p>
         </div>
     </div>
 </footer>
