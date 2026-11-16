@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.17.3 — 2026-11-16
 
 `bolt-extension-setup` installs a fourth extension: cookieless visitor statistics in the backend, with redirects from alias domains counted.
 
