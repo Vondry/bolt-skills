@@ -2,6 +2,18 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+`bolt-extension-setup` installs a fourth extension: cookieless visitor statistics in the backend, with redirects from alias domains counted.
+
+### Added
+- `bolt-extension-setup`: section 4 sets up `tomvondracek/bolt-request-analytics` — install, recipes, `examples/tomvondracek-requestanalytics.yaml` (`own_hosts`, `aliases`), the `symfony/lock` recipe's `LOCK_DSN`, the spool in `.gitignore`, alias domains in `SYMFONY_TRUSTED_HOSTS`, cron, deploys and the privacy page's `site_statistics` purpose. It sets no cookie and needs no consent.
+- `bolt-extension-setup`: `verify.sh` step [8/8]. It warns when the extension is not installed; once it is, it fails on a missing recipe, a missing `services_bolt.yaml` entry, an own or alias host that `SYMFONY_TRUSTED_HOSTS` rejects, an alias without `target`, storage in `public/` or an undefined `LOCK_DSN`, and warns about empty `own_hosts` and a missing `.gitignore` entry.
+- `bolt-build`: intake question E7 also asks for alias domains. `bolt-audit` reviews the request analytics.
+
+### Migrating a project
+- `composer require tomvondracek/bolt-request-analytics:^1.0`, `bin/console extensions:configure --with-config`, then follow `bolt-extension-setup` section 4 and run its `verify.sh`.
+
 ## 1.17.2 — 2026-11-11
 
 The footer's author credit comes from `bolt-menu`, and its link follows the page's language.

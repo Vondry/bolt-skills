@@ -1,0 +1,37 @@
+# Configuration file for tomvondracek/bolt-request-analytics
+# Placed in config/extensions/tomvondracek-requestanalytics.yaml (bolt-extension-setup section 4.3).
+#
+# Only the keys a project usually sets; every other key keeps the extension's default
+# (see the extension's README). An unknown key or a value of the wrong type is an error.
+
+# Master switch. `false` collects nothing and hides the dashboard card and menu item.
+enabled: true
+
+# Who may see and delete the statistics (any one role is enough; ROLE_DEVELOPER includes ROLE_ADMIN).
+access:
+  view: [ROLE_ADMIN]
+  delete: [ROLE_ADMIN]
+
+# Public hosts of the site: the canonical host (BOLT_CANONICAL) and its www twin. A Referer from
+# one of them is navigation within the site, not an entry.
+own_hosts: [example.cz, www.example.cz]
+
+# Other domains that redirect to the site (section 4.4). Leave `hosts` empty when there are none.
+aliases:
+  hosts: []                      # e.g. [example-alias.cz, www.example-alias.cz]
+  target: https://example.cz     # the canonical URL (BOLT_CANONICAL); required with hosts
+  mode: count                    # count: the extension answers the alias host, counts the hop and redirects
+  redirect_status: 301
+
+storage:
+  # SQLite file of its own, outside public/ and on persistent disk (keep it in backups).
+  database: '%kernel.project_dir%/var/data/request-analytics.db'
+
+aggregation:
+  # admin: on dashboard visits; cron / both: `bin/console request-analytics:rollup` runs hourly (section 4.5).
+  trigger: admin
+
+privacy:
+  honor_gpc: true                # Sec-GPC: 1
+  honor_dnt: true                # DNT: 1
+  retention_months: 25           # detailed aggregates; daily totals are kept

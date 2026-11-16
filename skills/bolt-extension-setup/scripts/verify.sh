@@ -28,7 +28,7 @@ cd "$BASE_DIR"
 
 echo "=========================================================="
 echo " Bolt CMS Essential Extensions Verification"
-echo " (AppoloDev/bolt-seo, bolt-sitemap, bolt-llms-txt)"
+echo " (AppoloDev/bolt-seo, bolt-sitemap, bolt-llms-txt, bolt-request-analytics)"
 echo " Project root: $BASE_DIR"
 echo "=========================================================="
 
@@ -49,7 +49,7 @@ echo ""
 # -------------------------------------------------------------
 # 1. Check Composer Dependencies
 # -------------------------------------------------------------
-echo "[1/7] Checking installed packages (vendor/composer/installed.json)..."
+echo "[1/8] Checking installed packages (vendor/composer/installed.json)..."
 for PKG in "appolodev/bolt-seo" "tomvondracek/bolt-sitemap" "tomvondracek/bolt-llms-txt"; do
     echo -n "  • $PKG: "
     # The installed version, not the constraint in composer.json: a required package that was
@@ -80,7 +80,7 @@ fi
 # 2. Check Extension Configuration Files
 # -------------------------------------------------------------
 echo ""
-echo "[2/7] Checking extension configuration files..."
+echo "[2/8] Checking extension configuration files..."
 
 # SEO config
 echo -n "  • config/extensions/appolo-boltseo.yaml: "
@@ -137,7 +137,7 @@ fi
 # 3. Check Symfony Package & Route Configurations
 # -------------------------------------------------------------
 echo ""
-echo "[3/7] Checking package and route recipes..."
+echo "[3/8] Checking package and route recipes..."
 
 # Bolt SEO package config
 echo -n "  • config/packages/extension_bolt-seo.yaml: "
@@ -186,7 +186,7 @@ fi
 # 4. Check ContentTypes Reusable SEO Field
 # -------------------------------------------------------------
 echo ""
-echo "[4/7] Checking ContentTypes SEO schema integration..."
+echo "[4/8] Checking ContentTypes SEO schema integration..."
 CT_FILE="config/bolt/contenttypes.yaml"
 if [ ! -f "$CT_FILE" ]; then
     echo "  ❌ config/bolt/contenttypes.yaml not found!"
@@ -214,7 +214,7 @@ fi
 # 5. Check Theme SEO Integration
 # -------------------------------------------------------------
 echo ""
-echo "[5/7] Checking Theme SEO integration in templates..."
+echo "[5/8] Checking Theme SEO integration in templates..."
 THEME_SEO_FOUND=0
 if [ -d "$THEME_DIR" ]; then
     if grep -rq "seo.metatags()" "$THEME_DIR" 2>/dev/null || grep -rq "@seo/_metatags.html.twig" "$THEME_DIR" 2>/dev/null; then
@@ -238,7 +238,7 @@ fi
 # 6. Check the sitemap's static pages, robots.txt & llms.txt in Theme Extensions
 # -------------------------------------------------------------
 echo ""
-echo "[6/7] Checking the sitemap's static pages and the theme extensions folder ($EXT_THEME_DIR)..."
+echo "[6/8] Checking the sitemap's static pages and the theme extensions folder ($EXT_THEME_DIR)..."
 
 # The old bolt/sitemap-extension override is not read any more (section 2.6).
 for OLD_OVERRIDE in "$EXT_THEME_DIR/sitemap.xml.twig" "$EXT_THEME_DIR/_sitemap.xml.twig"; do
@@ -309,7 +309,7 @@ fi
 # 7. Check the canonical URL override (bolt/core PR #3735 workaround)
 # -------------------------------------------------------------
 echo ""
-echo "[7/7] Checking the canonical URL override (section 1.6, needed until bolt/core#3735 is released)..."
+echo "[7/8] Checking the canonical URL override (section 1.6, needed until bolt/core#3735 is released)..."
 BOLT_CORE_VERSION=$(php -r '$i = json_decode((string) @file_get_contents("vendor/composer/installed.json"), true);
     foreach ($i["packages"] ?? $i ?? [] as $p) { if (($p["name"] ?? "") === "bolt/core") { echo $p["pretty_version"] ?? $p["version"]; } }' 2>/dev/null || true)
 echo "  • bolt/core ${BOLT_CORE_VERSION:-not installed} — remove the override only on a release that includes https://github.com/bolt/core/pull/3735"
@@ -367,6 +367,54 @@ if [ -n "$REQUEST_URI_FILES" ]; then
     WARNINGS=$((WARNINGS+1))
 else
     echo "  ✅ No template passes the request URL as the canonical"
+fi
+
+# -------------------------------------------------------------
+# 8. Check the request analytics (section 4)
+# -------------------------------------------------------------
+echo ""
+echo "[8/8] Checking the request analytics (tomvondracek/bolt-request-analytics, section 4)..."
+RA_VERSION=$(php -r '$i = json_decode((string) @file_get_contents("vendor/composer/installed.json"), true);
+    foreach ($i["packages"] ?? $i ?? [] as $p) { if (($p["name"] ?? "") === "tomvondracek/bolt-request-analytics") { echo $p["pretty_version"] ?? $p["version"]; } }' 2>/dev/null || true)
+RA_CONFIG="config/extensions/tomvondracek-requestanalytics.yaml"
+if [ -z "$RA_VERSION" ]; then
+    if grep -q '"tomvondracek/bolt-request-analytics"' composer.json; then
+        echo "  ❌ tomvondracek/bolt-request-analytics is in composer.json but not in vendor/ (run: composer install)"
+        FAILED=1
+    else
+        echo "  ⚠️  tomvondracek/bolt-request-analytics is not installed — cookieless visitor statistics (section 4.1)"
+        WARNINGS=$((WARNINGS+1))
+    fi
+else
+    echo "  ✅ tomvondracek/bolt-request-analytics INSTALLED ($RA_VERSION)"
+    for RA_FILE in "$RA_CONFIG" \
+        "config/packages/extension_bolt-request-analytics.yaml" \
+        "config/routes/extension_bolt-request-analytics.yaml"; do
+        if [ -f "$RA_FILE" ]; then
+            echo "  ✅ $RA_FILE"
+        else
+            echo "  ❌ $RA_FILE is MISSING (Run: php bin/console extensions:configure --with-config)"
+            FAILED=1
+        fi
+    done
+    if grep -q 'TomVondracek\\RequestAnalytics\\' config/services_bolt.yaml 2>/dev/null; then
+        echo "  ✅ config/services_bolt.yaml registers TomVondracek\\RequestAnalytics"
+    else
+        echo "  ❌ config/services_bolt.yaml does not register TomVondracek\\RequestAnalytics — run composer install (Bolt regenerates it)"
+        FAILED=1
+    fi
+    if [ -f "$RA_CONFIG" ]; then
+        RA_REPORT=$(php "$SCRIPT_DIR/request-analytics.php" "$RA_CONFIG" 2>&1 || true)
+        while IFS='|' read -r LEVEL MESSAGE; do
+            case "$LEVEL" in
+                OK)   echo "  ✅ $MESSAGE" ;;
+                WARN) echo "  ⚠️  $MESSAGE"; WARNINGS=$((WARNINGS+1)) ;;
+                FAIL) echo "  ❌ $MESSAGE"; FAILED=1 ;;
+                "")   ;;
+                *)    echo "  ⚠️  $LEVEL${MESSAGE:+|$MESSAGE}"; WARNINGS=$((WARNINGS+1)) ;;
+            esac
+        done <<< "$RA_REPORT"
+    fi
 fi
 
 echo ""

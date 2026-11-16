@@ -33,6 +33,7 @@ bolt-extension-setup	appolo-boltseo.yaml	config/extensions/appolo-boltseo.yaml	d
 bolt-extension-setup	tomvondracek-sitemap.yaml	config/extensions/tomvondracek-sitemap.yaml	design
 bolt-extension-setup	tomvondracek-llmstxt.yaml	config/extensions/tomvondracek-llmstxt.yaml	design
 bolt-extension-setup	llms.txt.twig	{theme}/extensions/llms.txt.twig	design
+bolt-extension-setup	tomvondracek-requestanalytics.yaml	config/extensions/tomvondracek-requestanalytics.yaml	design
 bolt-helper-pages	_helper_template_with_master.twig	{theme}/helper-pages/_helper_template_with_master.twig	logic
 bolt-helper-pages	_helper_template_without_master.twig	{theme}/helper-pages/_helper_template_without_master.twig	logic
 bolt-helper-pages	_helper_scene.twig	{theme}/helper-pages/_helper_scene.twig	design

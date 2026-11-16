@@ -1,21 +1,24 @@
 ---
 name: bolt-extension-setup
 description: >-
-  Use this skill whenever installing, configuring, or verifying the trio of essential
+  Use this skill whenever installing, configuring, or verifying the essential
   Bolt CMS extensions: AppoloDev/bolt-seo (SEO meta fields and tags, with the
   canonical URL override needed until bolt/core PR #3735 is released),
   Vondry/bolt-sitemap (tomvondracek/bolt-sitemap: spec-compliant XML sitemap
-  index with static pages, no theme override), and
-  Vondry/bolt-llms-txt (llmstxt.org dynamic endpoint).
+  index with static pages, no theme override),
+  Vondry/bolt-llms-txt (llmstxt.org dynamic endpoint), and
+  tomvondracek/bolt-request-analytics (cookieless server-side visitor statistics
+  in the backend, with domain alias counting).
 ---
 
 # Essential Bolt CMS Extensions Setup & Verification Guide
 
-Every modern production website built with Bolt CMS requires three foundational extensions for discoverability, search engine indexing, and AI crawler readiness:
+Every modern production website built with Bolt CMS requires four foundational extensions for discoverability, search engine indexing, AI crawler readiness and visitor statistics:
 
 1. **`AppoloDev/bolt-seo` (`appolodev/bolt-seo`)**: Structured SEO meta fields (`type: seo`), OpenGraph tags, JSON-LD, and robots meta tags — plus a theme override that gives `<link rel="canonical">`, `og:url` and `twitter:url` one clean URL (bolt/core PR #3735 workaround).
 2. **`Vondry/bolt-sitemap` (`tomvondracek/bolt-sitemap`)**: an XML sitemap index generated from content and routes, including the theme's static pages. It needs no theme override and replaces `bolt/sitemap-extension`.
 3. **`Vondry/bolt-llms-txt` (`tomvondracek/bolt-llms-txt`)**: Serves `/llms.txt` dynamically from CMS content adhering strictly to the [llmstxt.org](https://llmstxt.org/) specification.
+4. **`Vondry/bolt-server-analytics` (`tomvondracek/bolt-request-analytics`)**: Cookieless visitor statistics built on the server from the HTTP request alone — no JavaScript, no cookies, no identifiers, so nothing for the consent banner. A dashboard card and an **Analytics** page in the backend; redirects from alias domains are counted.
 
 This skill provides the end-to-end installation steps, architecture patterns, theme templates, and an automated verification script.
 
@@ -419,9 +422,111 @@ This file is generated from the website's content management system; the facts b
 
 ---
 
-## 4. Automated Verification Script
+## 4. tomvondracek/bolt-request-analytics Setup
 
-To verify that all three extensions and their theme overrides are correctly wired:
+Official repository: [Vondry/bolt-server-analytics](https://github.com/Vondry/bolt-server-analytics) (package [`tomvondracek/bolt-request-analytics`](https://packagist.org/packages/tomvondracek/bolt-request-analytics))
+
+After a page has been sent, the request is classified (path, device, browser, language, source) and appended to a spool file; a rollup moves the spool into a database of its own when an admin opens the dashboard, or from cron. The IP address is never read and nothing identifies a visitor, so it needs **no consent** and does not belong in the cookie banner. It needs no theme template.
+
+### 4.1 Install via Composer
+```bash
+composer require tomvondracek/bolt-request-analytics:^1.0
+```
+It pulls in `symfony/lock`. Its Flex recipe adds `config/packages/lock.yaml` (`framework.lock: '%env(LOCK_DSN)%'`) and `LOCK_DSN=flock` to `.env`; keep both and commit `symfony.lock`. Bolt's post-install script adds the `TomVondracek\RequestAnalytics\` resource to `config/services_bolt.yaml`.
+
+### 4.2 Copy Config Recipes & Keep the Data out of Git
+```bash
+php bin/console extensions:configure --with-config
+php bin/console request-analytics:install   # creates the tables now (otherwise on first use)
+php bin/console cache:clear
+```
+This generates:
+* `config/extensions/tomvondracek-requestanalytics.yaml`
+* `config/packages/extension_bolt-request-analytics.yaml` (translations, `@request-analytics` Twig namespace, the **Analytics** menu item)
+* `config/routes/extension_bolt-request-analytics.yaml` (the backend page and its API)
+
+Visits wait in `var/request-analytics/spool/` and the statistics live in `var/data/request-analytics.db`. Neither belongs in Git, and the database is not Bolt's:
+```gitignore
+# .gitignore
+/var/data/*
+/var/request-analytics/
+```
+
+### 4.3 Configure the Extension
+Replace the generated `config/extensions/tomvondracek-requestanalytics.yaml` with `examples/tomvondracek-requestanalytics.yaml` and fill in the hosts. Every key it leaves out keeps the extension's default:
+
+```yaml
+# config/extensions/tomvondracek-requestanalytics.yaml
+enabled: true
+access:
+  view: [ROLE_ADMIN]
+  delete: [ROLE_ADMIN]
+own_hosts: [example.cz, www.example.cz]   # the canonical host (BOLT_CANONICAL) and its www twin
+aliases:
+  hosts: []                               # section 4.4
+  target: https://example.cz
+  mode: count
+  redirect_status: 301
+storage:
+  database: '%kernel.project_dir%/var/data/request-analytics.db'
+aggregation:
+  trigger: admin                          # cron / both with the cron job of section 4.5
+privacy:
+  honor_gpc: true
+  honor_dnt: true
+  retention_months: 25
+```
+
+* **`own_hosts`:** always the canonical host and the www twin. Without them a click from `www.example.cz` (before its redirect) or a proxy's `Host` is counted as a referral from another site.
+* **`storage.database`:** keep the SQLite default unless the host has no `pdo_sqlite`; then a MySQL / PostgreSQL database **of its own** through `'%env(REQUEST_ANALYTICS_DATABASE_URL)%'`, defined in the server's `.env.local`. Bolt's own database is refused, and so is any path in `public/`.
+* **`access.view`:** `ROLE_ADMIN` by default. Add `ROLE_CHIEF_EDITOR` only when the client's editors should see the numbers.
+
+### 4.4 Domain Aliases (Second Domains That Redirect to the Site)
+A second domain (`examplekurim.cz` → `example-kurim.cz`, an old domain, a campaign domain) never shows up as a Referer, so the extension counts the redirect itself:
+
+```yaml
+aliases:
+  hosts: [example-alias.cz, www.example-alias.cz]
+  target: https://example.cz        # BOLT_CANONICAL
+  mode: count
+```
+
+In `count` mode the alias domain must reach **this** application (DNS to the same hosting, the alias attached to the webhosting, a TLS certificate for it), and Symfony must trust its `Host`, or Symfony answers HTTP 400:
+```dotenv
+# .env — one pattern for the canonical and the alias hosts (bolt-security-hardening Step 1)
+SYMFONY_TRUSTED_HOSTS='^(www\.)?(example|example-alias)\.cz$'
+```
+
+Rules:
+* **Don't redirect the alias at the registrar or in `.htaccess`** in `count` mode: the request then never reaches Bolt and is not counted. The root `.htaccess` www → bare host redirect (`bolt-htaccess` Step 1) is fine: `www.example-alias.cz` → `example-alias.cz` → the extension's counted 301 to the target.
+* **When the redirect has to stay elsewhere** (a registrar's forwarding, another server), use `mode: tag` and let that redirect go to `https://example.cz/?ra_via=example-alias.cz`. The same marker counts QR codes and print: `aliases.hosts: [poster-a2]` and `https://example.cz/?ra_via=poster-a2`.
+* No alias: leave `hosts: []`.
+
+### 4.5 Production
+* **Cron** (recommended on busy sites, or when nobody logs in for weeks): `0 * * * * cd /path/to/project && bin/console request-analytics:rollup` as the **web server's user** (a file created by another user that the web server can't write stops the statistics), and `aggregation.trigger: both`.
+* **Timezone:** days and hours follow `timezone` in `config/bolt/config.yaml` (`bolt-timezone`).
+* **Deploys** with release directories: share `var/request-analytics/` and `var/data/`. An SFTP upload never overwrites them as long as they are not in the repository.
+* **Privacy policy:** the processing sets no cookie and needs no consent, so it adds nothing to the banner or the cookie table. The privacy page still names it: add a purpose to `privacy.purposes` of `bolt-cookie-consent` (legitimate interest, the server's own hosting as the only recipient):
+  ```yaml
+  - id: site_statistics
+    controllers: [ctrl-1]
+    section: website
+    title: { cs: 'Statistika návštěvnosti webu', en: 'Website visitor statistics' }
+    data: { cs: 'navštívená stránka, typ zařízení, rodina prohlížeče a systému, jazyk, zdroj návštěvy (bez IP adresy a bez identifikátorů)', en: 'page visited, device type, browser and system family, language, source of the visit (no IP address and no identifiers)' }
+    legal_basis: art6_1_f
+    legitimate_interest: { cs: 'zjištění, které stránky návštěvníci používají, a oprava nefunkčních odkazů', en: 'learning which pages visitors use and fixing broken links' }
+    retention: '25 měsíců (souhrnné denní údaje)'   # = retention_months
+    recipients: [hosting]
+    provision: { cs: 'Údaje se zaznamenávají automaticky; signál Global Privacy Control nebo Do Not Track je respektován.', en: 'The data is recorded automatically; a Global Privacy Control or Do Not Track signal is honoured.' }
+  ```
+  Use the controller ids of the project's `theme.yaml`, and run `bolt-cookie-consent`'s `verify.sh` afterwards.
+* **Testing:** nothing is collected with `APP_ENV=dev` or `APP_DEBUG=1`. Check collection on production, or locally with `APP_ENV=prod APP_DEBUG=0` and a cleared cache: open a page, then the dashboard — the card shows today's page view.
+
+---
+
+## 5. Automated Verification Script
+
+To verify that all four extensions and their theme overrides are correctly wired:
 
 ```bash
 vendor/tomvondracek/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
@@ -441,3 +546,4 @@ vendor/tomvondracek/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
 7. **Canonical URL override (section 1.6, until bolt/core PR #3735 is released):**
    * Fails when `partials/_canonical.twig`, `_canonical.macros.twig` or `_seo_metatags.twig` is missing, or when `canonical_template` / `templates.meta` doesn't point at them. Warns when a copy differs from the skill example.
    * Warns when a theme template passes `canonical: app.request.uri` to the meta tags (section 1.5), or `appolo-boltseo.yaml` still has the dead `meta_robots` / `allow` keys (section 1.3).
+8. **Request analytics (section 4):** warns when `tomvondracek/bolt-request-analytics` is not installed. Once it is, fails when its config, package or route recipe or its `services_bolt.yaml` entry is missing, when `SYMFONY_TRUSTED_HOSTS` rejects an own host or a `count`-mode alias host (HTTP 400), when `aliases.target` is empty with alias hosts, when the database or spool is in `public/`, or when `lock.yaml` reads an undefined `LOCK_DSN`. Warns when `own_hosts` is empty or lacks the `BOLT_CANONICAL` host, and when `.gitignore` lacks `/var/request-analytics/` or `/var/data/*`.

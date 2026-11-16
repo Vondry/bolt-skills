@@ -409,13 +409,13 @@ Verifications 2.1 and 2.2 pass; `bolt-security-hardening` reports the baseline C
 **Goal:** every extension and custom Twig function the content model and templates rely on is installed before they are used.
 
 ### 3.1 Essential Extensions (`bolt-extension-setup`, Part A: packages & configuration)
-- `composer require appolodev/bolt-seo:^2.3 tomvondracek/bolt-sitemap:^1.0 tomvondracek/bolt-llms-txt:^1.1`
+- `composer require appolodev/bolt-seo:^2.3 tomvondracek/bolt-sitemap:^1.0 tomvondracek/bolt-llms-txt:^1.1 tomvondracek/bolt-request-analytics:^1.0`
 - `php bin/console extensions:configure --with-config`
 - `php bin/console assets:install --symlink --relative public`
-- Configure `config/extensions/appolo-boltseo.yaml` (fallback chains; the field names are revisited in 5.2; `default.robots`, never the dead `meta_robots`; `templates.meta` is set in 6.2 together with the partial it names), `config/extensions/tomvondracek-sitemap.yaml` (copy the skill's `examples/tomvondracek-sitemap.yaml`; keep `static_routes: true`, `images.fields` for ContentTypes whose first image is not the page's) and `config/extensions/tomvondracek-llmstxt.yaml` (`template: '@theme/extensions/llms.txt.twig'`, `locale`, `max_age`).
+- Configure `config/extensions/appolo-boltseo.yaml` (fallback chains; the field names are revisited in 5.2; `default.robots`, never the dead `meta_robots`; `templates.meta` is set in 6.2 together with the partial it names), `config/extensions/tomvondracek-sitemap.yaml` (copy the skill's `examples/tomvondracek-sitemap.yaml`; keep `static_routes: true`, `images.fields` for ContentTypes whose first image is not the page's) `config/extensions/tomvondracek-llmstxt.yaml` (`template: '@theme/extensions/llms.txt.twig'`, `locale`, `max_age`) and `config/extensions/tomvondracek-requestanalytics.yaml` (copy the skill's example; `own_hosts`, and **[if alias domains]** `aliases` with the alias hosts added to `SYMFONY_TRUSTED_HOSTS`). Keep `LOCK_DSN=flock` from the `symfony/lock` recipe and add `/var/request-analytics/` to `.gitignore` (skill section 4).
 - Confirm `bolt/redactor` and `bolt/article` are in `composer.json` (they ship with `bolt/project`). Phase 5 uses the field types `redactor`, `article` and `seo`, which these packages and `appolodev/bolt-seo` provide.
 - Part B (theme templates and the SEO block) is done in 6.2.
-- *Verify (partial):* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` — checks [1/7] to [3/7] pass now; [4/7] to [7/7] pass after 5.1 and 6.2.
+- *Verify (partial):* `bash $SKILLS/bolt-extension-setup/scripts/verify.sh` — checks [1/8] to [3/8] and [8/8] pass now; [4/8] to [7/8] pass after 5.1 and 6.2.
 
 ### 3.2 Runtime Twig Extensions (`bolt-runtime-extensions`)
 - `bash $SKILLS/bolt-runtime-extensions/scripts/scaffold.sh` installs into `src/`. Bolt's `App\` resource registers the classes and their `#[Autowire]` attributes inject `%app_locales%`, `%locale%` and `%kernel.project_dir%`, so `config/services.yaml` needs no service definitions:

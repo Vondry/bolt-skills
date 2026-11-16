@@ -26,7 +26,7 @@ phase and skill consume it.
 | E4 | How the site runs locally and its URL (`BOLT_BASE_URL`) | `symfony serve` → `https://127.0.0.1:8000` · Docker · Valet / other | all live checks |
 | E5 | Production web server and document root | Apache, vhost on `public/` · Apache, document root = project root · Nginx | 2.1 `bolt-htaccess`, 2.2 `bolt-asset-caching` |
 | E6 | Docker in production or development? | no · yes (PHP INI, compose, Nginx container) | 1.1 `bolt-timezone`, 2.2 |
-| E7 | Production domain and staging URL (if any) | — | 1.5 `SYMFONY_TRUSTED_HOSTS`, 8.3 smoke checks, SEO, `llms.txt` |
+| E7 | Production domain, staging URL (if any) and alias domains that redirect to the site | — · no alias | 1.5 `SYMFONY_TRUSTED_HOSTS`, 3.1 request analytics `own_hosts` / `aliases`, 8.3 smoke checks, SEO, `llms.txt` |
 | E8 | Theme folder name | slug of the site name | 4.1 `bolt-theme-init` |
 | E9 | CI platform | GitLab (skill default) · GitHub Actions (adapt the job) · none | 1.4 `bolt-code-quality` |
 | E10 | Git: commit after every gate? Remote to push to? | commit locally after each gate, no push | all gates |
