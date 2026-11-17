@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.17.4 — 2026-11-17
 
 When `tomvondracek/bolt-request-analytics` is installed, the privacy page always names its statistics in one clause of the server-log purpose, instead of a purpose of their own.
 
