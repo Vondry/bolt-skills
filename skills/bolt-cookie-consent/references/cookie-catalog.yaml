@@ -292,6 +292,13 @@ recipients:
     country: { cs: 'Maďarsko (EU); CDN Cloudflare může údaje zpracovávat i v USA', en: 'Hungary (EU); the Cloudflare CDN may process the data in the USA as well' }
     transfer: adequacy
 
+# Appended to the `data` of web_operation whenever tomvondracek/bolt-request-analytics is
+# installed (bolt-extension-setup section 4): the statistics are built from the same requests as
+# the server logs, without the IP address and without identifiers. privacy-config.php adds it, and
+# check-privacy.php / verify.sh fail while the privacy page lacks it.
+request_analytics:
+  data_suffix: { cs: '; z požadavků se dále sestavuje anonymní statistika návštěvnosti bez IP adresy a identifikátorů', en: '; anonymous visitor statistics without IP addresses or identifiers are also compiled from the requests' }
+
 # Purposes of processing (GDPR čl. 13). The key is the value for --purposes=; analytics,
 # marketing and third_party are added automatically from the trackers and embeds.
 # `legal_basis`: art6_1_a (consent) | art6_1_b (contract) | art6_1_c (legal obligation) |

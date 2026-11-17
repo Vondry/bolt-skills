@@ -482,7 +482,7 @@ privacy:
 * **`access.view`:** `ROLE_ADMIN` by default. Add `ROLE_CHIEF_EDITOR` only when the client's editors should see the numbers.
 
 ### 4.4 Domain Aliases (Second Domains That Redirect to the Site)
-A second domain (`examplekurim.cz` → `example-kurim.cz`, an old domain, a campaign domain) never shows up as a Referer, so the extension counts the redirect itself:
+A second domain (`example-alias.cz` → `example.cz`: a spelling without the hyphen, an old domain, a campaign domain) never shows up as a Referer, so the extension counts the redirect itself:
 
 ```yaml
 aliases:
@@ -506,20 +506,7 @@ Rules:
 * **Cron** (recommended on busy sites, or when nobody logs in for weeks): `0 * * * * cd /path/to/project && bin/console request-analytics:rollup` as the **web server's user** (a file created by another user that the web server can't write stops the statistics), and `aggregation.trigger: both`.
 * **Timezone:** days and hours follow `timezone` in `config/bolt/config.yaml` (`bolt-timezone`).
 * **Deploys** with release directories: share `var/request-analytics/` and `var/data/`. An SFTP upload never overwrites them as long as they are not in the repository.
-* **Privacy policy:** the processing sets no cookie and needs no consent, so it adds nothing to the banner or the cookie table. The privacy page still names it: add a purpose to `privacy.purposes` of `bolt-cookie-consent` (legitimate interest, the server's own hosting as the only recipient):
-  ```yaml
-  - id: site_statistics
-    controllers: [ctrl-1]
-    section: website
-    title: { cs: 'Statistika návštěvnosti webu', en: 'Website visitor statistics' }
-    data: { cs: 'navštívená stránka, typ zařízení, rodina prohlížeče a systému, jazyk, zdroj návštěvy (bez IP adresy a bez identifikátorů)', en: 'page visited, device type, browser and system family, language, source of the visit (no IP address and no identifiers)' }
-    legal_basis: art6_1_f
-    legitimate_interest: { cs: 'zjištění, které stránky návštěvníci používají, a oprava nefunkčních odkazů', en: 'learning which pages visitors use and fixing broken links' }
-    retention: '25 měsíců (souhrnné denní údaje)'   # = retention_months
-    recipients: [hosting]
-    provision: { cs: 'Údaje se zaznamenávají automaticky; signál Global Privacy Control nebo Do Not Track je respektován.', en: 'The data is recorded automatically; a Global Privacy Control or Do Not Track signal is honoured.' }
-  ```
-  Use the controller ids of the project's `theme.yaml`, and run `bolt-cookie-consent`'s `verify.sh` afterwards.
+* **Privacy policy:** always name the statistics. They are built from the same requests as the server logs, so the privacy page's `web_operation` purpose (`bolt-cookie-consent`) gets one clause in its data: „…typ prohlížeče (serverové logy); z požadavků se dále sestavuje anonymní statistika návštěvnosti bez IP adresy a identifikátorů“ (en: “…; anonymous visitor statistics without IP addresses or identifiers are also compiled from the requests”). `bolt-cookie-consent`'s `privacy-config.php` appends it when the extension is installed; in an existing `theme.yaml` or privacy record, append it by hand and increase `config_version`. Its `verify.sh` fails while the privacy page lacks it. The statistics set no cookie and need no consent, so they add nothing to the banner or the cookie table.
 * **Testing:** nothing is collected with `APP_ENV=dev` or `APP_DEBUG=1`. Check collection on production, or locally with `APP_ENV=prod APP_DEBUG=0` and a cleared cache: open a page, then the dashboard — the card shows today's page view.
 
 ---

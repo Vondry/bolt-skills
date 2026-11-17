@@ -222,6 +222,17 @@ if ($contentType === null) {
             $fail("purpose $label: section must be 'website' or a controller id");
         }
     }
+
+    // tomvondracek/bolt-request-analytics builds visitor statistics from the requests: a purpose
+    // (web_operation) names them (bolt-extension-setup section 4.5, catalog request_analytics).
+    $installed = json_decode((string) @file_get_contents('vendor/composer/installed.json'), true);
+    if (in_array('tomvondracek/bolt-request-analytics', array_column($installed['packages'] ?? [], 'name'), true)) {
+        $named = array_filter($purposes, static fn ($purpose): bool => is_array($purpose['data'] ?? null)
+            && str_contains(mb_strtolower((string) ($purpose['data']['cs'] ?? '')), 'anonymní statistik'));
+        $named
+            ? $ok('purpose ' . (reset($named)['id'] ?? '') . ' names the anonymous visitor statistics (request analytics)')
+            : $fail("tomvondracek/bolt-request-analytics is installed but no purpose names the statistics — append to web_operation's data: '; z požadavků se dále sestavuje anonymní statistika návštěvnosti bez IP adresy a identifikátorů' (and the en text, catalog request_analytics.data_suffix)");
+    }
 }
 
 // Cookies and similar technologies (INV-01–INV-03, CB-21, CB-23) — both models

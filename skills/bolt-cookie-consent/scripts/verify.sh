@@ -432,6 +432,13 @@ if curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     fi
     echo "$HOME_HTML" | grep -qE 'href="[^"]*/zasady-ochrany-osobnich-udaju"' && pass "$BASE_URL/ links /zasady-ochrany-osobnich-udaju (PP-01)." \
         || fail "$BASE_URL/ has no link to /zasady-ochrany-osobnich-udaju (PP-01)."
+    # The request analytics build visitor statistics from the requests: the page names them
+    # (bolt-extension-setup section 4.5) — also in the ContentType model, which only this sees.
+    if grep -q '"name": "tomvondracek/bolt-request-analytics"' vendor/composer/installed.json 2>/dev/null; then
+        echo "$PAGE_HTML" | grep -qi 'anonymní statistik' \
+            && pass "the privacy page names the anonymous visitor statistics (request analytics)." \
+            || fail "tomvondracek/bolt-request-analytics is installed but the privacy page does not name the statistics — append to web_operation's data: '; z požadavků se dále sestavuje anonymní statistika návštěvnosti bez IP adresy a identifikátorů'."
+    fi
     if [ $CHECK_ANCHORS_LIVE -eq 1 ]; then
         MISSING_ANCHORS=""
         for anchor in spravce ucely prijemci prava namitka cookies kontakt historie-zmen; do

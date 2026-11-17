@@ -48,6 +48,8 @@ Controller model from question 4 (guidelines, *Varianty*):
 
 Purposes for `--purposes=` (from `references/cookie-catalog.yaml`): `web_operation` (server logs — every site), `contact_form`, `contract`, `accounting`, `newsletter`, `legal_claims`, `map_display` (the map of `bolt-map`). The consent purposes `analytics`, `marketing` and `third_party` are added automatically from the trackers and embeds.
 
+**Request analytics.** When `tomvondracek/bolt-request-analytics` is installed (`bolt-extension-setup` section 4), the privacy page always names its statistics in `web_operation`'s data: „…typ prohlížeče (serverové logy); z požadavků se dále sestavuje anonymní statistika návštěvnosti bez IP adresy a identifikátorů“ (en: “…; anonymous visitor statistics without IP addresses or identifiers are also compiled from the requests”). `privacy-config.php` appends it (catalog `request_analytics.data_suffix`); in an existing `theme.yaml` or a privacy ContentType record, append it by hand and increase `config_version` with a changelog entry. The statistics set no cookie and need no consent, so they add nothing to the banner or the cookie table.
+
 ---
 
 ## 2. Architecture
@@ -304,7 +306,7 @@ bash $SKILLS/bolt-cookie-consent/scripts/verify.sh           # sign-off: placeho
 | Step | Checks |
 | :--- | :--- |
 | 1 | Active theme |
-| 2 | Privacy data (`scripts/check-privacy.php`) from `theme.yaml` `privacy:` or the privacy ContentType's record: placeholders; every cookie item classified with Czech purpose, provider and expiry; consent record listed when a banner exists — and not listed without one; tracker IDs inventoried; tracker cookies (`_ga`, `_gcl_*`, `_fbp`, …) listed while their ID is empty (warning: the banner asks for consent to nothing). For `theme.yaml` also: controller model and identity; joint arrangement; purposes with Czech texts, valid legal basis, concrete legitimate interest; recipients; consent lifetimes; version, date, changelog; automated decisions stated |
+| 2 | Privacy data (`scripts/check-privacy.php`) from `theme.yaml` `privacy:` or the privacy ContentType's record: placeholders; every cookie item classified with Czech purpose, provider and expiry; consent record listed when a banner exists — and not listed without one; tracker IDs inventoried; tracker cookies (`_ga`, `_gcl_*`, `_fbp`, …) listed while their ID is empty (warning: the banner asks for consent to nothing). For `theme.yaml` also: controller model and identity; joint arrangement; purposes with Czech texts, valid legal basis, concrete legitimate interest; recipients; consent lifetimes; version, date, changelog; automated decisions stated; with `tomvondracek/bolt-request-analytics` installed, a purpose names the anonymous visitor statistics |
 | 3 | Banner partials present, `_consent-mode.twig` in `<head>`, banner included in the master layout |
 | 4 | Reject / Accept (layer 1) and Reject / Save / Accept (layer 2) share identical classes; settings button; layer-2 dialog; switches start off; `role="dialog"`, `aria-labelledby`, `role="switch"` |
 | 5 | No implied-consent wording; one label for "Nastavení cookies" |
@@ -312,7 +314,7 @@ bash $SKILLS/bolt-cookie-consent/scripts/verify.sh           # sign-off: placeho
 | 7 | `cookie-consent.ts` present and imported; no auto-hide |
 | 8 | Footer links the policy (or, in the ContentType model, a record with `|link`) and has `[data-cookie-settings]` |
 | 9 | Privacy page: `theme.yaml` model — route, rendered from `privacy:`, all section anchors; ContentType model — `record_template` exists, the layout reads the same record; banner deferred on the page |
-| 10 | Every `cookie.*` / `privacy.*` unit in every catalog (Czech mandatory); live checks with `BOLT_BASE_URL`: no tracker script in the homepage HTML, consent configuration rendered, policy returns 200 without placeholders, the homepage links it, its sections (ContentType model), and every cookie that `/`, the policy and each `/<locale>/` homepage set is in the inventory (INV-01) |
+| 10 | Every `cookie.*` / `privacy.*` unit in every catalog (Czech mandatory); live checks with `BOLT_BASE_URL`: no tracker script in the homepage HTML, consent configuration rendered, policy returns 200 without placeholders, the homepage links it, its sections (ContentType model), it names the anonymous visitor statistics when `tomvondracek/bolt-request-analytics` is installed, and every cookie that `/`, the policy and each `/<locale>/` homepage set is in the inventory (INV-01) |
 
 Without trackers and embeds the banner checks are skipped and the privacy page is still verified — run this skill on every site. The behaviour that a script cannot see (DevTools before and after a choice, 360 px, keyboard and screen reader) is the manual checklist printed at the end of the run.
 

@@ -2,6 +2,17 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+When `tomvondracek/bolt-request-analytics` is installed, the privacy page always names its statistics in one clause of the server-log purpose, instead of a purpose of their own.
+
+### Changed
+- `bolt-cookie-consent`: with the extension installed, `privacy-config.php` appends „; z požadavků se dále sestavuje anonymní statistika návštěvnosti bez IP adresy a identifikátorů“ (en: “; anonymous visitor statistics without IP addresses or identifiers are also compiled from the requests”) to the data of `web_operation` (catalog `request_analytics.data_suffix`). `check-privacy.php` fails when no purpose in `theme.yaml` names the statistics, and `verify.sh` fails when the live privacy page doesn't (also for a privacy ContentType).
+- `bolt-extension-setup`: section 4.5 points to that clause; the separate `site_statistics` purpose is gone. The alias example in section 4.4 uses neutral domains.
+
+### Migrating a project
+- With the extension installed, append the clause to the Czech (and English) `data` of `web_operation` in `theme.yaml`, or in the privacy record in the admin, then increase `config_version` and add a changelog entry.
+
 ## 1.17.3 — 2026-11-16
 
 `bolt-extension-setup` installs a fourth extension: cookieless visitor statistics in the backend, with redirects from alias domains counted.

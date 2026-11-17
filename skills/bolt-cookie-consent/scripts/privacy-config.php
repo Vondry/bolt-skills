@@ -17,6 +17,8 @@ declare(strict_types=1);
  * theme.yaml already has a `privacy:` key) and missing `analytics:` ID keys are added.
  * Every value the operator must supply stays `[DOPLNIT …]` (AG-01); --model is required because
  * the controller model is never guessed (AG-02).
+ * With tomvondracek/bolt-request-analytics installed, web_operation's `data` also names the
+ * anonymous visitor statistics (catalog `request_analytics.data_suffix`).
  */
 
 $autoload = getcwd() . '/vendor/autoload.php';
@@ -150,6 +152,20 @@ for ($index = 1; $index <= $controllerCount; $index++) {
     ];
 }
 $controllerIds = array_column($controllers, 'id');
+
+// The request analytics are built from the same requests as the server logs (bolt-extension-setup
+// section 4): web_operation names them.
+$installed = json_decode((string) @file_get_contents('vendor/composer/installed.json'), true);
+$hasRequestAnalytics = in_array('tomvondracek/bolt-request-analytics', array_column($installed['packages'] ?? [], 'name'), true);
+if ($hasRequestAnalytics && in_array('web_operation', $purposeKeys, true)) {
+    foreach ($catalog['request_analytics']['data_suffix'] as $locale => $suffix) {
+        if (isset($catalog['purposes']['web_operation']['data'][$locale])) {
+            $catalog['purposes']['web_operation']['data'][$locale] .= $suffix;
+        }
+    }
+} elseif ($hasRequestAnalytics) {
+    fwrite(STDERR, "WARNING: tomvondracek/bolt-request-analytics is installed but --purposes has no web_operation, which names the visitor statistics.\n");
+}
 
 // Purposes (čl. 13/1 c, d; 13/2 a, e)
 $purposes = [];
