@@ -47,7 +47,7 @@ It keeps existing files and keys, so it can be repeated. It writes:
 | :--- | :--- |
 | `js/map.js` | The map module ([`examples/map.js`](examples/map.js)) |
 | `components/ui/map.twig` | The pure component ([`examples/map.twig`](examples/map.twig)) |
-| `package.json` | `maplibre-gl`, the `build:map` script, and `build:map` as part of `prod` |
+| `package.json` | `maplibre-gl`, the `build:map` script, and `build:map` as part of `prod` and `postinstall` |
 | `css/tailwind/index.css` | `@source not "../../js/maplibre";` and the map's light or dark rule |
 | `theme.yaml` | `location:` with the coordinates and `zoom: 17` |
 
@@ -135,6 +135,9 @@ Then open the page in a private window and confirm what only a browser can:
 * **The map stays empty and the console shows a 403 or 404 for `.mjs`** → the files were copied
   without renaming. The `.htaccess` allowlist of `bolt-htaccess` serves `.js` in `js/`, not `.mjs`.
   Use `npm run build:map`.
+* **`js/maplibre/maplibre-gl.js` names an older version than `package.json`** → the copies are
+  committed and only `build:map` refreshes them. `postinstall` runs it on `npm install` and `npm ci`,
+  but `npm update` skips the project's own `postinstall`, so run `npm install` after `npm update`.
 * **MapLibre imported in `js/src/`** → the theme's Rollup output is a single IIFE file, so 450 kB
   lands on every page and the worker is not found. Keep it in `js/map.js`.
 * **The map follows the site's theme toggle instead of the system** → `dark:` was used, and a theme can

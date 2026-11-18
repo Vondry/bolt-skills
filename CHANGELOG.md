@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+- `bolt-map`: `scaffold.sh` adds `npm run build:map` to `postinstall`, so `npm install` and `npm ci` refresh the committed copies in `js/maplibre/` after a MapLibre update. `verify.sh` fails without it. `npm update` skips `postinstall`, so run `npm install` after it.
+
+### Migrating a project
+- With `bolt-map` installed, add `"postinstall": "npm run build:map"` to the theme's `package.json` (or run `scaffold.sh` again), then `npm install` and commit `package.json`, `package-lock.json` and `js/maplibre/`.
+
 ## 1.17.4 — 2026-11-17
 
 When `tomvondracek/bolt-request-analytics` is installed, the privacy page always names its statistics in one clause of the server-log purpose, instead of a purpose of their own.

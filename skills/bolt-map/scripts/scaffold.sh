@@ -68,12 +68,17 @@ php -r '
     if (!str_contains($production, "build:map")) {
         $package["scripts"]["prod"] = "npm run build:map && " . $production;
     }
+    // npm install / npm ci run postinstall, so the copies in js/maplibre follow the installed version.
+    $postinstall = $package["scripts"]["postinstall"] ?? "";
+    if (!str_contains($postinstall, "build:map")) {
+        $package["scripts"]["postinstall"] = $postinstall === "" ? "npm run build:map" : $postinstall . " && npm run build:map";
+    }
     $json = json_encode($package, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     // npm style (two spaces): npm copies the indentation of package.json into package-lock.json.
     $json = preg_replace_callback("/^(?: {4})+/m", static fn (array $match): string => substr($match[0], 0, (int) (strlen($match[0]) / 2)), $json);
     file_put_contents($file, $json . "\n");
 ' "$THEME_DIR/package.json"
-echo "  updated $THEME_DIR/package.json (maplibre-gl, build:map, prod)"
+echo "  updated $THEME_DIR/package.json (maplibre-gl, build:map, prod, postinstall)"
 
 CSS_SOURCE="$THEME_DIR/css/tailwind/index.css"
 if [ -f "$CSS_SOURCE" ] && ! grep -q 'js/maplibre' "$CSS_SOURCE"; then

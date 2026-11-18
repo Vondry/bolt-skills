@@ -130,6 +130,11 @@ if [ -f "$THEME_DIR/package.json" ] && grep -E '"prod"' "$THEME_DIR/package.json
 else
     fail "npm run prod does not run build:map (scaffold.sh)"
 fi
+if [ -f "$THEME_DIR/package.json" ] && grep -E '"postinstall"' "$THEME_DIR/package.json" | grep -q 'build:map'; then
+    pass "npm install copies the library"
+else
+    fail "postinstall does not run build:map, so js/maplibre falls behind node_modules (scaffold.sh)"
+fi
 for file in maplibre-gl.js maplibre-gl-worker.js maplibre-gl.css; do
     if [ -s "$THEME_DIR/js/maplibre/$file" ]; then
         pass "js/maplibre/$file is built"
