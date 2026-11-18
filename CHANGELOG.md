@@ -5,10 +5,10 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 ## Unreleased
 
 ### Changed
-- `bolt-map`: `scaffold.sh` adds `npm run build:map` to `postinstall`, so `npm install` and `npm ci` refresh the committed copies in `js/maplibre/` after a MapLibre update. `verify.sh` fails without it. `npm update` skips `postinstall`, so run `npm install` after it.
+- `bolt-map`: `scaffold.sh` adds `npm run build:map` to `postinstall`, so `npm install` and `npm ci` refresh the committed copies in `js/maplibre/` after a MapLibre update. `verify.sh` fails without it. `npm update` skips `postinstall`, so run `npm install` after it. A new pitfall: bump `assets_version` whenever `js/maplibre/` changes, since `js/map.js` passes its `?v=` to the library and its worker.
 
 ### Migrating a project
-- With `bolt-map` installed, add `"postinstall": "npm run build:map"` to the theme's `package.json` (or run `scaffold.sh` again), then `npm install` and commit `package.json`, `package-lock.json` and `js/maplibre/`.
+- With `bolt-map` installed, add `"postinstall": "npm run build:map"` to the theme's `package.json` (or run `scaffold.sh` again), then `npm install`, bump `assets_version` in `theme.yaml` and commit `package.json`, `package-lock.json`, `theme.yaml` and `js/maplibre/`.
 
 ## 1.17.4 — 2026-11-17
 

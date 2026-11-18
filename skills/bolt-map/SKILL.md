@@ -138,6 +138,10 @@ Then open the page in a private window and confirm what only a browser can:
 * **`js/maplibre/maplibre-gl.js` names an older version than `package.json`** → the copies are
   committed and only `build:map` refreshes them. `postinstall` runs it on `npm install` and `npm ci`,
   but `npm update` skips the project's own `postinstall`, so run `npm install` after `npm update`.
+* **Browsers keep the old MapLibre after an update** → `js/map.js` passes its own `?v=` to the
+  library, the stylesheet and the worker, and they are cached for months. Bump `assets_version` in
+  `theme.yaml` whenever `js/maplibre/` changes. The library and its worker then always come from the
+  same release.
 * **MapLibre imported in `js/src/`** → the theme's Rollup output is a single IIFE file, so 450 kB
   lands on every page and the worker is not found. Keep it in `js/map.js`.
 * **The map follows the site's theme toggle instead of the system** → `dark:` was used, and a theme can
