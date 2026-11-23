@@ -7,7 +7,13 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 ### Changed
 - `bolt-map`: `scaffold.sh` adds `npm run build:map` to `postinstall`, so `npm install` and `npm ci` refresh the committed copies in `js/maplibre/` after a MapLibre update. `verify.sh` fails without it. `npm update` skips `postinstall`, so run `npm install` after it. A new pitfall: bump `assets_version` whenever `js/maplibre/` changes, since `js/map.js` passes its `?v=` to the library and its worker.
 
+- `bolt-theme-templates`: section 3 states the rule for links that open a new tab: every `<a target="_blank">` carries `rel="noopener noreferrer"`, except the footer's author credit to `tvondracek.cz` with `rel="noopener"` only, so the portfolio sees the referring site. `verify.sh` step [12/12] fails on a link that breaks it. `bolt-menu` and the Integration Contract in `WORKFLOWS.md` name the exception.
+
+### Fixed
+- `bolt-map`: the directions button carries `rel="noopener noreferrer"` instead of `rel="noopener"`.
+
 ### Migrating a project
+- Run `bolt-theme-templates`' `verify.sh` and add `noreferrer` to every link it reports. With `bolt-map` installed, change the directions button in `components/ui/map.twig` to `rel="noopener noreferrer"`.
 - With `bolt-map` installed, add `"postinstall": "npm run build:map"` to the theme's `package.json` (or run `scaffold.sh` again), then `npm install`, bump `assets_version` in `theme.yaml` and commit `package.json`, `package-lock.json`, `theme.yaml` and `js/maplibre/`.
 
 ## 1.17.4 — 2026-11-17

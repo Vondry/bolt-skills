@@ -516,6 +516,8 @@ The bottom bar ends with the author credit („Vytvořil Tomáš Vondráček“,
 
 Keep the link absolute and outside `locale_link()`: that function prefixes the site's own paths, and would send a German page to `/de`, which the portfolio does not have.
 
+The credit opens in a new tab with `rel="noopener"` and **without** `noreferrer`, so the portfolio sees which site a visitor came from. It is the only exception: every other `target="_blank"` link carries `rel="noopener noreferrer"` (the social links here, and `bolt-theme-templates` section 3, whose `verify.sh` step 12 checks both).
+
 
 ```twig
 {# public/theme/<theme>/containers/footer/_footer.twig #}

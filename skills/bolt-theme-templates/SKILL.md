@@ -8,7 +8,8 @@ description: >-
   page orchestrators per ContentType with page-scoped components, the search results page every
   Bolt site serves at /search (in the theme's design, verified live: results with HTTP 200 and the
   locale kept), their translation catalogs, and automated verification (layout contract, purity,
-  translation traps, undefined classes, lint, search).
+  translation traps, undefined classes, lint, search, rel="noopener noreferrer" on links that
+  open a new tab).
 ---
 
 # Bolt CMS Theme Templates (`bolt-theme-templates`)
@@ -158,6 +159,8 @@ public/theme/<theme_name>/
 ## 3. Implementation Blueprint & Examples
 
 All examples use the token names of `bolt-tailwind-theme` (`canvas`, `surface`, `surface-2`, `ink`, `ink-2`, `ink-3`, `stroke`, `accent*`, `night*`, text sizes `hero` / `section` / `card` / `lead` / `body` / `meta` / `micro`) and its utilities (`wrapper`, `px-edge`, `py-section`, `card`, `eyebrow`, `link-arrow`, `pagination`, `cms-redactor`). Status colours (`emerald`, `amber` in the badge and stock badge) are Tailwind defaults used on purpose.
+
+**Links that open a new tab.** Every `<a target="_blank">` carries `rel="noopener noreferrer"`: `noopener` keeps the opened page from reaching this one through `window.opener` (and redirecting it, the "tabnabbing" attack), and `noreferrer` keeps the page's URL out of the `Referer` header sent to the other site. This covers external links in templates, components (the button sets it for every external `href`), page-scoped components and the macros of `bolt-theme-init` (`linkAttributes`). The one exception is the author credit to `tvondracek.cz` in the footer (`bolt-menu`): `rel="noopener"` only, so the portfolio sees which sites its visitors come from. Do not use `target="_blank"` on the site's own pages. `verify.sh` step 12 checks every template.
 
 ### A. Pure Button Component (`components/ui/button.twig`)
 ```twig
@@ -1419,6 +1422,7 @@ bash skills/bolt-theme-templates/scripts/verify.sh
     - a term without matches answers 200; markup in the term is not printed as markup (this catches every path, including components that print with `|raw`);
     - every secondary locale from `app_locales`: `/<locale>/search` answers 200, its form submits to `/<locale>/search`, and the results link to `/<locale>/` pages.
     The step fails when no site can be reached: the search page is always verified.
+12. **Links that open a new tab**: fails on an `<a target="_blank">` whose `rel` lacks `noopener` or `noreferrer`, and on the `tvondracek.cz` credit unless its `rel` is `noopener` without `noreferrer` (section 3). Twig comments are skipped; `target="{{ … }}"` with a dynamic value is not checked.
 
 Raw HTML in page orchestrators is a judgement call and is not checked automatically; review pages against the rule in section 1.
 
@@ -1458,6 +1462,7 @@ Name tokens by role, not by position: `--spacing-page` / `--spacing-page-end` re
 | **Raw HTML in page orchestrators** | Inconsistent markup, duplication between pages, difficult responsive refactoring. | Extract reusable HTML sections into `containers/` and presentational elements into `components/ui/`. |
 | **Un-scoped one-off components** | Global `components/` folder gets cluttered with one-time tables or hero banners. | Scope page-specific components in `pages/<page>/components/<comp>.twig`. |
 | **Hardcoded URLs without `locale_link()`** | Language switcher breaks or user jumps back to default language. | Always wrap links in `{{ locale_link(item.href) }}` (the button component does it for `href`). |
+| **`target="_blank"` without `rel="noopener noreferrer"`** | The opened site can redirect the visitor's original tab through `window.opener`, and it receives the page's URL as `Referer`. | `rel="noopener noreferrer"` on every link that opens a new tab; only the `tvondracek.cz` credit keeps `rel="noopener"` (section 3, `verify.sh` step 12). |
 | **Dynamic Tailwind class interpolation** | `bg-{{ color }}-500` classes are purged by Tailwind v4. | Use lookup maps (e.g. `variant_map = { 'primary': 'bg-accent' }`) with full static class strings. |
 | **Arbitrary values that a token already covers** (`rounded-[var(--radius-btn)]`, `text-[0.9375rem]`) | Long class strings; the IDE warns "can be written as"; a token change does not reach these places. | `node scripts/canonical-classes.mjs --fix` (section 5), then `npm run prod`. |
 | **Colour names outside the token set** (`brand`, `ink-800`, `zinc-*`) | No CSS is generated; components render unstyled. | Use the `bolt-tailwind-theme` tokens; the verification lists missing classes. |

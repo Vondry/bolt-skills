@@ -50,7 +50,7 @@ WARNINGS=0
 # -------------------------------------------------------------
 # 1. Detect Active Theme
 # -------------------------------------------------------------
-echo -n "[1/11] Detecting active theme... "
+echo -n "[1/12] Detecting active theme... "
 ACTIVE_THEME="default"
 if [ -f "$BOLT_CONFIG" ]; then
     FOUND_THEME=$(grep -E "^theme:" "$BOLT_CONFIG" | head -n 1 | awk '{print $2}' | tr -d '"' | tr -d "'")
@@ -69,7 +69,7 @@ echo "PASSED (Theme: '$ACTIVE_THEME')"
 # -------------------------------------------------------------
 # 2. Check Directory Structure & Layout Shell (Integration Contract)
 # -------------------------------------------------------------
-echo -n "[2/11] Checking architectural directories and partials/_master.twig... "
+echo -n "[2/12] Checking architectural directories and partials/_master.twig... "
 STRUCT_ERRORS=()
 for d in components containers pages; do
     [ -d "$THEME_DIR/$d" ] || STRUCT_ERRORS+=("Missing $d/ folder")
@@ -94,7 +94,7 @@ fi
 # -------------------------------------------------------------
 # 3. Strict Pure Component Audit: ZERO setcontent in components/
 # -------------------------------------------------------------
-echo -n "[3/11] Auditing pure components (ZERO setcontent rule)... "
+echo -n "[3/12] Auditing pure components (ZERO setcontent rule)... "
 SETCONTENT_VIOLATIONS=0
 
 # Find all components directories (both top-level and page-scoped)
@@ -124,7 +124,7 @@ fi
 # -------------------------------------------------------------
 # 4. Page Orchestrator Audit: every page extends a layout
 # -------------------------------------------------------------
-echo -n "[4/11] Auditing page orchestrators in pages/... "
+echo -n "[4/12] Auditing page orchestrators in pages/... "
 if [ -d "$THEME_DIR/pages" ]; then
     PAGE_FILES=$(find "$THEME_DIR/pages" -name "*.twig" ! -path "*/components/*" 2>/dev/null || true)
     PAGE_COUNT=0
@@ -153,7 +153,7 @@ fi
 # -------------------------------------------------------------
 # 5. Link Locale Safety Audit: locale_link usage
 # -------------------------------------------------------------
-echo -n "[5/11] Auditing URL localization safety (locale_link usage)... "
+echo -n "[5/12] Auditing URL localization safety (locale_link usage)... "
 LOCALE_LINKS=$(grep -rn "locale_link(" "$THEME_DIR" --include="*.twig" 2>/dev/null || true)
 if [ -n "$LOCALE_LINKS" ]; then
     echo "PASSED (Found locale_link calls wrapping template URLs)"
@@ -167,7 +167,7 @@ fi
 #    The translator returns the key itself for a missing translation, so the
 #    default never renders; every key must exist in every catalog instead.
 # -------------------------------------------------------------
-echo -n "[6/11] Checking for __('key')|default(...) fallbacks... "
+echo -n "[6/12] Checking for __('key')|default(...) fallbacks... "
 DEFAULT_TRAPS=$(grep -rnE "__\([^)]*\)\|default\(" "$THEME_DIR" --include="*.twig" --exclude-dir=node_modules 2>/dev/null || true)
 if [ -n "$DEFAULT_TRAPS" ]; then
     echo "WARNING"
@@ -182,7 +182,7 @@ fi
 # 7. Same interface text everywhere: lightbox labels on every gallery container, and no
 #    aria-label typed in one language on a multilingual site.
 # -------------------------------------------------------------
-echo -n "[7/11] Checking lightbox labels and translated aria-labels... "
+echo -n "[7/12] Checking lightbox labels and translated aria-labels... "
 # Every opening tag whose class list holds photoswipe-gallery (not __link / __caption) must
 # include components/ui/lightbox-labels.twig, or PhotoSwipe shows English buttons there.
 UNLABELLED=$(find "$THEME_DIR" -name "*.twig" -not -path "*/node_modules/*" -print0 2>/dev/null | xargs -0 perl -0777 -ne '
@@ -215,7 +215,7 @@ fi
 # -------------------------------------------------------------
 # 8. Undefined Tailwind Classes (colour/token utilities missing from the build)
 # -------------------------------------------------------------
-echo -n "[8/11] Checking template classes against the compiled css/index.css... "
+echo -n "[8/12] Checking template classes against the compiled css/index.css... "
 CSS_OUT="$THEME_DIR/css/index.css"
 if [ ! -s "$CSS_OUT" ]; then
     echo "SKIPPED (css/index.css not built yet — run npm run prod in the theme)"
@@ -260,7 +260,7 @@ fi
 # -------------------------------------------------------------
 # 9. Canonical Tailwind classes (the IDE's "can be written as" hint)
 # -------------------------------------------------------------
-echo -n "[9/11] Checking that Tailwind classes use their canonical (token) form... "
+echo -n "[9/12] Checking that Tailwind classes use their canonical (token) form... "
 CANONICAL_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/canonical-classes.mjs"
 if ! command -v node > /dev/null 2>&1; then
     echo "SKIPPED (node not available)"
@@ -284,7 +284,7 @@ fi
 # -------------------------------------------------------------
 # 10. Twig Syntax Linting
 # -------------------------------------------------------------
-echo -n "[10/11] Linting Twig syntax via bin/console lint:twig... "
+echo -n "[10/12] Linting Twig syntax via bin/console lint:twig... "
 if [ -f "bin/console" ]; then
     if php bin/console lint:twig "$THEME_DIR" > /dev/null 2>&1; then
         echo "PASSED (0 syntax errors in $THEME_DIR)"
@@ -300,7 +300,7 @@ fi
 # -------------------------------------------------------------
 # 11. Search page: Bolt serves /search and /{_locale}/search on every site
 # -------------------------------------------------------------
-echo "[11/11] Checking the search page (template, locale, escaping, live results)..."
+echo "[11/12] Checking the search page (template, locale, escaping, live results)..."
 yaml_value() { grep -E "^$1:" "$2" 2>/dev/null | head -n 1 | sed -E "s/^$1:[[:space:]]*//; s/[[:space:]]+#.*$//" | tr -d "\"'"; }
 SEARCH_TEMPLATE=$(yaml_value search_results_template "$THEME_DIR/theme.yaml")
 [ -z "$SEARCH_TEMPLATE" ] && SEARCH_TEMPLATE=$(yaml_value search_results_template "$BOLT_CONFIG")
@@ -367,6 +367,35 @@ else
     fi
 fi
 [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null && SERVER_PID=""
+
+# -------------------------------------------------------------
+# 12. Links opening a new tab: rel="noopener noreferrer"
+#     Every <a target="_blank"> carries rel with both noopener and noreferrer, except the
+#     author credit to tvondracek.cz: rel="noopener" only, so the portfolio sees the referring site.
+# -------------------------------------------------------------
+echo -n "[12/12] Checking rel on links that open a new tab (target=\"_blank\")... "
+BLANK_ISSUES=$(find "$THEME_DIR" -name '*.twig' -not -path '*/node_modules/*' -print0 2>/dev/null | xargs -0 perl -0777 -ne '
+    my $src = $_;
+    $src =~ s/\{#.*?#\}/my $c = $&; $c =~ tr{\n}{ }c; $c/gse;   # drop Twig comments, keep line numbers
+    while ($src =~ /<a\b((?:\{\{.*?\}\}|\{%.*?%\}|[^>])*)>/gs) {
+        my ($tag, $pos) = ($1, $-[0]);
+        next unless $tag =~ /\btarget\s*=\s*["\x27]_blank["\x27]/;
+        my $line = 1 + (() = substr($src, 0, $pos) =~ /\n/g);
+        my $rel = $tag =~ /\brel\s*=\s*["\x27]([^"\x27]*)["\x27]/ ? " $1 " : "";
+        if ($tag =~ /tvondracek\.cz/) {
+            print "$ARGV:$line: the tvondracek.cz credit needs rel=\"noopener\" without noreferrer\n"
+                unless $rel =~ /\snoopener\s/ && $rel !~ /\snoreferrer\s/;
+        } elsif ($rel !~ /\snoopener\s/ || $rel !~ /\snoreferrer\s/) {
+            print "$ARGV:$line: target=\"_blank\" without rel=\"noopener noreferrer\"\n";
+        }
+    }' 2>/dev/null || true)
+if [ -n "$BLANK_ISSUES" ]; then
+    echo "FAILED"
+    echo "$BLANK_ISSUES" | sed 's/^/      /'
+    FAILED=$((FAILED + 1))
+else
+    echo "PASSED"
+fi
 
 echo "=========================================================="
 if [ $FAILED -ne 0 ]; then
