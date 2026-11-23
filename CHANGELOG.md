@@ -2,11 +2,12 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.17.5 — 2026-11-23
+
+Links that open a new tab carry `rel="noopener noreferrer"`, checked by `bolt-theme-templates`, and `npm install` refreshes the MapLibre copies of `bolt-map`.
 
 ### Changed
 - `bolt-map`: `scaffold.sh` adds `npm run build:map` to `postinstall`, so `npm install` and `npm ci` refresh the committed copies in `js/maplibre/` after a MapLibre update. `verify.sh` fails without it. `npm update` skips `postinstall`, so run `npm install` after it. A new pitfall: bump `assets_version` whenever `js/maplibre/` changes, since `js/map.js` passes its `?v=` to the library and its worker.
-
 - `bolt-theme-templates`: section 3 states the rule for links that open a new tab: every `<a target="_blank">` carries `rel="noopener noreferrer"`, except the footer's author credit to `tvondracek.cz` with `rel="noopener"` only, so the portfolio sees the referring site. `verify.sh` step [12/12] fails on a link that breaks it. `bolt-menu` and the Integration Contract in `WORKFLOWS.md` name the exception.
 
 ### Fixed
