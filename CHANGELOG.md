@@ -2,7 +2,9 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.17.6 — 2026-11-23
+
+The check for links that open a new tab also covers targets printed by Twig, attributes passed to components and the translation catalogs.
 
 ### Changed
 - `bolt-theme-templates`: `verify.sh` step 12 runs the new `scripts/check-new-tab-links.php`. Besides `<a target="_blank">` it now also fails on a link whose target Twig prints (`target="{{ getLinkHref(…) }}"`), on `target: '_blank'` in a Twig hash (`attrs: { … }` passed to a component) and on `<a target="_blank">` in `translations/*.xlf`, each without `rel="noopener noreferrer"`.
