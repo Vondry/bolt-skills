@@ -2,6 +2,17 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+- `bolt-theme-templates`: `verify.sh` step 12 runs the new `scripts/check-new-tab-links.php`. Besides `<a target="_blank">` it now also fails on a link whose target Twig prints (`target="{{ getLinkHref(…) }}"`), on `target: '_blank'` in a Twig hash (`attrs: { … }` passed to a component) and on `<a target="_blank">` in `translations/*.xlf`, each without `rel="noopener noreferrer"`.
+
+### Fixed
+- `bolt-theme-templates`: `verify.sh` no longer prints bash's "Terminated" notice for the PHP server of step 11 into the next step's line.
+
+### Migrating a project
+- Run `bolt-theme-templates`' `verify.sh` again and add `noreferrer` to every link that step 12 reports. Content written in the admin needs nothing: Bolt's HTML cleaner renders its `target="_blank"` links with `rel="noreferrer noopener"`.
+
 ## 1.17.5 — 2026-11-23
 
 Links that open a new tab carry `rel="noopener noreferrer"`, checked by `bolt-theme-templates`, and `npm install` refreshes the MapLibre copies of `bolt-map`.

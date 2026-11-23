@@ -366,29 +366,17 @@ else
         FAILED=$((FAILED + $?))
     fi
 fi
-[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null && SERVER_PID=""
+# wait reaps the server, so bash prints no "Terminated" notice into the next step's line.
+[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null && { wait "$SERVER_PID" 2>/dev/null || true; SERVER_PID=""; }
 
 # -------------------------------------------------------------
 # 12. Links opening a new tab: rel="noopener noreferrer"
-#     Every <a target="_blank"> carries rel with both noopener and noreferrer, except the
+#     Every link that opens a new tab carries rel with both noopener and noreferrer, except the
 #     author credit to tvondracek.cz: rel="noopener" only, so the portfolio sees the referring site.
+#     Covers target="_blank", targets set by Twig, target: '_blank' in Twig hashes and the catalogs.
 # -------------------------------------------------------------
-echo -n "[12/12] Checking rel on links that open a new tab (target=\"_blank\")... "
-BLANK_ISSUES=$(find "$THEME_DIR" -name '*.twig' -not -path '*/node_modules/*' -print0 2>/dev/null | xargs -0 perl -0777 -ne '
-    my $src = $_;
-    $src =~ s/\{#.*?#\}/my $c = $&; $c =~ tr{\n}{ }c; $c/gse;   # drop Twig comments, keep line numbers
-    while ($src =~ /<a\b((?:\{\{.*?\}\}|\{%.*?%\}|[^>])*)>/gs) {
-        my ($tag, $pos) = ($1, $-[0]);
-        next unless $tag =~ /\btarget\s*=\s*["\x27]_blank["\x27]/;
-        my $line = 1 + (() = substr($src, 0, $pos) =~ /\n/g);
-        my $rel = $tag =~ /\brel\s*=\s*["\x27]([^"\x27]*)["\x27]/ ? " $1 " : "";
-        if ($tag =~ /tvondracek\.cz/) {
-            print "$ARGV:$line: the tvondracek.cz credit needs rel=\"noopener\" without noreferrer\n"
-                unless $rel =~ /\snoopener\s/ && $rel !~ /\snoreferrer\s/;
-        } elsif ($rel !~ /\snoopener\s/ || $rel !~ /\snoreferrer\s/) {
-            print "$ARGV:$line: target=\"_blank\" without rel=\"noopener noreferrer\"\n";
-        }
-    }' 2>/dev/null || true)
+echo -n "[12/12] Checking rel on links that open a new tab (templates and translations)... "
+BLANK_ISSUES=$(php "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/check-new-tab-links.php" "$THEME_DIR" translations 2>&1 || true)
 if [ -n "$BLANK_ISSUES" ]; then
     echo "FAILED"
     echo "$BLANK_ISSUES" | sed 's/^/      /'

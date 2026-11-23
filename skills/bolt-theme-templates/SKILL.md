@@ -160,7 +160,7 @@ public/theme/<theme_name>/
 
 All examples use the token names of `bolt-tailwind-theme` (`canvas`, `surface`, `surface-2`, `ink`, `ink-2`, `ink-3`, `stroke`, `accent*`, `night*`, text sizes `hero` / `section` / `card` / `lead` / `body` / `meta` / `micro`) and its utilities (`wrapper`, `px-edge`, `py-section`, `card`, `eyebrow`, `link-arrow`, `pagination`, `cms-redactor`). Status colours (`emerald`, `amber` in the badge and stock badge) are Tailwind defaults used on purpose.
 
-**Links that open a new tab.** Every `<a target="_blank">` carries `rel="noopener noreferrer"`: `noopener` keeps the opened page from reaching this one through `window.opener` (and redirecting it, the "tabnabbing" attack), and `noreferrer` keeps the page's URL out of the `Referer` header sent to the other site. This covers external links in templates, components (the button sets it for every external `href`), page-scoped components and the macros of `bolt-theme-init` (`linkAttributes`). The one exception is the author credit to `tvondracek.cz` in the footer (`bolt-menu`): `rel="noopener"` only, so the portfolio sees which sites its visitors come from. Do not use `target="_blank"` on the site's own pages. `verify.sh` step 12 checks every template.
+**Links that open a new tab.** Every `<a target="_blank">` carries `rel="noopener noreferrer"`: `noopener` keeps the opened page from reaching this one through `window.opener` (and redirecting it, the "tabnabbing" attack), and `noreferrer` keeps the page's URL out of the `Referer` header sent to the other site. This covers external links in templates, components (the button sets it for every external `href`), page-scoped components and the macros of `bolt-theme-init` (`linkAttributes`), attributes passed to components (`attrs: { target: '_blank', rel: 'noopener noreferrer' }`), targets printed by a macro and links inside translations. The one exception is the author credit to `tvondracek.cz` in the footer (`bolt-menu`): `rel="noopener"` only, so the portfolio sees which sites its visitors come from. Do not use `target="_blank"` on the site's own pages. `verify.sh` step 12 checks the templates and the translation catalogs.
 
 ### A. Pure Button Component (`components/ui/button.twig`)
 ```twig
@@ -1422,7 +1422,12 @@ bash skills/bolt-theme-templates/scripts/verify.sh
     - a term without matches answers 200; markup in the term is not printed as markup (this catches every path, including components that print with `|raw`);
     - every secondary locale from `app_locales`: `/<locale>/search` answers 200, its form submits to `/<locale>/search`, and the results link to `/<locale>/` pages.
     The step fails when no site can be reached: the search page is always verified.
-12. **Links that open a new tab**: fails on an `<a target="_blank">` whose `rel` lacks `noopener` or `noreferrer`, and on the `tvondracek.cz` credit unless its `rel` is `noopener` without `noreferrer` (section 3). Twig comments are skipped; `target="{{ … }}"` with a dynamic value is not checked.
+12. **Links that open a new tab** (`scripts/check-new-tab-links.php`): fails when `rel` lacks `noopener` or `noreferrer` on
+    - an `<a target="_blank">` in a template;
+    - an `<a target="{{ … }}">` whose target Twig prints (a macro such as `getLinkHref()` that returns `_blank` for external URLs);
+    - a Twig hash with `target: '_blank'` (attributes passed to a component: `attrs: { target: '_blank', rel: 'noopener noreferrer' }`);
+    - an `<a target="_blank">` in `translations/*.xlf` (CDATA or escaped).
+    The `tvondracek.cz` credit must have `noopener` without `noreferrer` (section 3). Twig comments are skipped, and a `rel="{{ … }}"` set by Twig is not checked. Links in content written in the admin need nothing: Bolt's HTML cleaner adds `rel="noreferrer noopener"` to every `target="_blank"` link of a rich-text field when it renders it (`sanitise: true` from `bolt-contenttypes`, `_blank` in `htmlcleaner.allowed_frame_targets`), even when the stored HTML has only `rel="noopener"`.
 
 Raw HTML in page orchestrators is a judgement call and is not checked automatically; review pages against the rule in section 1.
 
