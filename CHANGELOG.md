@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.19.0 — 2026-11-25
 
 The sites move to PHP 8.5: they require `"php": "^8.5"`, build on `php:8.5` and run CI on 8.5. Bolt 6 itself still runs on 8.2, and so does this plugin.
 
