@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.18.0 — 2026-11-25
 
 Bolt's sign-in screens in one shared, branded layout: a project changes only its colours, logo and watermark.
 
