@@ -2,6 +2,11 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+- `bolt-auth-screens`: `verify.sh` no longer reports a project colour as written into the templates when it equals a shared value of the skill's own template (the `--danger` red, a neutral or a fallback colour) — for example a red site whose button hover is the same red as the error colour.
+
 ## 1.18.0 — 2026-11-25
 
 Bolt's sign-in screens in one shared, branded layout: a project changes only its colours, logo and watermark.
