@@ -450,10 +450,14 @@ function checkValues(array $auth, string $themeDir, array $sources): void
             out($level, $message);
         }
         // The colours live in theme.yaml only: a copy in a template would not follow a change.
+        // A project colour that equals a shared value of the skill's own template (--danger, a
+        // neutral, a fallback) is not a copy: only colours the skill's version lacks count.
         $hardCoded = [];
+        $examples = dirname(__DIR__) . '/examples/bolt-auth';
         foreach ($sources as $file => $source) {
+            $shared = strtolower(stripTwigComments((string) @file_get_contents($examples . '/' . basename($file))));
             foreach (array_unique(array_values($colors)) as $hex) {
-                if (stripos($source, $hex) !== false && ! in_array($hex, ['#ffffff', '#18181b', '#09090b'], true)) {
+                if (stripos($source, $hex) !== false && ! str_contains($shared, $hex)) {
                     $hardCoded[] = basename($file) . " ($hex)";
                 }
             }
