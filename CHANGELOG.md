@@ -2,6 +2,20 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Bolt's sign-in screens in one shared, branded layout: a project changes only its colours, logo and watermark.
+
+### Added
+- `bolt-auth-screens`: new skill (WORKFLOWS.md 6.9). Replaces the stock login, reset request, "link sent" and new-password screens through `theme.yaml` (`login_template`, `reset_password_settings`) with the shared `bolt-auth/` templates: a brand panel (site colours, logo on a white badge, faint watermark) and a form side in self-hosted Instrument Serif / Sans with inline Font Awesome icons. Bolt's forms, CSRF, extension widget slots, flashes and translation keys are kept. A project sets only `bolt_auth` in `theme.yaml`: `scripts/auth-screens.php colors` derives the button label and checkbox colours and checks every contrast, `scaffold.sh` installs and wires everything, `verify.sh` checks templates, wiring, values, the Tailwind exclusion, catalogs, Twig, all nine states and the live screens, and `scripts/preview.php` serves every state side by side without an account, token or e-mail.
+- `bolt-auth-screens` security layer, so the custom screens are at least as safe as Bolt's own and close what those leave open: `src/BoltAuthSecuritySubscriber.php` limits the reset request (5 per 15 min and IP) and opened reset links / submitted passwords (10 per 15 min and IP) with Symfony's rate limiter — a rate-limited visitor returns to the request screen with „Příliš mnoho požadavků…“ and `Retry-After` — and sends a strict Content-Security-Policy on the four screens (`default-src 'none'`, the one inline `<style>` by nonce, Trusted Types without kernel.debug) with `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, COOP / CORP and `X-Robots-Tag`. `src/BoltAuthPasswordPolicyExtension.php` puts the admin password policy (12 characters, `PasswordStrength`, `NotCompromisedPassword`) on Bolt's new-password form, which core validates with 6 characters only. The templates print nothing with `|raw`, carry no inline script, handler or `style=`, accept `theme.yaml` values into CSS only as hex colours, whole numbers or plain paths, and always render password fields as `type="password"` without a value. `js/bolt-auth.js` hides a revealed password again before submit and on `pagehide`.
+- `bolt-auth-screens/scripts/verify.sh` checks the security layer (files, limiters, login throttling, trusted hosts, enumeration notice, token lifetime, Trusted Types of an installed ALTCHA, template rules), the live headers and cookie flags, and — against its own local server — the rate limit, with POSTs that send no e-mail. `preview.php` adds the throttled login, the rate-limited request and a weak new password, fails on a password field rendered as text, and always renders the current code.
+- `bolt-security-hardening`: the reset form is no longer listed as outside the password policy (Step 3c points to `bolt-auth-screens`), and Step 6b notes that the sign-in screens keep their own strict policy.
+- `verify-all.sh`, `bolt-audit` (checklist section 20, example map) and `bolt-build` (intake S12, Phase 6) include the new skill; edit pencils move to WORKFLOWS.md 6.10.
+
+### Migrating a project
+- Run `bolt-auth-screens`' Steps 1–3 with the site's colours, logo and watermark, then its `verify.sh` and preview. `composer require symfony/rate-limiter` if the project lacks it; with `tomvondracek/bolt-altcha`, keep `svelte-trusted-html` in `bolt_auth.trusted_types`. Check the login in production with the browser console open.
+
 ## 1.17.6 — 2026-11-23
 
 The check for links that open a new tab also covers targets printed by Twig, attributes passed to components and the translation catalogs.

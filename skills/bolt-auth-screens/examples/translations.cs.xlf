@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="cs" trgLang="cs">
+  <file id="messages.cs">
+    <!-- bolt-auth-screens: units of bolt-auth-screens: the password reveal button (bolt-auth/_macros.twig) and the rate-limit message (src/BoltAuthSecuritySubscriber.php); every other string is Bolt's own. Merge into translations/messages.<locale>.xlf with scripts/merge-xliff.php. -->
+    <unit id="bolt_auth_show_password" name="bolt_auth.show_password"><segment><source>bolt_auth.show_password</source><target>Zobrazit heslo</target></segment></unit>
+    <unit id="bolt_auth_hide_password" name="bolt_auth.hide_password"><segment><source>bolt_auth.hide_password</source><target>Skrýt heslo</target></segment></unit>
+    <unit id="bolt_auth_too_many_requests" name="bolt_auth.too_many_requests"><segment><source>bolt_auth.too_many_requests</source><target>Příliš mnoho požadavků z této adresy. Zkuste to prosím znovu za %minutes% min.</target></segment></unit>
+  </file>
+</xliff>
