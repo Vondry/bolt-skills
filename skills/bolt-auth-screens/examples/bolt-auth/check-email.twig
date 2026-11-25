@@ -1,0 +1,19 @@
+{#
+  bolt-auth/check-email.twig — the "reset link sent" state at /bolt/reset-password/check-email
+  (bolt-auth-screens). Wired in theme.yaml: reset_password_settings.check_email_template.
+
+  The success alert replaces the form; the back link stays.
+#}
+{% extends 'bolt-auth/_layout.twig' %}
+{% import 'bolt-auth/_macros.twig' as ba %}
+
+{% block title %}{{ 'reset_password.request_header'|trans }}{% endblock %}
+
+{% block form %}
+    <h1 class="ba-title">{{ 'reset_password.request_header'|trans }}</h1>
+    {{ ba.alert('success', 'reset_password.check_email_sent_header'|trans) }}
+
+    <div class="ba-foot">
+        <a class="ba-link" href="{{ path('bolt_login') }}">{{ ba.icon('arrow-left') }}{{ 'reset_password.back-to-login'|trans }}</a>
+    </div>
+{% endblock %}

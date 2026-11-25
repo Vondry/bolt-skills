@@ -49,6 +49,7 @@ phase and skill consume it.
 | S9 | Images | exported from the design · supplied folder (path) · placeholders | 4.2 logo, 7.1 media library |
 | S10 | Who enters content into Bolt? | agent through the admin in a browser (needs E3) · operator · leave sample records | 7.1 |
 | S11 | Error-page metaphor (an object or scene from the industry for 404/500/503) | agent proposes one from the brand | 6.4 `bolt-helper-pages` |
+| S12 | Sign-in screens: the logo for a white badge and a symbol from it for the watermark | the dark / colour logo; the symbol of the logo when it has one, else none | 6.9 `bolt-auth-screens` |
 
 ## Round 3 — Design gaps (only what the design does not answer)
 

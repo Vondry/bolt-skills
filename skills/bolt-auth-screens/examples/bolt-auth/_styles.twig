@@ -1,0 +1,315 @@
+{#
+  bolt-auth/_styles.twig — every style of Bolt's sign-in screens (bolt-auth-screens).
+
+  One layout for every project. The project changes only the seven colours, the logo and the
+  watermark in theme.yaml (bolt_auth:), printed into the :root block at the top. Everything below
+  it is shared: do not edit it per project, and never write a project's colour into it.
+
+  Inline on purpose: the screens load nothing from the site's CSS bundle (and add nothing to it),
+  and an inline <style> cannot 404. The fonts are self-hosted in css/fonts/instrument/.
+
+  Security: the <style> carries the per-request nonce of BoltAuthSecuritySubscriber, whose policy
+  allows no other inline style. Values from theme.yaml are printed only when they are a #hex
+  colour, a whole number or a plain theme path, so a typo cannot inject CSS.
+#}
+{#- auth: the bolt_auth block of theme.yaml, passed in by _layout.twig. -#}
+{%- set nonce = app.request.attributes.get('_bolt_auth_csp_nonce') -%}
+{%- set hex = '/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/' -%}
+{%- set colors = {} -%}
+{%- for key, fallback in {brand_deep: '#18181b', brand: '#71717a', brand_2: '#a1a1aa', accent: '#18181b', accent_hover: '#09090b', on_accent: '#ffffff', accent_line: '#18181b'} -%}
+    {%- set value = auth[key]|default('') -%}
+    {%- set colors = colors|merge({(key): (value is string and value matches hex) ? value : fallback}) -%}
+{%- endfor -%}
+{%- set mark = auth.mark|default('') -%}
+{%- set mark = (mark is string and mark matches '#^[A-Za-z0-9][A-Za-z0-9_/.-]*[.](svg|png|webp)$#' and '..' not in mark) ? mark : null -%}
+<style{% if nonce %} nonce="{{ nonce }}"{% endif %}>
+@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url("{{ asset('css/fonts/instrument/instrument-sans-latin-ext.woff2') }}") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url("{{ asset('css/fonts/instrument/instrument-sans-latin.woff2') }}") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Instrument Serif"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("{{ asset('css/fonts/instrument/instrument-serif-latin-ext.woff2') }}") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Instrument Serif"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("{{ asset('css/fonts/instrument/instrument-serif-latin.woff2') }}") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+/* ---------- per project: theme.yaml → bolt_auth ---------- */
+:root {
+  --brand-deep: {{ colors.brand_deep }};
+  --brand: {{ colors.brand }};
+  --brand-2: {{ colors.brand_2 }};
+  --accent: {{ colors.accent }};
+  --accent-hover: {{ colors.accent_hover }};
+  --on-accent: {{ colors.on_accent }};
+  --accent-line: {{ colors.accent_line }};
+  --ba-logo-w: {{ logo_width }}px;
+  --ba-logo-h: {{ logo_height }}px;
+{% if mark %}
+  --ba-mark: url("{{ asset(mark) }}");
+  --ba-mark-display: block;
+{% else %}
+  --ba-mark: none;
+  --ba-mark-display: none;
+{% endif %}
+}
+
+/* ---------- shared tokens (the same in every project) ---------- */
+:root {
+  --surface: #fafaf9;
+  --field: #ffffff;
+  --ink: #18181b;
+  --muted: #57534e;
+  --line: #82828b;
+  --hairline: #e7e5e4;
+  --panel-ink: #ffffff;
+  --panel-muted: #ffffffb3;
+  --focus: #18181b;
+  --danger: #b91c1c;
+  --success: #15803d;
+  --shadow-badge: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 18px 40px -12px rgba(0, 0, 0, .55);
+  --shadow-field: 0 1px 2px rgba(24, 24, 27, .06);
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-14: 56px;
+  --radius-field: 12px;
+  --radius-badge: 18px;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+
+html, body { margin: 0; min-height: 100%; background: var(--surface); }
+
+.ba-screen {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(360px, 1.05fr) 1fr;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--ink);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+}
+.ba-screen *, .ba-screen *::before, .ba-screen *::after { box-sizing: border-box; }
+.ba-icon { display: inline-block; flex: none; vertical-align: -.125em; overflow: visible; }
+
+/* ---------- brand panel ---------- */
+.ba-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-14);
+  color: var(--panel-ink);
+  background:
+    radial-gradient(110% 80% at 100% 0%, color-mix(in srgb, var(--brand) 62%, transparent) 0%, transparent 58%),
+    radial-gradient(80% 60% at 0% 100%, color-mix(in srgb, var(--brand-2) 24%, transparent) 0%, transparent 62%),
+    var(--brand-deep);
+}
+/* fine dot texture, fading downward */
+.ba-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(color-mix(in srgb, var(--panel-ink) 16%, transparent) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+          mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+}
+/* the project's symbol, huge and faint */
+.ba-panel::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -12%;
+  top: 22%;
+  width: 92%;
+  height: 52%;
+  background: var(--panel-ink);
+  opacity: .06;
+  display: var(--ba-mark-display, block);
+  -webkit-mask: var(--ba-mark) no-repeat right center / contain;
+          mask: var(--ba-mark) no-repeat right center / contain;
+}
+
+.ba-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 20px;
+  background: var(--field);
+  border-radius: var(--radius-badge);
+  box-shadow: var(--shadow-badge);
+}
+.ba-logo { display: block; width: var(--ba-logo-w); height: var(--ba-logo-h); object-fit: contain; }
+
+.ba-identity { display: flex; flex-direction: column; gap: var(--space-5); }
+.ba-sitename {
+  margin: 0;
+  max-width: 11ch;
+  font-family: var(--font-serif);
+  font-size: 64px;
+  line-height: 60px;
+  font-weight: 400;
+  letter-spacing: -1.5px;
+  color: var(--panel-ink);
+}
+.ba-rule { width: 48px; height: 3px; border-radius: 3px; background: var(--brand); }
+.ba-domain {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-size: 14px; line-height: 20px; font-weight: 500;
+  color: var(--panel-muted);
+  text-decoration: none;
+  border-radius: 4px;
+}
+.ba-domain:hover { color: var(--panel-ink); }
+.ba-domain:focus-visible { outline: 2px solid var(--panel-ink); outline-offset: 3px; }
+
+/* ---------- form side ---------- */
+.ba-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-14);
+  background: var(--surface);
+}
+.ba-form-wrap { width: 100%; max-width: 380px; margin: 0 auto; }
+
+.ba-eyebrow {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: 12px; line-height: 16px; font-weight: 600;
+  letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--muted);
+}
+.ba-eyebrow .ba-icon { color: var(--accent); font-size: 11px; }
+.ba-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 48px; line-height: 52px; font-weight: 400; letter-spacing: -0.8px;
+  color: var(--ink);
+}
+.ba-lead { margin: var(--space-4) 0 0; font-size: 15px; line-height: 23px; color: var(--muted); }
+
+.ba-form { display: flex; flex-direction: column; gap: var(--space-5); margin: var(--space-8) 0 0; }
+.ba-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.ba-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
+.ba-label { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink); }
+.ba-input {
+  width: 100%; height: 52px; margin: 0; padding: 0 var(--space-4);
+  font: inherit; font-size: 16px; color: var(--ink);
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-field);
+  box-shadow: var(--shadow-field);
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ba-input::placeholder { color: var(--muted); opacity: 1; }
+.ba-input:hover { border-color: var(--ink); }
+.ba-input:focus {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.ba-input.is-invalid { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger), 0 0 0 5px color-mix(in srgb, var(--danger) 12%, transparent); }
+.ba-input-group { position: relative; }
+.ba-input-group .ba-input { padding-right: 52px; }
+.ba-reveal {
+  position: absolute; top: 4px; right: 4px; width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--muted);
+  font-size: 16px;
+  border-radius: 9px; cursor: pointer;
+}
+.ba-reveal[hidden] { display: none; }
+.ba-reveal:hover { color: var(--ink); background: var(--surface); }
+.ba-reveal:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+.ba-reveal .ba-icon--eye-slash, .ba-reveal[aria-pressed="true"] .ba-icon--eye { display: none; }
+.ba-reveal[aria-pressed="true"] .ba-icon--eye-slash { display: inline-block; }
+.ba-help { margin: 0; font-size: 14px; line-height: 20px; color: var(--muted); }
+.ba-help.is-error { color: var(--danger); display: flex; gap: var(--space-2); align-items: baseline; font-weight: 600; }
+
+.ba-check { position: relative; display: inline-flex; align-items: center; gap: var(--space-3); font-size: 15px; line-height: 22px; color: var(--ink); cursor: pointer; }
+.ba-check input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.ba-box {
+  flex: none; width: 20px; height: 20px; display: grid; place-items: center;
+  font-size: 11px; color: transparent;
+  background: var(--field); border: 2px solid var(--accent-line); border-radius: 6px;
+  transition: color .15s ease;
+}
+.ba-check input:checked + .ba-box { color: var(--accent-line); }
+.ba-check input:focus-visible + .ba-box { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.ba-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3);
+  width: 100%; height: 52px; padding: 0 var(--space-5);
+  margin-top: var(--space-2);
+  font: inherit; font-size: 16px; font-weight: 600;
+  color: var(--on-accent); background: var(--accent);
+  border: 0; border-radius: var(--radius-field); cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .22) inset, 0 12px 24px -12px color-mix(in srgb, var(--accent) 80%, transparent);
+  transition: background-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.ba-btn .ba-icon { font-size: 14px; transition: transform .15s ease; }
+.ba-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.ba-btn:hover .ba-icon { transform: translateX(3px); }
+.ba-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+.ba-link {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink);
+  text-decoration: underline; text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px; text-underline-offset: 5px;
+  border-radius: 2px;
+}
+.ba-link:hover { text-decoration-color: var(--ink); }
+.ba-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.ba-foot { margin-top: var(--space-8); padding-top: var(--space-5); border-top: 1px solid var(--hairline); text-align: center; }
+
+.ba-alert {
+  display: flex; gap: var(--space-3); align-items: flex-start;
+  margin-top: var(--space-6); padding: 14px var(--space-4);
+  font-size: 15px; line-height: 22px; font-weight: 600;
+  background: var(--field);
+  border: 1px solid currentColor; border-radius: var(--radius-field);
+}
+.ba-alert .ba-icon { margin-top: 3px; }
+.ba-alert.is-danger { color: var(--danger); }
+.ba-alert.is-success { color: var(--success); }
+
+/* Extension widgets (login_top, login_middle, login_bottom) keep their own markup. */
+.ba-widgets:empty { display: none; }
+
+/* ---------- small screens: the panel becomes a header ---------- */
+@media (max-width: 760px) {
+  .ba-screen { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .ba-panel { padding: var(--space-6); gap: var(--space-6); min-height: 248px; }
+  .ba-badge { padding: 10px 14px; border-radius: 14px; }
+  .ba-logo { width: calc(var(--ba-logo-w) * .78); height: calc(var(--ba-logo-h) * .78); }
+  .ba-sitename { font-size: 40px; line-height: 40px; letter-spacing: -0.8px; }
+  .ba-identity { gap: var(--space-3); }
+  .ba-rule { display: none; }
+  .ba-main { justify-content: flex-start; padding: var(--space-8) var(--space-6); }
+  .ba-title { font-size: 38px; line-height: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ba-screen *, .ba-screen *::before, .ba-screen *::after { transition: none !important; }
+  .ba-btn:hover, .ba-btn:hover .ba-icon { transform: none; }
+}
+</style>

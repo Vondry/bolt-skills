@@ -1,0 +1,29 @@
+# config/packages/bolt_auth.yaml (bolt-auth-screens)
+#
+# Security settings of Bolt's sign-in screens, used by src/BoltAuthSecuritySubscriber.php and
+# src/BoltAuthPasswordPolicyExtension.php. The login itself is throttled by the firewall's
+# login_throttling in config/packages/security.yaml (bolt-security-hardening, Step 3a).
+
+parameters:
+  # Minimum length of a new password set through the "forgotten password" link. Keep it equal to
+  # the Length rule of config/validator/user.yaml (bolt-security-hardening, Step 3c).
+  bolt_auth.password_min_length: 12
+
+  # Trusted Types policies that an extension in the login form needs, e.g. the ALTCHA captcha of
+  # tomvondracek/bolt-altcha: [ 'svelte-trusted-html' ]. Empty = no policy may be created.
+  bolt_auth.trusted_types: [ ]
+
+framework:
+  rate_limiter:
+    # Reset request (/bolt/reset-password, POST) per IP address: stops e-mail bombing and probing
+    # many addresses. Bolt adds its own limit of one e-mail per account and hour.
+    bolt_auth_reset_request:
+      policy: sliding_window
+      limit: 5
+      interval: '15 minutes'
+    # Reset links opened and new passwords submitted (/bolt/reset-password/reset…) per IP address:
+    # stops guessing tokens.
+    bolt_auth_reset_password:
+      policy: sliding_window
+      limit: 10
+      interval: '15 minutes'

@@ -153,7 +153,8 @@ Copy [`examples/validator/user.yaml`](examples/validator/user.yaml). It adds, on
 `NotCompromisedPassword` (Have I Been Pwned; only 5 characters of the password's SHA-1 hash leave
 the server; `skipOnError` keeps saving possible on hosts that block outgoing HTTPS). It applies to
 adding and editing users in the admin (also the own profile) and to `bin/console bolt:add-user`.
-The "forgotten password" form has its own 6-character rule in Bolt core and is not covered.
+The "forgotten password" form has its own 6-character rule in Bolt core; `bolt-auth-screens` adds
+this policy to it (`BoltAuthPasswordPolicyExtension`, minimum length in `config/packages/bolt_auth.yaml`).
 
 ### 3d. Reset-password notice (`config/bolt/config.yaml`)
 
@@ -266,7 +267,8 @@ scripts, but every tracker and embed must be listed. Introduce it in two stages:
      csp:
        request_matcher: app.csp_frontend_matcher
    ```
-   The admin then has no CSP; `X-Frame-Options: DENY` still protects it. Change `bolt` in the
+   The admin then has no CSP; `X-Frame-Options: DENY` still protects it. The sign-in screens keep
+   their own strict policy from `bolt-auth-screens` (sent by its subscriber, independent of nelmio). Change `bolt` in the
    pattern if `bolt.backend_url` differs.
 
 **Inline scripts under the strict policy.** `script-src 'self'` blocks every inline `<script>`. The

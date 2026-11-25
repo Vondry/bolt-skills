@@ -1,0 +1,42 @@
+{#
+  bolt-auth/reset-request.twig — "reset password" request at /bolt/reset-password (bolt-auth-screens).
+  Wired in theme.yaml: reset_password_settings.request_template.
+
+  The lead sits directly under the title; Bolt's error flash (an expired or invalid link sends
+  the user here) follows it. "Back to login" is a centred link under the form.
+#}
+{% extends 'bolt-auth/_layout.twig' %}
+{% import 'bolt-auth/_macros.twig' as ba %}
+{% form_theme requestForm with ['form_div_layout.html.twig'] only %}
+
+{% block title %}{{ 'reset_password.request_header'|trans }}{% endblock %}
+
+{% block form %}
+    <h1 class="ba-title">{{ 'reset_password.request_header'|trans }}</h1>
+    <p class="ba-lead">{{ 'reset_password.request_description'|trans }}</p>
+
+    {% for message in app.flashes('reset_password_error') %}
+        {{ ba.alert('danger', message) }}
+    {% endfor %}
+    {% for formError in requestForm.vars.errors %}
+        {{ ba.alert('danger', formError.message) }}
+    {% endfor %}
+
+    {{ form_start(requestForm, {attr: {class: 'ba-form'}}) }}
+        {% set email = requestForm.email %}
+        {% set invalid = email.vars.errors|length > 0 %}
+        <div class="ba-field">
+            <label class="ba-label" for="{{ email.vars.id }}">{{ email.vars.label|trans }}</label>
+            {{ form_widget(email, {attr: email.vars.attr|merge({
+                class: 'ba-input' ~ (invalid ? ' is-invalid' : ''),
+                autocomplete: 'email', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', maxlength: 180
+            })|merge(invalid ? {'aria-invalid': 'true', 'aria-describedby': 'ba-error'} : {})}) }}
+            {{ ba.errors(email) }}
+        </div>
+        <button class="ba-btn" type="submit">{{ 'reset_password.request_send'|trans }}{{ ba.icon('arrow-right') }}</button>
+    {{ form_end(requestForm) }}
+
+    <div class="ba-foot">
+        <a class="ba-link" href="{{ path('bolt_login') }}">{{ ba.icon('arrow-left') }}{{ 'reset_password.back-to-login'|trans }}</a>
+    </div>
+{% endblock %}

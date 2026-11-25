@@ -1,0 +1,59 @@
+{#
+  bolt-auth/_layout.twig — the shared layout of Bolt's sign-in screens (bolt-auth-screens).
+
+  Two halves: the brand panel (logo badge, site name, back-to-site link) and the form side
+  ("Bolt CMS" eyebrow, then the screen's {% block form %}). Standalone on purpose: no master
+  layout, no menu, no setcontent and no site bundle, so the sign-in works whatever the theme does.
+
+  Per-project values come only from theme.yaml (bolt_auth:); nothing project-specific is written
+  here. Site name: bolt_auth.sitename, else general/sitename. Domain: bolt_auth.domain, else the
+  host of the request.
+#}
+{%- set auth = config.get('theme/bolt_auth') -%}
+{%- set auth = auth.toArray is defined ? auth.toArray() : auth|default({}) -%}
+{%- set sitename = auth.sitename|default(config.get('general/sitename')) -%}
+{#- The domain shown on the back link: bolt_auth.domain, else the canonical host, else the request
+    host (only trustworthy with SYMFONY_TRUSTED_HOSTS set — bolt-security-hardening). -#}
+{%- set canonical = config.get('general/canonical')|default('') -%}
+{%- set canonical = canonical is string ? canonical|split('://')|last|split('/')|first : '' -%}
+{%- set domain = auth.domain|default(canonical ?: app.request.host) -%}
+{%- set logo_width = (auth.logo_width|default(48) ~ '') matches '/^[1-9][0-9]{0,2}$/' ? auth.logo_width : 48 -%}
+{%- set logo_height = (auth.logo_height|default(48) ~ '') matches '/^[1-9][0-9]{0,2}$/' ? auth.logo_height : 48 -%}
+{%- import 'bolt-auth/_macros.twig' as ba -%}
+<!DOCTYPE html>
+<html lang="{{ htmllang() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}{% endblock %} · {{ sitename }}</title>
+    {% if auth.favicon|default(null) %}
+        <link rel="icon" href="{{ asset(auth.favicon) }}">
+    {% else %}
+        {{ include('@bolt/_partials/favicon.html.twig') }}
+    {% endif %}
+    {{ include('bolt-auth/_styles.twig', {auth: auth, logo_width: logo_width, logo_height: logo_height}) }}
+    <script defer src="{{ asset('js/bolt-auth.js') }}?v={{ theme.assets_version|default('1.0') }}"></script>
+</head>
+<body>
+<div class="ba-screen">
+    <aside class="ba-panel">
+        <div class="ba-badge">
+            {# The site name follows as text, so the logo itself is decorative. #}
+            <img class="ba-logo" src="{{ asset(auth.logo) }}" width="{{ logo_width }}" height="{{ logo_height }}" alt="">
+        </div>
+        <div class="ba-identity">
+            <p class="ba-sitename">{{ sitename }}</p>
+            <span class="ba-rule" aria-hidden="true"></span>
+            <a class="ba-domain" href="{{ path('homepage') }}">{{ ba.icon('arrow-left') }}<span>{{ domain }}</span></a>
+        </div>
+    </aside>
+    <main class="ba-main">
+        <div class="ba-form-wrap">
+            <p class="ba-eyebrow">{{ ba.icon('lock') }}Bolt CMS</p>
+            {% block form %}{% endblock %}
+        </div>
+    </main>
+</div>
+</body>
+</html>

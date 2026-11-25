@@ -1,6 +1,6 @@
 # Bolt CMS End-to-End Website Build Workflow
 
-This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 20 skills in this repository.
+This master workflow takes a brief, a visual design (Figma wireframes, design tokens) and content, and turns them into a production-ready, secure and performant [Bolt CMS](https://boltcms.io) 6 website using the 21 skills in this repository.
 
 The phases are ordered by real dependencies: every step only needs what earlier steps produced. Each phase ends with a **gate** (verifications that must pass, then a commit). Steps marked **[if …]** depend on the answers recorded in the Phase 0 site plan.
 
@@ -93,6 +93,7 @@ flowchart TD
         S66["bolt-legal-cz"]
         S67["bolt-performance — fragment cache [optional]"]
         S6M["bolt-map — 3D location map [if the site shows a map]"]
+        S6A["bolt-auth-screens — branded sign-in screens"]
         S68["bolt-edit-links — editor pencils, last"]
     end
     P6 -.-> D6
@@ -302,6 +303,7 @@ Record the answers in the project's `AGENTS.md` under a `## Site plan` heading, 
 - Privacy (bolt-cookie-consent intake): controller model single | joint | separate | hybrid; controllers; purposes; recipients; open [DOPLNIT] questions for the operator
 - Public API consumers: none (disable) | <who> (lock down instead)
 - Error-page metaphor: <industry object or scene>
+- Sign-in screens (bolt-auth-screens): badge logo <dark / colour file>; watermark <symbol from the logo | none>
 - Expected verification warnings (with reason): …
 ```
 
@@ -582,7 +584,15 @@ Show the user the ContentType list, the URL map per locale and both menus. Get a
 - Add `map_display` to `--purposes=` of `bolt-cookie-consent` (6.5): the map sets no cookies, but the visitor's IP address reaches the tile host.
 - *Verify:* `bash $SKILLS/bolt-map/scripts/verify.sh`, then the browser checks of the skill once Gate 6 has built the theme.
 
-### 6.9 Editor Pencils (`bolt-edit-links`)
+### 6.9 Sign-in Screens (`bolt-auth-screens`)
+- Bolt's login, reset request, "link sent" and new-password screens share one layout for every project; a project changes only the values in `theme.yaml` → `bolt_auth`.
+- Take the four colours from the design tokens of 4.4 (`brand_deep` = the site's darkest colour, `brand` = the colour the site is known by, `brand_2` = a supporting colour, `accent` = the colour of its primary button, plus its hover colour when the site has one): `php $SKILLS/bolt-auth-screens/scripts/auth-screens.php colors --brand-deep=… --brand=… --brand-2=… --accent=… [--accent-hover=…]` derives the label and checkbox colours and checks every contrast.
+- Put the dark / colour logo for the white badge and the watermark symbol from the site plan into `img/`, then `bash $SKILLS/bolt-auth-screens/scripts/scaffold.sh` with the same colours, `--logo=… --logo-size=WxH --mark=…|none`. It copies `bolt-auth/`, `js/bolt-auth.js` and the self-hosted fonts, wires the templates in `theme.yaml`, excludes `bolt-auth/` from the Tailwind scan and merges the reveal-button labels.
+- The scaffold also installs the security layer: `src/BoltAuthSecuritySubscriber.php` (per-IP rate limits on the reset request and the reset link, a strict CSP with nonce and Trusted Types, `no-store`, `no-referrer`, COOP on the four screens), `src/BoltAuthPasswordPolicyExtension.php` (the user password policy of 1.5 on the reset form) and `config/packages/bolt_auth.yaml`. It relies on 1.5: login throttling, trusted hosts, no enumeration notice.
+- Never edit the copied templates or classes per project; never load fonts or icons from a CDN; never add `'unsafe-inline'` or a foreign host to the screens' policy.
+- *Verify:* `bash $SKILLS/bolt-auth-screens/scripts/verify.sh` (includes the live headers and a local rate-limit test), then the preview server of the skill (every state, desktop and 390 px). After the first deployment, once more with `BOLT_BASE_URL` pointing at production.
+
+### 6.10 Editor Pencils (`bolt-edit-links`)
 - Last step of the phase, once every page exists. `bash $SKILLS/bolt-edit-links/scripts/scaffold.sh` installs or upgrades the `edit` macro in `macros.twig` and prints the places still missing a pencil, with the tabs of each ContentType.
 - A record that feeds two or more sections gets one `group:` per section in `contenttypes.yaml`; it changes only the editor, so no migration is needed.
 - Apply the macro by the placement table of the skill: `macros.edit(record)` on the `<h1>`, `title_suffix: macros.edit(record, '<group>')` per section, `macros.editList(items|first)` on the heading of a list without pages of its own, once per record in containers. Never one per row or card. Never inside a link, a button, `helper-pages/`, `extensions/` or a cached fragment.
@@ -685,6 +695,7 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 - Maintenance page: set `maintenance_mode: true`, check in a private window (logged-in editors still see the site), set it back.
 - 500 page: only rendered with `APP_ENV=prod`; check it on staging.
 - Admin: save a record twice and confirm its publish date did not shift (timezone).
+- Sign-in screens: the preview server of `bolt-auth-screens` shows every state in the site's colours at desktop and 390 px; sign in once on the real `/bolt/login` (password reveal, remember-me, wrong password alert).
 - Editor pencils: logged in, run `$SKILLS/bolt-edit-links/scripts/edit-links-browser.js` on a frontend page — `missingTabs` and `errors` are empty. Click one pencil per ContentType (right tab, right language); a private window shows none.
 
 ### 8.5 Definition of Done
@@ -729,7 +740,8 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | Skill | Applied in | Verification expected to pass in | Applies to |
 | :--- | :--- | :--- | :--- |
 | `bolt-timezone` | 1.1 | 1.1, 8.2 | every site |
-| `bolt-edit-links` | 6.9 | 6.9, 8.2 (logged-in browser check 8.4) | every site |
+| `bolt-edit-links` | 6.10 | 6.10, 8.2 (logged-in browser check 8.4) | every site |
+| `bolt-auth-screens` | 6.9 | 6.9, 8.2 | every site |
 | `bolt-add-language` | 1.2 (Step 1), 5.1 (Step 2), 5.5 (Step 3), 5.4 (Step 4), 6.3 (Step 6), 7.2–7.3 (Steps 5, 7) | 8.2, once per secondary locale | multilingual sites |
 | `bolt-disable-api` | 1.3 | 1.3 (configuration), 8.2 (HTTP) | every site (lock-down variant when the API has consumers) |
 | `bolt-code-quality` | 1.4 (setup) | 1.4, 3.2, 8.1, 8.2 | every site |

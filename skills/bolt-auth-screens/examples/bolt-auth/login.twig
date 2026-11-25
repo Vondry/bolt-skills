@@ -1,0 +1,72 @@
+{#
+  bolt-auth/login.twig — Bolt's sign-in screen at /bolt/login (bolt-auth-screens).
+  Wired in theme.yaml: login_template: 'bolt-auth/login.twig'.
+
+  Keeps everything Bolt's own template does: the CSRF token, the remember-me field, the
+  login_top / login_middle / login_bottom widget slots for extensions, the authentication error
+  and the flash after a password reset. Every string is Bolt's own translation key.
+  One primary button only; the forgotten password is a link.
+#}
+{% extends 'bolt-auth/_layout.twig' %}
+{% import 'bolt-auth/_macros.twig' as ba %}
+{% form_theme loginForm with ['form_div_layout.html.twig'] only %}
+
+{% block title %}{{ 'title.login'|trans }}{% endblock %}
+
+{% block form %}
+    <h1 class="ba-title">{{ 'title.login'|trans }}</h1>
+
+    {% for message in app.flashes('reset_password_success') %}
+        {{ ba.alert('success', message) }}
+    {% endfor %}
+    {% if error %}
+        {{ ba.alert('danger', error.messageKey|trans(error.messageData, 'security')) }}
+    {% endif %}
+    {% for formError in loginForm.vars.errors %}
+        {{ ba.alert('danger', formError.message) }}
+    {% endfor %}
+    {# Other flashes (Bolt shows them as toasts in the admin): an alert each, never lost. #}
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            {{ ba.alert(type in ['success', 'info', 'notice'] ? 'success' : 'danger', message|trans) }}
+        {% endfor %}
+    {% endfor %}
+
+    {{ form_start(loginForm, {attr: {id: 'login-form', class: 'ba-form'}}) }}
+        {{ widgets('login_top') }}
+
+        {% set username = loginForm.username %}
+        <div class="ba-field">
+            <label class="ba-label" for="{{ username.vars.id }}">{{ username.vars.label|trans }}</label>
+            {{ form_widget(username, {attr: username.vars.attr|merge({
+                class: 'ba-input', autocomplete: 'username', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', maxlength: 180
+            })}) }}
+            {{ ba.errors(username) }}
+        </div>
+
+        {% set password = loginForm.password %}
+        {{ ba.password(password, password.vars.label|trans, false, {
+            href: path('bolt_forgot_password_request'),
+            label: 'login.forgotpassword'|trans
+        }) }}
+        {{ ba.errors(password) }}
+
+        {{ widgets('login_middle') }}
+
+        {% set remember = loginForm.remember_me %}
+        {% if 'checkbox' in remember.vars.block_prefixes %}
+            {# Checked by default, as Bolt does. #}
+            <label class="ba-check">
+                {{ form_widget(remember) }}
+                <span class="ba-box">{{ ba.icon('check') }}</span>
+                <span>{{ remember.vars.label|trans(remember.vars.label_translation_parameters) }}</span>
+            </label>
+        {% else %}
+            {{ form_widget(remember) }}
+        {% endif %}
+
+        <button class="ba-btn" type="submit">{{ 'action.log_in'|trans }}{{ ba.icon('arrow-right') }}</button>
+
+        {{ widgets('login_bottom') }}
+    {{ form_end(loginForm) }}
+{% endblock %}

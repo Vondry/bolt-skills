@@ -1,0 +1,52 @@
+{#
+  bolt-auth/reset.twig — "set a new password" from the e-mailed link
+  (/bolt/reset-password/reset/{token}; bolt-auth-screens).
+  Wired in theme.yaml: reset_password_settings.reset_template.
+
+  Bolt's repeated password: both fields get the reveal button. One error line under the fields,
+  and only the field at fault is marked: the repeat field when the passwords differ (Bolt maps
+  that error onto the first one), the new password for every other message.
+#}
+{% extends 'bolt-auth/_layout.twig' %}
+{% import 'bolt-auth/_macros.twig' as ba %}
+{% form_theme resetForm with ['form_div_layout.html.twig'] only %}
+
+{% block title %}{{ 'reset_password.reset_header'|trans }}{% endblock %}
+
+{% block form %}
+    {% set first = resetForm.plainPassword.first %}
+    {% set second = resetForm.plainPassword.second %}
+    {% set mismatch = 'reset_password.not_matching_pwds'|trans %}
+    {% set messages = [] %}
+    {% set firstInvalid = false %}
+    {% set secondInvalid = false %}
+    {% for field in [resetForm.plainPassword, first, second] %}
+        {% for error in field.vars.errors %}
+            {% set messages = messages|merge([error.message]) %}
+            {% if error.message == mismatch or field is same as(second) %}
+                {% set secondInvalid = true %}
+            {% else %}
+                {% set firstInvalid = true %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+
+    <h1 class="ba-title">{{ 'reset_password.reset_header'|trans }}</h1>
+
+    {% for formError in resetForm.vars.errors %}
+        {{ ba.alert('danger', formError.message) }}
+    {% endfor %}
+
+    {{ form_start(resetForm, {attr: {class: 'ba-form'}}) }}
+        {{ ba.password(first, first.vars.label|trans, firstInvalid, null, 'new-password') }}
+        {{ ba.password(second, second.vars.label|trans, secondInvalid, null, 'new-password') }}
+        {% if messages is not empty %}
+            <p class="ba-help is-error" id="ba-error" role="alert">{{ ba.icon('exclamation-circle') }}<span>{{ messages|first }}</span></p>
+        {% endif %}
+        <button class="ba-btn" type="submit">{{ 'reset_password.reset_btn'|trans }}{{ ba.icon('arrow-right') }}</button>
+    {{ form_end(resetForm) }}
+
+    <div class="ba-foot">
+        <a class="ba-link" href="{{ path('bolt_login') }}">{{ ba.icon('arrow-left') }}{{ 'reset_password.back-to-login'|trans }}</a>
+    </div>
+{% endblock %}
