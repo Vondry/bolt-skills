@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.18.1 — 2026-11-25
 
 ### Fixed
 - `bolt-auth-screens`: `verify.sh` leaves `translations/` as it found it. Bolt's stock `auto_add_missing_translations` (php-translation) re-dumps the catalogs whenever a page renders in dev, so the live checks rewrote them (new unit ids, missing keys of other pages added); the catalogs are now copied before the local server starts and put back after it stops. SKILL.md explains the effect under Pitfalls.
