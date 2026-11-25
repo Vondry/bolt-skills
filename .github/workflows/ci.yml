@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        php: [ '8.2', '8.4' ]
+        php: [ '8.2', '8.5' ]
     steps:
       - uses: actions/checkout@v4
 
@@ -35,12 +35,12 @@ jobs:
           find scripts skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
 
       - name: ShellCheck
-        if: matrix.php == '8.4'
+        if: matrix.php == '8.5'
         run: |
           find scripts skills -name '*.sh' -print0 | xargs -0 shellcheck --severity=warning
 
       - name: YAML examples parse
-        if: matrix.php == '8.4'
+        if: matrix.php == '8.5'
         run: |
           composer require --no-interaction --no-progress --dev symfony/yaml:^7.0 > /dev/null
           find skills -name '*.yaml' -path '*/examples/*' -print0 | xargs -0 -n1 php -r '
