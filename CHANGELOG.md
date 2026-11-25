@@ -5,6 +5,7 @@ All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Ver
 ## Unreleased
 
 ### Fixed
+- `bolt-auth-screens`: `verify.sh` leaves `translations/` as it found it. Bolt's stock `auto_add_missing_translations` (php-translation) re-dumps the catalogs whenever a page renders in dev, so the live checks rewrote them (new unit ids, missing keys of other pages added); the catalogs are now copied before the local server starts and put back after it stops. SKILL.md explains the effect under Pitfalls.
 - `bolt-auth-screens`: `verify.sh` no longer reports a project colour as written into the templates when it equals a shared value of the skill's own template (the `--danger` red, a neutral or a fallback colour) — for example a red site whose button hover is the same red as the error colour.
 
 ## 1.18.0 — 2026-11-25

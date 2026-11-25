@@ -46,6 +46,25 @@ report() {
     done
 }
 
+# Bolt's stock config/packages/translation.yaml enables php-translation's
+# auto_add_missing_translations: in the dev environment every rendered page re-dumps the catalogs
+# of translations/ (new unit ids, missing keys added). The live checks render pages, so the
+# catalogs are copied first and put back afterwards: a verification never changes them.
+CATALOGS="$(mktemp -d)"
+[ -d translations ] && cp -p translations/* "$CATALOGS/" 2>/dev/null
+restore_catalogs() {
+    [ -d translations ] || return 0
+    for file in translations/*; do
+        [ -f "$file" ] || continue
+        if [ -f "$CATALOGS/$(basename "$file")" ]; then
+            cmp -s "$file" "$CATALOGS/$(basename "$file")" || cp -p "$CATALOGS/$(basename "$file")" "$file"
+        else
+            rm -f "$file"
+        fi
+    done
+    rm -rf "$CATALOGS"
+}
+
 # Live screens: BOLT_BASE_URL, else PHP's built-in server started for this check.
 BASE_URL=""
 SERVER_PID=""
@@ -57,7 +76,7 @@ elif command -v php > /dev/null 2>&1 && [ -f public/index.php ]; then
     # The project's .env may limit trusted hosts to the production domain; 127.0.0.1 must pass here.
     SYMFONY_TRUSTED_HOSTS='' php -S "127.0.0.1:$PORT" -t public "$ROUTER" > /dev/null 2>&1 &
     SERVER_PID=$!
-    trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null' EXIT
+    trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null; restore_catalogs' EXIT
     for _ in $(seq 1 30); do
         curl -s --max-time 2 -o /dev/null "http://127.0.0.1:$PORT/" && { BASE_URL="http://127.0.0.1:$PORT"; break; }
         sleep 0.5
@@ -94,6 +113,8 @@ if [ -z "$BASE_URL" ]; then
     fail "no site to test against — set BOLT_BASE_URL, or make PHP's built-in server start (php -S, database reachable)"
 fi
 [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null && { wait "$SERVER_PID" 2>/dev/null || true; SERVER_PID=""; }
+restore_catalogs
+trap - EXIT
 
 echo ""
 echo "  Not checked here (SKILL.md, Step 5): the look in a browser — run the preview server"
