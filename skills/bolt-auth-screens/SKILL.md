@@ -290,6 +290,12 @@ console: no Content-Security-Policy or Trusted Types violation may appear. Run `
 - **A strict CSP.** The screens need `style-src 'unsafe-inline'` (the inline styles, as the helper
   pages) and nothing else beyond `'self'` — the baseline and strict policies of
   `bolt-security-hardening` both allow them.
+- **A catalog in `translations/` rewritten after browsing the screens locally.** Not the skill:
+  Bolt's stock `config/packages/translation.yaml` enables php-translation's
+  `auto_add_missing_translations`, which re-dumps the catalogs in the dev environment whenever a
+  rendered page uses a key they lack (new unit ids, every missing key of that page added). Discard
+  such changes before committing (`git checkout translations/`, then merge the skill's units
+  again). `verify.sh` restores the catalogs after its live checks.
 - **PHP's built-in server ignores `APP_ENV=prod` given on the command line** and boots from
   `.env.local`: start it with `php -d variables_order=EGPCS -S …` to test production mode.
 - **A CSP violation in the admin login after installing an extension.** Its widget loads a file
