@@ -2,6 +2,19 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+The sites move to PHP 8.5: they require `"php": "^8.5"`, build on `php:8.5` and run CI on 8.5. Bolt 6 itself still runs on 8.2, and so does this plugin.
+
+### Changed
+- `bolt-code-quality` `examples/gitlab-ci.yml` and Step 5: every job on PHP 8.5; the PHPStan matrix starts at 8.5, and each newer PHP release is added to it. Pitfall 5 covers 8.4 → 8.5: change every pin together, resolve and reinstall the dependencies on 8.5, then `make csfix` and `make stancheck`.
+- `bolt-build` `preflight.sh` warns below PHP 8.5 (it still blocks below 8.2). WORKFLOWS Phase 1 prerequisites: the project boots on PHP 8.5 with `"php": "^8.5"` and `ARG PHP_VERSION=8.5`. `bolt-security-hardening` asks for PHP 8.5+ in the host's panel.
+- `bolt-runtime-extensions`: the `mb_trim()` note no longer mentions the 8.2 / 8.3 polyfill.
+- The plugin's own CI lints on PHP 8.2 (its minimum) and 8.5 (the sites' version) instead of 8.4.
+
+### Migrating a project
+- Run Pitfall 5 of `bolt-code-quality`: set `"php": "^8.5"`, `ARG PHP_VERSION=8.5` in the `Dockerfile` and the CI versions of Step 5, run `composer update` on PHP 8.5 and reinstall `vendor/`, then `make csfix` and `make stancheck`. Switch the local PHP (shell and IDE) and the host's PHP to 8.5 before the next deploy.
+
 ## 1.18.1 — 2026-11-25
 
 ### Fixed

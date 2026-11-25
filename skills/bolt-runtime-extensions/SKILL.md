@@ -388,7 +388,7 @@ Nothing to add. Bolt's stock `config/services.yaml` registers every class in `sr
 
 Older projects define `App\LocaleLinkExtension` explicitly with `arguments` and a `twig.extension` tag. Once the class has the `#[Autowire]` attributes (an audit or `scaffold.sh --force` copies `examples/LocaleLinkExtension.php` over it), that definition only duplicates them: remove it. `verify.sh` warns while both are present.
 
-**PHP version:** the classes use `mb_trim()`, `mb_ltrim()` and `mb_rtrim()` (PHP 8.4) — on PHP 8.4 ECS (`MbStrFunctionsFixer`) asks for them instead of `trim()`, `ltrim()` and `rtrim()`. On PHP 8.2 and 8.3 they come from `symfony/polyfill-php84`, which `bolt/core` requires — nothing to install.
+**PHP version:** the classes use `mb_trim()`, `mb_ltrim()` and `mb_rtrim()` (native since PHP 8.4; the sites require 8.5) — from PHP 8.4 ECS (`MbStrFunctionsFixer`) asks for them instead of `trim()`, `ltrim()` and `rtrim()`.
 
 ---
 

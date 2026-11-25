@@ -36,8 +36,8 @@ if command -v php > /dev/null; then
     PHP_V=$(php -r 'echo PHP_VERSION;')
     if ! version_ge "$PHP_V" "8.2.0"; then
         block "php $PHP_V — Bolt 6 needs PHP 8.2 or newer"
-    elif ! version_ge "$PHP_V" "8.4.0"; then
-        warn "php $PHP_V — the sites require PHP ^8.4 (bolt-code-quality CI tests 8.4–8.5); switch before Phase 1"
+    elif ! version_ge "$PHP_V" "8.5.0"; then
+        warn "php $PHP_V — the sites require PHP ^8.5 (bolt-code-quality CI runs on 8.5); switch before Phase 1"
     else
         ok "php $PHP_V"
     fi
