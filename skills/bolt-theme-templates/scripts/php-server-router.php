@@ -13,6 +13,13 @@ if ($path !== '/' && is_file($_SERVER['DOCUMENT_ROOT'] . $path)) {
     return false;
 }
 
+// The built-in server keeps its environment out of $_SERVER (variables_order GPCS), so Symfony's
+// Dotenv would overwrite the overrides verify.sh starts it with (SYMFONY_TRUSTED_HOSTS='', a dummy
+// MAILER_DSN) with the values of .env. As on the CLI, the environment wins.
+foreach (getenv() as $name => $value) {
+    $_SERVER[$name] ??= $value;
+}
+
 $_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'] . '/index.php';
 $_SERVER['SCRIPT_NAME'] = $_SERVER['PHP_SELF'] = '/index.php';
 
