@@ -10,7 +10,7 @@ parameters:
   bolt_auth.password_min_length: 12
 
   # Trusted Types policies that an extension in the login form needs, e.g. the ALTCHA captcha of
-  # tomvondracek/bolt-altcha: [ 'svelte-trusted-html' ]. Empty = no policy may be created.
+  # tomvondracek/bolt-altcha: [ 'svelte-trusted-html', 'default' ]. Empty = no policy may be created.
   bolt_auth.trusted_types: [ ]
 
 framework:

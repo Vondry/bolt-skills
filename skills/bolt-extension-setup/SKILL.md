@@ -556,7 +556,7 @@ Keep the defaults otherwise (`display: invisible`, `auto: onsubmit`, the `login`
 A theme that replaces the sign-in screens (`login_template`, `reset_password_settings` in `theme.yaml`, as `bolt-auth-screens` does) must:
 * print `{{ widgets('login_middle') }}` inside the login form (the login widget renders there);
 * add `'@bolt-altcha/form/altcha.html.twig'` to a `form_theme … only` of the reset forms. `only` drops the extension's global form theme, and the ALTCHA field then renders as a plain text input that blocks the form. The `bolt-auth-screens` templates do it when the form carries an ALTCHA field;
-* allow the widget's Trusted Types policy where the screens enforce Trusted Types: `bolt_auth.trusted_types: [ 'svelte-trusted-html' ]` in `config/packages/bolt_auth.yaml` (`bolt-auth-screens`' `scaffold.sh` sets it when the extension is installed).
+* allow the widget's Trusted Types policies where the screens enforce Trusted Types: `bolt_auth.trusted_types: [ 'svelte-trusted-html', 'default' ]` in `config/packages/bolt_auth.yaml` (`bolt-auth-screens`' `scaffold.sh` sets it when the extension is installed). `default` is bolt-altcha's own (1.0.7+): it lets through only the widget's texts and worker URLs. Trusted Types are enforced only without `kernel.debug`, so a broken widget shows up in production only: test the login with `APP_ENV=prod` before deploying.
 
 The widget loads its script, stylesheet and workers from the site and asks the site for its challenge, so a policy with `script-src`, `style-src`, `worker-src` and `connect-src 'self'` covers it.
 

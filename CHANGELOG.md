@@ -2,6 +2,14 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+- `bolt-auth-screens`, `bolt-extension-setup`: with `tomvondracek/bolt-altcha`, `bolt_auth.trusted_types` must be `[ 'svelte-trusted-html', 'default' ]`. With `svelte-trusted-html` alone the widget crashed in production (Trusted Types are enforced only without `kernel.debug`), the login never carried a solution and nobody could log in. bolt-altcha 1.0.7 creates the `default` policy, limited to the widget's texts and worker URLs. `scaffold.sh` adds `default` to an existing `[ 'svelte-trusted-html' ]`, `verify.sh` fails without it.
+
+### Migrating a project
+- `composer update tomvondracek/bolt-altcha` (1.0.7+), `bin/console extensions:configure`, set `bolt_auth.trusted_types: [ 'svelte-trusted-html', 'default' ]` in `config/packages/bolt_auth.yaml` (or `scaffold.sh --update`), `cache:clear`. Deploy `public/assets/altcha/` too.
+
 ## 1.21.0 — 2026-11-26
 
 The sign-in screens offer the password reset only when the site can send the e-mail.

@@ -612,8 +612,9 @@ function checkSecurity(string $root, string $themeDir, string $examples, array $
     // Trusted Types: an extension in the login form must have its policy allowed.
     $trustedTypes = $packages['parameters']['bolt_auth.trusted_types'] ?? [];
     $lock = (string) @file_get_contents('composer.lock');
-    if (str_contains($lock, '"name": "tomvondracek/bolt-altcha"') && ! in_array('svelte-trusted-html', is_array($trustedTypes) ? $trustedTypes : [], true)) {
-        out('FAIL', "tomvondracek/bolt-altcha is installed: add 'svelte-trusted-html' to bolt_auth.trusted_types, or its login widget cannot render in production");
+    $missing = array_diff(['svelte-trusted-html', 'default'], is_array($trustedTypes) ? $trustedTypes : []);
+    if (str_contains($lock, '"name": "tomvondracek/bolt-altcha"') && $missing !== []) {
+        out('FAIL', "tomvondracek/bolt-altcha is installed: add '" . implode("', '", $missing) . "' to bolt_auth.trusted_types, or its login widget cannot render in production and nobody can log in");
     }
     // Form themes: `only` drops the extension's global form theme, so the templates add it back for an ALTCHA field.
     foreach (['login.twig', 'reset-request.twig', 'reset.twig'] as $template) {
