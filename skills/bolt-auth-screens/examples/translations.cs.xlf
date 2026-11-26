@@ -5,5 +5,6 @@
     <unit id="bolt_auth_show_password" name="bolt_auth.show_password"><segment><source>bolt_auth.show_password</source><target>Zobrazit heslo</target></segment></unit>
     <unit id="bolt_auth_hide_password" name="bolt_auth.hide_password"><segment><source>bolt_auth.hide_password</source><target>Skrýt heslo</target></segment></unit>
     <unit id="bolt_auth_too_many_requests" name="bolt_auth.too_many_requests"><segment><source>bolt_auth.too_many_requests</source><target>Příliš mnoho požadavků z této adresy. Zkuste to prosím znovu za %minutes% min.</target></segment></unit>
+    <unit id="bolt_auth_reset_unavailable" name="bolt_auth.reset_unavailable"><segment><source>bolt_auth.reset_unavailable</source><target>Zapomněli jste heslo? Požádejte správce webu o nové.</target></segment></unit>
   </file>
 </xliff>

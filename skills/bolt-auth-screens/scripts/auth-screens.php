@@ -514,9 +514,9 @@ function checkIntegration(string $themeDir): void
     foreach (glob('translations/messages.*.xlf') ?: [] as $catalog) {
         $locale = (string) preg_replace('/^messages\.(.+)\.xlf$/', '$1', basename($catalog));
         $xml = (string) file_get_contents($catalog);
-        $missing = array_filter(['bolt_auth.show_password', 'bolt_auth.hide_password', 'bolt_auth.too_many_requests'], static fn (string $key): bool => ! str_contains($xml, ">$key<") && ! str_contains($xml, "\"$key\""));
+        $missing = array_filter(['bolt_auth.show_password', 'bolt_auth.hide_password', 'bolt_auth.too_many_requests', 'bolt_auth.reset_unavailable'], static fn (string $key): bool => ! str_contains($xml, ">$key<") && ! str_contains($xml, "\"$key\""));
         if ($missing === []) {
-            out('PASS', "$catalog has the bolt_auth units (reveal button, rate-limit message)");
+            out('PASS', "$catalog has the bolt_auth units (reveal button, rate-limit message, reset without mailer)");
         } else {
             out($locale === $default ? 'FAIL' : 'WARN', "$catalog misses " . implode(', ', $missing) . ' — merge examples/translations.' . ($locale === 'cs' ? 'cs' : 'en') . '.xlf');
         }
@@ -596,6 +596,19 @@ function checkSecurity(string $root, string $themeDir, string $examples, array $
         out('PASS', 'trusted hosts set (the reset link cannot be pointed at a foreign host)');
     }
 
+    // The reset e-mail needs a mailer: without one the screens hide the reset (SKILL.md Step 4).
+    $dsn = preg_match_all('/^\s*MAILER_DSN=(.*)$/m', (string) @file_get_contents('.env'), $m) ? trim(trim((string) end($m[1])), "'\"") : null;
+    $subscriber = 'App\\BoltAuthSecuritySubscriber';
+    if (class_exists($subscriber) && method_exists($subscriber, 'canSendMail')) {
+        $scheme = $dsn === null || $dsn === '' ? 'unset' : (parse_url($dsn, PHP_URL_SCHEME) ?: 'composite') . '://' . (parse_url($dsn, PHP_URL_HOST) ?: '…');
+        out(
+            $subscriber::canSendMail($dsn) ? 'PASS' : 'WARN',
+            $subscriber::canSendMail($dsn)
+                ? "MAILER_DSN in .env can send ($scheme): the login offers the password reset"
+                : "MAILER_DSN in .env cannot send ($scheme): the login hides the password reset unless the server's .env.local sets a real mailer (smtp://user:pass@host, or sendmail://default)"
+        );
+    }
+
     // Trusted Types: an extension in the login form must have its policy allowed.
     $trustedTypes = $packages['parameters']['bolt_auth.trusted_types'] ?? [];
     $lock = (string) @file_get_contents('composer.lock');
@@ -662,6 +675,18 @@ function checkLive(string $baseUrl, string $backend, bool $rateLimitTest): void
         "$backend/reset-password" => ['reset_password_request_form[email]', 'reset_password_request_form[_token]'],
     ];
     $assets = [];
+    // Without a mailer the reset screens redirect to the login, and the login shows a hint instead.
+    [$resetStatus, , $resetHeaders] = fetch($baseUrl . "$backend/reset-password");
+    $resetOff = in_array($resetStatus, [302, 303], true) && str_ends_with((string) parse_url($resetHeaders['location'][0] ?? '', PHP_URL_PATH), "$backend/login");
+    if ($resetOff) {
+        unset($screens["$backend/reset-password"]);
+        $rateLimitTest = false;
+        [, $login] = fetch($baseUrl . "$backend/login");
+        $hidden = ! str_contains($login, 'reset-password') && str_contains($login, '<p class="ba-help">');
+        out($hidden ? 'WARN' : 'FAIL', $hidden
+            ? "password reset is off on $baseUrl: MAILER_DSN cannot send, so $backend/reset-password redirects to the login, which asks to contact the administrator — set a real mailer to offer it"
+            : "$backend/reset-password redirects to the login, but the login still links to it or lacks the hint");
+    }
     foreach ($screens as $path => $fields) {
         [$status, $html, $headers] = fetch($baseUrl . $path);
         if ($status !== 200) {

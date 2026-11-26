@@ -5,7 +5,9 @@
   Keeps everything Bolt's own template does: the CSRF token, the remember-me field, the
   login_top / login_middle / login_bottom widget slots for extensions, the authentication error
   and the flash after a password reset. Every string is Bolt's own translation key.
-  One primary button only; the forgotten password is a link.
+  One primary button only; the forgotten password is a link. Without a mailer that can send the
+  reset e-mail (MAILER_DSN, see BoltAuthSecuritySubscriber) the link is replaced by a hint to ask
+  the site's administrator, and the reset screens redirect here.
 #}
 {% extends 'bolt-auth/_layout.twig' %}
 {% import 'bolt-auth/_macros.twig' as ba %}
@@ -46,11 +48,15 @@
         </div>
 
         {% set password = loginForm.password %}
-        {{ ba.password(password, password.vars.label|trans, false, {
+        {% set reset_available = app.request.attributes.get('_bolt_auth_password_reset', true) %}
+        {{ ba.password(password, password.vars.label|trans, false, reset_available ? {
             href: path('bolt_forgot_password_request'),
             label: 'login.forgotpassword'|trans
-        }) }}
+        } : null) }}
         {{ ba.errors(password) }}
+        {% if not reset_available %}
+            <p class="ba-help">{{ 'bolt_auth.reset_unavailable'|trans }}</p>
+        {% endif %}
 
         {{ widgets('login_middle') }}
 

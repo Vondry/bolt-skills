@@ -2,6 +2,20 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+The sign-in screens offer the password reset only when the site can send the e-mail.
+
+### Added
+- `bolt-auth-screens`: without a `MAILER_DSN` that can send (unset, `null://`, or the placeholder `smtp://localhost` without credentials), the login hides „Zapomenuté heslo“ and shows „Zapomněli jste heslo? Požádejte správce webu o nové.“ (`bolt_auth.reset_unavailable`), and `BoltAuthSecuritySubscriber` redirects the reset screens to the login. Bolt sends the e-mail synchronously, so the request used to end in a 500 page. Hidden rather than disabled with a tooltip: a disabled link is unreachable for keyboards and screen readers, and a public page shouldn't describe the server. `verify.sh` warns while `.env` holds such a DSN, reports a hidden reset on a live site, and the preview has the state „Login · no mailer“.
+- `bolt-security-hardening` Step 1 and the `bolt-audit` checklist name `MAILER_DSN` as what the password reset depends on.
+
+### Fixed
+- `bolt-theme-templates/scripts/php-server-router.php` (also used by `bolt-auth-screens`' `verify.sh`): variables the local server is started with (`SYMFONY_TRUSTED_HOSTS=''`) never reached Symfony — PHP's built-in server keeps the environment out of `$_SERVER`, so Dotenv took `.env`'s values. The router now copies them in, as on the CLI.
+
+### Migrating a project
+- `bolt-auth-screens/scripts/scaffold.sh --update` (login template, subscriber, the new translation unit; translate it in catalogs other than cs / en), then `cache:clear`. Set the real `MAILER_DSN` where the reset should stay available, and send yourself a reset e-mail once.
+
 ## 1.20.0 — 2026-11-26
 
 ALTCHA joins the essential extensions: Bolt's login and both password reset forms are protected from bots on every site.

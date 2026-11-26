@@ -74,7 +74,8 @@ elif command -v php > /dev/null 2>&1 && [ -f public/index.php ]; then
     PORT=$((18000 + RANDOM % 1000))
     ROUTER="$SCRIPT_DIR/../../bolt-theme-templates/scripts/php-server-router.php"
     # The project's .env may limit trusted hosts to the production domain; 127.0.0.1 must pass here.
-    SYMFONY_TRUSTED_HOSTS='' php -S "127.0.0.1:$PORT" -t public "$ROUTER" > /dev/null 2>&1 &
+    # A dummy mailer keeps the reset screens on (they hide without one); the checks send no e-mail.
+    SYMFONY_TRUSTED_HOSTS='' MAILER_DSN='smtp://bolt-auth-verify:x@mail.invalid' php -S "127.0.0.1:$PORT" -t public "$ROUTER" > /dev/null 2>&1 &
     SERVER_PID=$!
     trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null; restore_catalogs' EXIT
     for _ in $(seq 1 30); do

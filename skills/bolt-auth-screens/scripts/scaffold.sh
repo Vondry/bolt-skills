@@ -111,7 +111,7 @@ for catalog in translations/messages.*.xlf; do
         php "$SKILLS_ROOT/scripts/merge-xliff.php" "$source" "$catalog" > /dev/null
         echo "  merged  $catalog (bolt_auth.*)"
     else
-        echo "  next    php $SKILLS_ROOT/scripts/merge-xliff.php $EXAMPLES_DIR/translations.en.xlf $catalog — then translate the three targets"
+        echo "  next    php $SKILLS_ROOT/scripts/merge-xliff.php $EXAMPLES_DIR/translations.en.xlf $catalog — then translate the four targets"
     fi
 done
 
