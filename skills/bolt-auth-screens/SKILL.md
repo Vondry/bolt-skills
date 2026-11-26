@@ -176,7 +176,7 @@ bash $SKILLS/bolt-auth-screens/scripts/scaffold.sh \
 | :--- | :--- |
 | `bolt-auth/*.twig`, `js/bolt-auth.js`, `css/fonts/instrument/` | Copied from [`examples/`](examples/); existing files are kept |
 | `theme.yaml` | `login_template`, `reset_password_settings` and `bolt_auth` appended ([`examples/theme.yaml`](examples/theme.yaml)); kept when present |
-| `src/BoltAuthSecuritySubscriber.php`, `src/BoltAuthPasswordPolicyExtension.php`, `config/packages/bolt_auth.yaml` | The security layer ([`examples/src/`](examples/src/), [`examples/config/bolt_auth.yaml`](examples/config/bolt_auth.yaml)); autowired from `src/`, they pass ECS and PHPStan level max (`bolt-code-quality`). With `tomvondracek/bolt-altcha` installed, `bolt_auth.trusted_types` gets its `svelte-trusted-html` policy |
+| `src/BoltAuthSecuritySubscriber.php`, `src/BoltAuthPasswordPolicyExtension.php`, `config/packages/bolt_auth.yaml` | The security layer ([`examples/src/`](examples/src/), [`examples/config/bolt_auth.yaml`](examples/config/bolt_auth.yaml)); autowired from `src/`, they pass ECS and PHPStan level max (`bolt-code-quality`). With `tomvondracek/bolt-altcha` installed, `bolt_auth.trusted_types` gets its `svelte-trusted-html` and `default` policies |
 | `css/tailwind/index.css` | `@source not "../../bolt-auth";` after the other `@source` rules |
 | `translations/messages.<locale>.xlf` | `bolt_auth.show_password`, `bolt_auth.hide_password`, `bolt_auth.too_many_requests`, `bolt_auth.reset_unavailable` merged (cs, en); other locales: merge the English catalog and translate the four targets |
 
