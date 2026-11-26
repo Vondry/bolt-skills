@@ -205,7 +205,10 @@ These rules are why the templates must not be rewritten per project:
 
 - **Forms through Symfony.** Fields are rendered with `form_widget()` under
   `form_theme … with ['form_div_layout.html.twig'] only`, so names, ids, `required`, the last
-  username and the CSRF token (`form_end`) stay Bolt's.
+  username and the CSRF token (`form_end`) stay Bolt's. A form that carries an ALTCHA field
+  (`tomvondracek/bolt-altcha`, e.g. `bolt.reset_password: true`) also gets
+  `@bolt-altcha/form/altcha.html.twig`: `only` drops the extension's global form theme, and the
+  field would render as a text input.
 - **Extension slots.** `widgets('login_top')`, `widgets('login_middle')`, `widgets('login_bottom')`
   stay in the login form — captcha and 2FA extensions render there.
 - **Messages.** The authentication error (`error.messageKey|trans(…, 'security')`), the

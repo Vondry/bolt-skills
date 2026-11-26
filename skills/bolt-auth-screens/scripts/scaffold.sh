@@ -66,7 +66,7 @@ install_file "$EXAMPLES_DIR/config/bolt_auth.yaml" "config/packages/bolt_auth.ya
 if [ ! -d vendor/symfony/rate-limiter ]; then
     echo "  next    composer require symfony/rate-limiter (the rate limits need it)"
 fi
-if grep -q '"name": "tomvondracek/bolt-altcha"' composer.lock 2>/dev/null && ! grep -q "svelte-trusted-html" config/packages/bolt_auth.yaml; then
+if grep -q '"name": "tomvondracek/bolt-altcha"' composer.lock 2>/dev/null && ! grep -qE "^  bolt_auth.trusted_types:.*svelte-trusted-html" config/packages/bolt_auth.yaml; then
     sed -i.bak "s/^  bolt_auth.trusted_types: \[ \]$/  bolt_auth.trusted_types: [ 'svelte-trusted-html' ]/" config/packages/bolt_auth.yaml && rm -f config/packages/bolt_auth.yaml.bak
     echo "  updated config/packages/bolt_auth.yaml (Trusted Types policy of the ALTCHA login widget)"
 fi
