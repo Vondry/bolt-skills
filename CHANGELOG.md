@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.21.0 — 2026-11-26
 
 The sign-in screens offer the password reset only when the site can send the e-mail.
 
