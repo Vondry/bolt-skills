@@ -9,7 +9,8 @@
 #}
 {% extends 'bolt-auth/_layout.twig' %}
 {% import 'bolt-auth/_macros.twig' as ba %}
-{% form_theme resetForm with ['form_div_layout.html.twig'] only %}
+{#- An ALTCHA field (tomvondracek/bolt-altcha) is rendered by its own form theme; without it, as a text input. -#}
+{% form_theme resetForm with ['form_div_layout.html.twig']|merge(resetForm|filter(field => 'altcha' in field.vars.block_prefixes)|length > 0 ? ['@bolt-altcha/form/altcha.html.twig'] : []) only %}
 
 {% block title %}{{ 'reset_password.reset_header'|trans }}{% endblock %}
 

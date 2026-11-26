@@ -602,6 +602,13 @@ function checkSecurity(string $root, string $themeDir, string $examples, array $
     if (str_contains($lock, '"name": "tomvondracek/bolt-altcha"') && ! in_array('svelte-trusted-html', is_array($trustedTypes) ? $trustedTypes : [], true)) {
         out('FAIL', "tomvondracek/bolt-altcha is installed: add 'svelte-trusted-html' to bolt_auth.trusted_types, or its login widget cannot render in production");
     }
+    // Form themes: `only` drops the extension's global form theme, so the templates add it back for an ALTCHA field.
+    foreach (['login.twig', 'reset-request.twig', 'reset.twig'] as $template) {
+        $source = $sources["$themeDir/bolt-auth/$template"] ?? '';
+        if ($source !== '' && ! str_contains($source, "'@bolt-altcha/form/altcha.html.twig'")) {
+            out('FAIL', "$template sets its form themes with `only` but not the ALTCHA one: a protected form renders the field as a text input — scaffold.sh --update");
+        }
+    }
 
     // Templates: nothing that could carry injected markup or script.
     $problems = [];
