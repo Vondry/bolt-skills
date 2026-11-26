@@ -68,6 +68,7 @@ adds the rest.
 | Bots on the login | captcha / 2FA extensions render in the kept `login_top`, `login_middle`, `login_bottom` slots | templates |
 | E-mail bombing, probing many addresses through the reset request | 5 POSTs per 15 min and IP → 303 back with „Příliš mnoho požadavků…“ and `Retry-After`; Bolt adds 1 e-mail per account and hour | `BoltAuthSecuritySubscriber`, rate limiter `bolt_auth_reset_request` |
 | Guessing reset tokens | 10 opened links / submitted passwords per 15 min and IP; tokens expire after 1 h | rate limiter `bolt_auth_reset_password`, `reset_password.yaml` |
+| A reset request that ends in a 500 page (no mailer) | without a `MAILER_DSN` that can send, the reset screens redirect to the login, which shows „Zapomněli jste heslo? Požádejte správce webu o nové.“ instead of the link | `BoltAuthSecuritySubscriber`, `login.twig` |
 | Account enumeration | the same "link sent" screen for every address; `show_already_requested_password_notice: false` | Bolt, `bolt-security-hardening` 3d |
 | Reset link pointing at a foreign host (Host-header poisoning) | `framework.trusted_hosts` from `SYMFONY_TRUSTED_HOSTS` | `bolt-security-hardening` 2 |
 | Weak password set through the reset link (Bolt core allows 6 characters) | the admin policy on the new password: ≥ 12 characters, medium `PasswordStrength`, `NotCompromisedPassword`; `minlength` and `passwordrules` hints for password managers | `BoltAuthPasswordPolicyExtension` |
@@ -177,7 +178,7 @@ bash $SKILLS/bolt-auth-screens/scripts/scaffold.sh \
 | `theme.yaml` | `login_template`, `reset_password_settings` and `bolt_auth` appended ([`examples/theme.yaml`](examples/theme.yaml)); kept when present |
 | `src/BoltAuthSecuritySubscriber.php`, `src/BoltAuthPasswordPolicyExtension.php`, `config/packages/bolt_auth.yaml` | The security layer ([`examples/src/`](examples/src/), [`examples/config/bolt_auth.yaml`](examples/config/bolt_auth.yaml)); autowired from `src/`, they pass ECS and PHPStan level max (`bolt-code-quality`). With `tomvondracek/bolt-altcha` installed, `bolt_auth.trusted_types` gets its `svelte-trusted-html` policy |
 | `css/tailwind/index.css` | `@source not "../../bolt-auth";` after the other `@source` rules |
-| `translations/messages.<locale>.xlf` | `bolt_auth.show_password`, `bolt_auth.hide_password`, `bolt_auth.too_many_requests` merged (cs, en); other locales: merge the English catalog and translate the three targets |
+| `translations/messages.<locale>.xlf` | `bolt_auth.show_password`, `bolt_auth.hide_password`, `bolt_auth.too_many_requests`, `bolt_auth.reset_unavailable` merged (cs, en); other locales: merge the English catalog and translate the four targets |
 
 Without the colour options the block is written with `'#…'` placeholders, which `verify.sh`
 reports until Step 2's values are filled in. `--update` replaces the shared files with the skill's
@@ -225,7 +226,19 @@ These rules are why the templates must not be rewritten per project:
   `reset_password.request_description`, `reset_password.request_send`,
   `reset_password.back-to-login`, `reset_password.check_email_sent_header`,
   `reset_password.reset_header`, `reset_password.reset_btn` and the form labels. „Bolt CMS“ in the
-  eyebrow is the product name. Only the reveal button's `aria-label` has keys of its own.
+  eyebrow is the product name. Only the reveal button's `aria-label`, the rate-limit message and the
+  no-mailer hint have keys of their own.
+- **No mailer, no reset.** Bolt sends the reset e-mail through Symfony Mailer (`MAILER_DSN`,
+  `config/packages/mailer.yaml`) synchronously, so a mailer that can't send answers the request
+  with a 500 page. `BoltAuthSecuritySubscriber::canSendMail()` treats an unset or empty DSN,
+  `null://…` and SMTP on `localhost` / `127.0.0.1` without credentials (the placeholder
+  `smtp://localhost` of Symfony's recipe and Bolt's `.env`) as unable to send. Then the login
+  **hides** the link and shows `bolt_auth.reset_unavailable` under the password, and the reset
+  routes redirect to the login (bookmarks, old links). Hidden, not disabled with a tooltip: a
+  disabled link takes no focus (screen readers never reach its explanation), tooltips don't work on
+  touch, and a public page should not say how the server is set up. The editor gets the way that
+  works — an administrator sets a new password under Users — and the developer gets the reason from
+  `verify.sh`. A host whose local MTA delivers mail uses `sendmail://default`.
 - **One primary button** per screen; „Zapomenuté heslo“ and „Zpět k přihlášení“ are links.
 - **Password fields** are always rendered with `type: 'password', value: ''` (`ba.password()`):
   Bolt's login uses `PasswordWithPreviewType`, which a plain form theme renders as a text input.
@@ -246,11 +259,11 @@ bash $SKILLS/bolt-auth-screens/scripts/verify.sh
 | 1. Templates and assets | the seven templates and `js/bolt-auth.js` equal the skill's (drift warns), the fonts, no external URL in the templates |
 | 2. Wiring | the four `theme.yaml` keys point at `bolt-auth/` |
 | 3. Per-project values | seven `#rrggbb` colours, every contrast, no project colour written into a template, logo and mark files and sizes |
-| 4. Theme integration | the Tailwind exclusion, the reveal labels in every catalog (missing in the default locale fails) |
-| 5. Security | the security layer equals the skill's, `symfony/rate-limiter`, both limiters, the password minimum (= `config/validator/user.yaml`), `login_throttling`, no enumeration notice, token lifetime ≤ 1 h, trusted hosts, the Trusted Types policy of an installed ALTCHA, and the template rules (no `|raw`, inline script, handler or `style=`, nonce on `<style>`, `type="password"` forced, CSRF, widget slots and errors kept) |
-| 6. Live screens | `/…/login` and `/…/reset-password` (backend URL from `bolt.backend_url`) render the screen with Bolt's fields, password fields `type="password"` without value, no admin CSS, no foreign host; headers: the strict CSP with a nonce equal to the `<style>`'s, Trusted Types without debug, `no-store`, `no-referrer`, `DENY`, COOP, `nosniff`; session cookie `HttpOnly` + `SameSite` (+ `Secure` on HTTPS); every theme asset answers 200. Against PHP's built-in server started by `verify.sh` also the rate limit (POSTs without a valid CSRF token, so no e-mail is sent), after which the limiter pool is cleared. `BOLT_BASE_URL`, else PHP's built-in server |
+| 4. Theme integration | the Tailwind exclusion, the four `bolt_auth` units in every catalog (missing in the default locale fails) |
+| 5. Security | the security layer equals the skill's, `symfony/rate-limiter`, both limiters, the password minimum (= `config/validator/user.yaml`), `login_throttling`, no enumeration notice, token lifetime ≤ 1 h, trusted hosts, the Trusted Types policy of an installed ALTCHA, whether `MAILER_DSN` in `.env` can send (warns when it can't), and the template rules (no `|raw`, inline script, handler or `style=`, nonce on `<style>`, `type="password"` forced, CSRF, widget slots and errors kept) |
+| 6. Live screens | `/…/login` and `/…/reset-password` (backend URL from `bolt.backend_url`) render the screen (the reset request only with a mailer: a reset that redirects to the login warns, and the login must then show the hint instead of the link) with Bolt's fields, password fields `type="password"` without value, no admin CSS, no foreign host; headers: the strict CSP with a nonce equal to the `<style>`'s, Trusted Types without debug, `no-store`, `no-referrer`, `DENY`, COOP, `nosniff`; session cookie `HttpOnly` + `SameSite` (+ `Secure` on HTTPS); every theme asset answers 200. Against PHP's built-in server started by `verify.sh` also the rate limit (POSTs without a valid CSRF token, so no e-mail is sent), after which the limiter pool is cleared. `BOLT_BASE_URL`, else PHP's built-in server (started with a dummy `MAILER_DSN`, so the reset screens are tested) |
 | 7. Twig syntax | `lint:twig` on `bolt-auth/` |
-| 8. Every state | all twelve states rendered through Bolt's controllers and form types with dummy data (`scripts/preview.php check`), including the throttled login, the rate-limited request and a new password refused by the policy; no password field rendered as text or with a value |
+| 8. Every state | all thirteen states rendered through Bolt's controllers and form types with dummy data (`scripts/preview.php check`), including the throttled login, the login without a mailer (hint, no link), the rate-limited request and a new password refused by the policy; no password field rendered as text or with a value |
 
 Then look at every state in the browser — the preview renders them with dummy forms, so it needs
 no user account, no reset token and sends no e-mail:
@@ -281,6 +294,11 @@ console: no Content-Security-Policy or Trusted Types violation may appear. Run `
 
 ## Pitfalls
 
+- **„Zapomenuté heslo“ is missing on the login.** `MAILER_DSN` can't send (Step 4): set the real
+  SMTP server (`smtp://user:password@smtp.example.cz:587`) in `.env` or the server's `.env.local`,
+  or `sendmail://default` where the host's MTA delivers mail, then delete `var/cache/prod/`.
+  `verify.sh` warns while `.env` holds the placeholder, and its live check against a production
+  URL reports a hidden reset. Send yourself a reset e-mail once to be sure the mailer works.
 - **Default screen still shows.** `theme.yaml` is cached: `php bin/console cache:clear`. A
   `login_template` in `config/bolt/config.yaml` does not win over the theme's.
 - **Fonts or logo answer 403 on Apache.** They must live in `css/`, `js/` or `img/` (the

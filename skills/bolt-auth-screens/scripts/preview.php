@@ -35,6 +35,7 @@ const STATES = [
     'login-error' => 'Login · wrong credentials',
     'login-reset' => 'Login · after a password reset',
     'login-throttled' => 'Login · too many attempts',
+    'login-no-mailer' => 'Login · no mailer (password reset hidden)',
     'reset-request' => 'Reset request',
     'reset-request-error' => 'Reset request · expired link',
     'reset-request-limited' => 'Reset request · rate limit',
@@ -95,6 +96,7 @@ foreach (array_keys(STATES) as $state) {
         'login-error', 'login-throttled', 'reset-request-error', 'reset-request-limited' => 'ba-alert is-danger',
         'login-reset', 'check-email' => 'ba-alert is-success',
         'reset-mismatch', 'reset-short', 'reset-weak' => 'ba-help is-error',
+        'login-no-mailer' => '<p class="ba-help">',
         default => 'class="ba-form"',
     };
     $marked = match ($state) {
@@ -107,6 +109,10 @@ foreach (array_keys(STATES) as $state) {
     $exposed = array_filter($inputs[0], static fn (string $input): bool => ! str_contains($input, 'type="password"') || preg_match('/\svalue="[^"]/', $input) === 1);
     if ($exposed !== []) {
         echo "FAIL $state renders a password field as text or with a value: " . reset($exposed) . "\n";
+        continue;
+    }
+    if ($state === 'login-no-mailer' && str_contains($html, '/reset-password')) {
+        echo "FAIL $state still links to the password reset\n";
         continue;
     }
     if (! str_contains($html, 'class="ba-screen"') || ! str_contains($html, $expected) || ! $marked) {
@@ -176,7 +182,9 @@ function render(string $state): string
     $flash = static fn (string $type, string $message) => $session->getFlashBag()->add($type, $message);
 
     [$template, $parameters] = match ($state) {
-        'login', 'login-error', 'login-reset', 'login-throttled' => (static function () use ($state, $forms, $flash, $translator): array {
+        'login', 'login-error', 'login-reset', 'login-throttled', 'login-no-mailer' => (static function () use ($state, $forms, $flash, $translator, $request): array {
+            // What BoltAuthSecuritySubscriber sets when MAILER_DSN cannot send.
+            $request->attributes->set('_bolt_auth_password_reset', $state !== 'login-no-mailer');
             if ($state === 'login-reset') {
                 $flash('reset_password_success', $translator->trans('reset_password.reset_successful'));
             }

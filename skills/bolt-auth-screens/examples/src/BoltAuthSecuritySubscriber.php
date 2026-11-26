@@ -23,6 +23,9 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  *
  *  - per-IP rate limits on the reset request (e-mail bombing, account probing) and on the reset
  *    link / new password (token guessing), next to Symfony's login_throttling;
+ *  - no password reset without a mailer: when MAILER_DSN can't send (unset, null://, or the
+ *    recipe's placeholder smtp://localhost), the reset screens redirect to the login, which shows
+ *    a hint instead of the link (Bolt would answer the request with a 500 from the mailer);
  *  - strict response headers on the four screens: a Content-Security-Policy that allows only the
  *    site's own files plus one nonce for the inline <style>, Trusted Types, no caching, no referrer,
  *    no framing, an isolated browsing context and noindex.
@@ -32,6 +35,13 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 final class BoltAuthSecuritySubscriber implements EventSubscriberInterface
 {
     public const NONCE_ATTRIBUTE = '_bolt_auth_csp_nonce';
+
+    /**
+     * Request attribute read by bolt-auth/login.twig: whether to offer the password reset.
+     */
+    public const RESET_ATTRIBUTE = '_bolt_auth_password_reset';
+
+    private const RESET_SCREENS = ['bolt_forgot_password_request', 'bolt_check_email', 'bolt_reset_password'];
     private const SCREENS = ['bolt_login', 'bolt_forgot_password_request', 'bolt_check_email', 'bolt_reset_password'];
 
     /**
@@ -49,7 +59,35 @@ final class BoltAuthSecuritySubscriber implements EventSubscriberInterface
         private readonly bool $debug,
         #[Autowire('%bolt_auth.trusted_types%')]
         private readonly array $trustedTypes = [],
+        #[Autowire(env: 'default::MAILER_DSN')]
+        private readonly ?string $mailerDsn = null,
     ) {
+    }
+
+    /**
+     * Whether a mailer DSN can deliver the reset e-mail. Not: unset or empty, the `null://`
+     * transport, or SMTP on the local machine without credentials — the placeholder
+     * `smtp://localhost` of Symfony's mailer recipe and of Bolt's .env. A host whose local MTA
+     * delivers mail uses `sendmail://default` or `native://default`.
+     */
+    public static function canSendMail(?string $dsn): bool
+    {
+        $dsn = trim((string) $dsn);
+        if ($dsn === '') {
+            return false;
+        }
+        $parts = parse_url($dsn);
+        if ($parts === false || ! isset($parts['scheme'])) {
+            // failover(…) / roundrobin(…) and other composite DSNs: assume they are configured.
+            return true;
+        }
+        $scheme = mb_strtolower($parts['scheme']);
+        if ($scheme === 'null') {
+            return false;
+        }
+        $host = mb_strtolower(trim($parts['host'] ?? '', '[]'));
+
+        return ! (in_array($scheme, ['smtp', 'smtps'], true) && in_array($host, ['localhost', '127.0.0.1', '::1'], true) && ! isset($parts['user']));
     }
 
     public static function getSubscribedEvents(): array
@@ -71,6 +109,15 @@ final class BoltAuthSecuritySubscriber implements EventSubscriberInterface
         }
 
         $request->attributes->set(self::NONCE_ATTRIBUTE, base64_encode(random_bytes(18)));
+
+        $resetAvailable = self::canSendMail($this->mailerDsn);
+        $request->attributes->set(self::RESET_ATTRIBUTE, $resetAvailable);
+        if (! $resetAvailable && in_array($route, self::RESET_SCREENS, true)) {
+            // A bookmark or an old link: back to the login, which explains whom to ask.
+            $event->setResponse(new RedirectResponse($this->urlGenerator->generate('bolt_login'), Response::HTTP_SEE_OTHER));
+
+            return;
+        }
 
         $limiter = match (true) {
             $route === 'bolt_forgot_password_request' && $request->isMethod('POST') => $this->resetRequestLimiter,

@@ -5,5 +5,6 @@
     <unit id="bolt_auth_show_password" name="bolt_auth.show_password"><segment><source>bolt_auth.show_password</source><target>Show password</target></segment></unit>
     <unit id="bolt_auth_hide_password" name="bolt_auth.hide_password"><segment><source>bolt_auth.hide_password</source><target>Hide password</target></segment></unit>
     <unit id="bolt_auth_too_many_requests" name="bolt_auth.too_many_requests"><segment><source>bolt_auth.too_many_requests</source><target>Too many requests from this address. Please try again in %minutes% min.</target></segment></unit>
+    <unit id="bolt_auth_reset_unavailable" name="bolt_auth.reset_unavailable"><segment><source>bolt_auth.reset_unavailable</source><target>Forgot your password? Ask the site administrator for a new one.</target></segment></unit>
   </file>
 </xliff>
