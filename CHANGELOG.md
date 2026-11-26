@@ -2,6 +2,22 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+ALTCHA joins the essential extensions: Bolt's login and both password reset forms are protected from bots on every site.
+
+### Added
+- `bolt-extension-setup` section 5: `tomvondracek/bolt-altcha` ([Vondry/bolt-altcha](https://github.com/Vondry/bolt-altcha)) — install, `extensions:configure`, the signing key (`APP_SECRET` or `ALTCHA_HMAC_KEY`, 32+ characters, on the server in `.env.local`), `bolt.login` / `bolt.reset_password` / `bolt.change_password`, what custom sign-in templates need (`login_middle` slot, the ALTCHA form theme next to `form_theme … only`, the `svelte-trusted-html` Trusted Types policy) and production notes (HTTPS, upload `public/assets/altcha/`, writable `var/data/bolt-altcha/`). The verification section is now section 6.
+- `bolt-extension-setup/scripts/verify.sh` step [9/9] with `scripts/altcha.php`: fails when the extension, its recipes or its `services_bolt.yaml` entry is missing, a Bolt form is unprotected, the published widget is missing or outdated, or the theme's sign-in templates lose the widget slot or the form theme; warns when `.env` holds no strong key. With `BOLT_BASE_URL` it checks the widget on the login and the reset request and the challenge endpoint.
+- WORKFLOWS 3.1 installs and configures the extension; `bolt-audit`'s checklist reviews it.
+
+### Fixed
+- `bolt-auth-screens`: with `tomvondracek/bolt-altcha` protecting the password reset (`bolt.reset_password` / `bolt.change_password`), the reset screens rendered its field as an empty text input instead of the widget, so the form could never be sent: `form_theme … only` drops the extension's global form theme. `login.twig`, `reset-request.twig` and `reset.twig` add `@bolt-altcha/form/altcha.html.twig` when the form carries an ALTCHA field, and `verify.sh` fails on templates that don't.
+- `bolt-auth-screens`: `scaffold.sh` never added ALTCHA's `svelte-trusted-html` to `bolt_auth.trusted_types`: the policy name in the shipped file's comment made it look present. It now reads only the setting.
+
+### Migrating a project
+- `composer require tomvondracek/bolt-altcha`, `php bin/console extensions:configure --with-config`, set the three `bolt:` switches to `true` (`bolt-extension-setup` section 5.3), then `bolt-auth-screens/scripts/scaffold.sh --update` (templates and the Trusted Types policy) and `cache:clear`. `bolt-extension-setup`'s `verify.sh` checks it all; upload `public/assets/altcha/` with the next deploy.
+
 ## 1.19.0 — 2026-11-25
 
 The sites move to PHP 8.5: they require `"php": "^8.5"`, build on `php:8.5` and run CI on 8.5. Bolt 6 itself still runs on 8.2, and so does this plugin.
