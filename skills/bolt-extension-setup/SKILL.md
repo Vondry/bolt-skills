@@ -8,17 +8,20 @@ description: >-
   index with static pages, no theme override),
   Vondry/bolt-llms-txt (llmstxt.org dynamic endpoint), and
   tomvondracek/bolt-request-analytics (cookieless server-side visitor statistics
-  in the backend, with domain alias counting).
+  in the backend, with domain alias counting), and Vondry/bolt-altcha
+  (tomvondracek/bolt-altcha: self-hosted ALTCHA proof-of-work on Bolt's login
+  and password reset forms).
 ---
 
 # Essential Bolt CMS Extensions Setup & Verification Guide
 
-Every modern production website built with Bolt CMS requires four foundational extensions for discoverability, search engine indexing, AI crawler readiness and visitor statistics:
+Every modern production website built with Bolt CMS requires five foundational extensions for discoverability, search engine indexing, AI crawler readiness, visitor statistics and a login safe from bots:
 
 1. **`AppoloDev/bolt-seo` (`appolodev/bolt-seo`)**: Structured SEO meta fields (`type: seo`), OpenGraph tags, JSON-LD, and robots meta tags — plus a theme override that gives `<link rel="canonical">`, `og:url` and `twitter:url` one clean URL (bolt/core PR #3735 workaround).
 2. **`Vondry/bolt-sitemap` (`tomvondracek/bolt-sitemap`)**: an XML sitemap index generated from content and routes, including the theme's static pages. It needs no theme override and replaces `bolt/sitemap-extension`.
 3. **`Vondry/bolt-llms-txt` (`tomvondracek/bolt-llms-txt`)**: Serves `/llms.txt` dynamically from CMS content adhering strictly to the [llmstxt.org](https://llmstxt.org/) specification.
 4. **`Vondry/bolt-server-analytics` (`tomvondracek/bolt-request-analytics`)**: Cookieless visitor statistics built on the server from the HTTP request alone — no JavaScript, no cookies, no identifiers, so nothing for the consent banner. A dashboard card and an **Analytics** page in the backend; redirects from alias domains are counted.
+5. **`Vondry/bolt-altcha` (`tomvondracek/bolt-altcha`)**: [ALTCHA](https://altcha.org) proof-of-work on Bolt's login and both password reset forms, by configuration only. Self-hosted (widget, workers and challenge endpoint on the site), no cookie, no third-party request, invisible to visitors.
 
 This skill provides the end-to-end installation steps, architecture patterns, theme templates, and an automated verification script.
 
@@ -511,9 +514,63 @@ Rules:
 
 ---
 
-## 5. Automated Verification Script
+## 5. Vondry/bolt-altcha Setup
 
-To verify that all four extensions and their theme overrides are correctly wired:
+Official repository: [Vondry/bolt-altcha](https://github.com/Vondry/bolt-altcha) (package [`tomvondracek/bolt-altcha`](https://packagist.org/packages/tomvondracek/bolt-altcha))
+
+Before a protected form is sent, the visitor's browser solves a small puzzle in the background. Generic bots pay CPU time for every login attempt and every reset e-mail; a failed check on the login is Bolt's usual login error and counts towards `login_throttling`. It sets no cookie and sends nothing to a third party, so it adds nothing to the cookie banner (`bolt-cookie-consent`).
+
+### 5.1 Install via Composer
+```bash
+composer require tomvondracek/bolt-altcha:^1.0
+```
+Bolt's post-install script adds the `Tomvondracek\Altcha\` resource to `config/services_bolt.yaml` and runs `extensions:configure`, which publishes the widget to `public/assets/altcha/`.
+
+### 5.2 Copy Config Recipes & the Signing Key
+```bash
+php bin/console extensions:configure --with-config
+php bin/console cache:clear
+```
+This generates:
+* `config/extensions/tomvondracek-altcha.yaml` (every option documented in the file)
+* `config/packages/extension_bolt-altcha.yaml` (translations, `@bolt-altcha` Twig namespace, the global form theme, the replay store in `var/data/bolt-altcha`)
+* `config/routes/extension_bolt-altcha.yaml` (the challenge endpoint `/altcha/challenge/{profile}`)
+* `public/assets/altcha/` (the widget; `VERSION` names its version). Upload it with every deploy: without it every check stands down (logged as critical). Run `extensions:configure` after every update of the extension — Composer does it on `composer update`.
+
+Challenges are signed with `ALTCHA_HMAC_KEY`, else with a key derived from `APP_SECRET`. Either must be at least 32 characters and never Bolt's `!ChangeMe!`; on the server it lives in `.env.local` (`bolt-security-hardening` Step 1). A weak key switches the protection off (logged as critical) and makes `cache:clear` fail — the login itself keeps working.
+
+### 5.3 Protect Bolt's Login and Password Reset
+In the generated `config/extensions/tomvondracek-altcha.yaml`, switch on all three of Bolt's forms. No template changes are needed for Bolt's own screens:
+
+```yaml
+# config/extensions/tomvondracek-altcha.yaml
+bolt:
+  login: true            # /bolt/login — the widget renders in the login_middle widget slot
+  reset_password: true   # /bolt/reset-password — the "send me a link" form
+  change_password: true  # /bolt/reset-password/reset/{token} — the new password form
+```
+
+Keep the defaults otherwise (`display: invisible`, `auto: onsubmit`, the `login` profile with higher counters). To switch everything off on a development machine, put `enabled: false` into `config/extensions/tomvondracek-altcha_local.yaml` and never upload that file.
+
+### 5.4 Custom Sign-in Templates
+A theme that replaces the sign-in screens (`login_template`, `reset_password_settings` in `theme.yaml`, as `bolt-auth-screens` does) must:
+* print `{{ widgets('login_middle') }}` inside the login form (the login widget renders there);
+* add `'@bolt-altcha/form/altcha.html.twig'` to a `form_theme … only` of the reset forms. `only` drops the extension's global form theme, and the ALTCHA field then renders as a plain text input that blocks the form. The `bolt-auth-screens` templates do it when the form carries an ALTCHA field;
+* allow the widget's Trusted Types policy where the screens enforce Trusted Types: `bolt_auth.trusted_types: [ 'svelte-trusted-html' ]` in `config/packages/bolt_auth.yaml` (`bolt-auth-screens`' `scaffold.sh` sets it when the extension is installed).
+
+The widget loads its script, stylesheet and workers from the site and asks the site for its challenge, so a policy with `script-src`, `style-src`, `worker-src` and `connect-src 'self'` covers it.
+
+### 5.5 Production
+* **HTTPS only:** browsers offer Web Crypto only on secure pages. Over plain HTTP the widget can't solve its challenge and the protected forms (the login too) can't be sent.
+* **Upload** `vendor/`, the three config files and `public/assets/altcha/`, then delete `var/cache/prod/`. `var/data/bolt-altcha/` (used solutions, outside the cache) must be writable by the web server.
+* **Emergency switch:** `enabled: false` in `config/extensions/tomvondracek-altcha_local.yaml` on the server.
+* **Check:** open the login in a private window with the browser console open; the network panel shows `/altcha/challenge/login` answered 200, and signing in works.
+
+---
+
+## 6. Automated Verification Script
+
+To verify that all five extensions and their theme overrides are correctly wired:
 
 ```bash
 vendor/tomvondracek/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
@@ -534,3 +591,4 @@ vendor/tomvondracek/bolt-skills/skills/bolt-extension-setup/scripts/verify.sh
    * Fails when `partials/_canonical.twig`, `_canonical.macros.twig` or `_seo_metatags.twig` is missing, or when `canonical_template` / `templates.meta` doesn't point at them. Warns when a copy differs from the skill example.
    * Warns when a theme template passes `canonical: app.request.uri` to the meta tags (section 1.5), or `appolo-boltseo.yaml` still has the dead `meta_robots` / `allow` keys (section 1.3).
 8. **Request analytics (section 4):** warns when `tomvondracek/bolt-request-analytics` is not installed. Once it is, fails when its config, package or route recipe or its `services_bolt.yaml` entry is missing, when `SYMFONY_TRUSTED_HOSTS` rejects an own host or a `count`-mode alias host (HTTP 400), when `aliases.target` is empty with alias hosts, when the database or spool is in `public/`, or when `lock.yaml` reads an undefined `LOCK_DSN`. Warns when `own_hosts` is empty or lacks the `BOLT_CANONICAL` host, and when `.gitignore` lacks `/var/request-analytics/` or `/var/data/*`.
+9. **ALTCHA (section 5):** fails when `tomvondracek/bolt-altcha` is not installed, when its config, package or route recipe or its `services_bolt.yaml` entry is missing, when `enabled` is false or `bolt.login`, `bolt.reset_password` or `bolt.change_password` is off, when `public/assets/altcha/VERSION` is missing or differs from the installed extension's widget, or when the theme's `login_template` lacks `widgets('login_middle')` or a sign-in template sets `form_theme … only` without the ALTCHA form theme. Warns when `.env` has no strong `APP_SECRET` / `ALTCHA_HMAC_KEY` (the server's `.env.local` must then set one) and about an `enabled: false` in the `_local.yaml` override. With `BOLT_BASE_URL`, fails when the login or the reset request renders no `<altcha-widget>` or `/altcha/challenge/default` doesn't answer 200, and warns on plain HTTP.
