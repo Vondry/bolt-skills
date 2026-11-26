@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.20.0 — 2026-11-26
 
 ALTCHA joins the essential extensions: Bolt's login and both password reset forms are protected from bots on every site.
 
