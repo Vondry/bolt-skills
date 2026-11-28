@@ -355,7 +355,7 @@ Show the site plan to the user and get approval. Do not start Phase 1 until the 
 - The remaining `bolt-add-language` steps are spread over the phases that own those files: Step 2 in 5.1, Step 3 in 5.5, Step 4 in 5.4, Step 6 in 6.3, Step 5 and Step 7 in Phase 7. Its verification runs in Phase 8, once per secondary locale.
 
 ### 1.3 API Lockdown (`bolt-disable-api`)
-- Keep the `api_platform` route loader and `api_entrypoint` registered (the admin listings generate IRIs from those routes; removing them breaks the dashboard with "Unable to generate an IRI"), set the documentation and GraphiQL flags in `config/packages/api_platform.yaml`, revoke `api:*` permissions in `config/bolt/permissions.yaml`, add the `^/api(/|$)` → `ROLE_NO_ACCESS` firewall rule as the first `access_control` entry (keep Bolt core's entity path in `mapping.paths`).
+- Keep the `api_platform` route loader and `api_entrypoint` registered (the admin listings generate IRIs from those routes; removing them breaks the dashboard with "Unable to generate an IRI"), set the documentation and GraphiQL flags in `config/packages/api_platform.yaml`, revoke `api:*` permissions in `config/bolt/permissions.yaml`, add the `^/api(/|$)` → `ROLE_NO_ACCESS` firewall rule as the first `access_control` entry, replace the `api` firewall's `http_basic` login with `stateless: true` (otherwise `/api` still checks passwords) (keep Bolt core's entity path in `mapping.paths`).
 - **[if the site plan lists API consumers]** replace the deny-all firewall rule with the permission lock-down only.
 - `php bin/console lint:yaml config --parse-tags && php bin/console cache:clear`
 - *Verify:* `bash $SKILLS/bolt-disable-api/scripts/verify.sh` (the HTTP part needs the running site and `BOLT_BASE_URL`; otherwise it reports SKIPPED and is repeated in Phase 8).
@@ -383,7 +383,7 @@ Verifications 1.1, 1.3 (configuration part), 1.4 and 1.5 (file sections) pass. C
 **Goal:** the web server serves only what it should and caches static files and thumbnails correctly.
 
 ### 2.1 Apache `.htaccess` Shielding (`bolt-htaccess`) **[if Apache]**
-- `public/.htaccess` from the skill's template: `AddDefaultCharset UTF-8`, the allowlist for `theme/`, `files/` and `thumbs/` (only built assets and accepted upload types are served), the safety-net `FilesMatch` deny list, the security headers for static files (HSTS, nosniff, sandboxed uploads), the Symfony front-controller rules.
+- `public/.htaccess` from the skill's template: `AddDefaultCharset UTF-8`, the allowlist for `theme/`, `files/` and `thumbs/` (only built assets and accepted upload types are served), the safety-net `FilesMatch` deny list, only `index.php` runs PHP (also `/x.php/…`), the security headers for static files (HSTS, nosniff, sandboxed uploads and thumbnails, also those Bolt renders through PHP), the Symfony front-controller rules.
 - Root `/.htaccess` with the HTTPS redirect and the rewrite into `public/` **only** when the domain's document root is the project root.
 - The templates redirect plain HTTP both with and without a TLS proxy (`%{HTTPS} off` + `X-Forwarded-Proto !https`) and deny `node_modules/`, `.git/` and `.env*` in addition to the source-file patterns.
 - *Verify:* `bash $SKILLS/bolt-htaccess/scripts/verify.sh` (the live part is repeated in Phase 8, once the theme exists).
@@ -685,6 +685,8 @@ Run against the local or staging site (`curl -s -o /dev/null -w '%{http_code}' "
 | `/.env`, `/composer.json`, `/var/data/bolt.sqlite`, `/files/anything.html` | 403 or 404 |
 | `curl -sI /` | `X-Frame-Options: DENY`, `Content-Security-Policy`, `Strict-Transport-Security` (https), no `X-Powered-By` |
 | `curl -sI /files/<image>` | `Content-Security-Policy: … sandbox`, `X-Content-Type-Options: nosniff` |
+| `curl -sI /thumbs/10×10/probe.svg` | `Content-Security-Policy: … sandbox` (thumbnail rendered by PHP) |
+| `curl -sI -u probe:x /api/contents` | `401` without `WWW-Authenticate: Basic` |
 
 ### 8.4 Manual Checks
 - Mobile drawer: opens, closes on Escape, backdrop and link click; focus stays inside while open. Dropdowns open with click and ArrowDown, close with Escape.

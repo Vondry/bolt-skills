@@ -2,6 +2,20 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+Three security gaps found in a review of the skills, each reproduced on a fresh Bolt 6.1.10 project behind Apache 2.4 + PHP-FPM.
+
+### Security
+- `bolt-htaccess`: the "only `index.php` runs PHP" rule matched only names ending in `.php`. Apache hands `/info.php/x` to `info.php` (`PATH_INFO`), and `/files/shell.php/x.jpg` even passed the `files/` allowlist, so a PHP file that got into `public/` still ran. The rule now matches the extension followed by `/` or the end and covers `.phtml`, `.php5`, `.phar`, `.pht`, `.phps` (Pitfall 11). `verify.sh` fails on the old rule.
+- `bolt-htaccess`: thumbnails Bolt renders through `index.php` — every thumbnail in Bolt 6 — got no sandbox policy, because the condition tested the file on disk. For an SVG, Bolt returns the uploaded file itself, so `/thumbs/<size>/<file>.svg` ran its scripts on the site's origin. The sandbox `<If>` also matches `%{THE_REQUEST}` under `/thumbs/`. `verify.sh` fails without it and checks the header live on a PHP-rendered thumbnail.
+- `bolt-disable-api`: Bolt's `api` firewall authenticates HTTP basic credentials before `access_control` refuses the request, so a blocked API still answered `401` to a wrong password and `403` to the right one — with its own limiter (5 per minute) and without the login's ALTCHA. Step 4 replaces the firewall's login with `stateless: true`; the admin is unaffected. `verify.sh` fails while the firewall has an authenticator and checks live that `/api` sends no `Basic` challenge; `bolt-security-hardening`'s `verify.sh` warns about `http_basic` on any firewall but `main`. Sites whose API has consumers keep `http_basic` with the `login_throttling` of `main`.
+
+### Migrating a project
+- `public/.htaccess`: replace `RewriteRule ^(?!index\.php$).+\.php$ - [F,L]` with the two lines of `bolt-htaccess` Step 2, and the sandbox `<If …>` line with the one of Step 4 (or copy both from `examples/public.htaccess`).
+- `config/packages/security.yaml`: replace the `api` firewall's `http_basic: ~` and `login_throttling` with `stateless: true` (`bolt-disable-api` Step 4).
+- Upload both files, delete `var/cache/prod/`, then run `bolt-htaccess` and `bolt-disable-api` `verify.sh` with `BOLT_BASE_URL`.
+
 ## 1.21.1 — 2026-11-26
 
 The ALTCHA login works in production: the sign-in screens allow bolt-altcha's `default` Trusted Types policy.

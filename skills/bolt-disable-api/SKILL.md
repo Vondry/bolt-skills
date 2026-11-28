@@ -135,6 +135,23 @@ security:
 
 The backend does not call `/api/*` from the browser (it uses `/bolt/*` and `/bolt/async/*`), so this rule never affects the admin.
 
+**Remove the `api` firewall's login.** Bolt's stock `security.yaml` gives `/api` a firewall of its own with HTTP basic auth (`http_basic: ~`). Authentication runs **before** `access_control`, so with the API blocked `/api` still checks passwords: a wrong one answers `401`, the right one `403` (refused by `ROLE_NO_ACCESS`). That is a password oracle outside the login form — its own `login_throttling` limiter (Bolt's `~` = 5 attempts per **minute**, while the main firewall allows 5 per 15 minutes, `bolt-security-hardening` Step 3a), no ALTCHA (`bolt-extension-setup`), no Bolt user checker. With the API disabled nothing needs a login there, so replace the firewall's authenticator:
+
+```yaml
+# config/packages/security.yaml
+security:
+  firewalls:
+    # …dev firewall unchanged…
+    # No login on /api (bolt-disable-api): the API is blocked by access_control, and an
+    # http_basic login here would still check passwords (401 wrong / 403 right).
+    api:
+      pattern: ^/api
+      stateless: true
+    # …main firewall unchanged…
+```
+
+Keep the `api` firewall itself: without it `/api` falls into `main`, whose login form would answer anonymous API requests with a redirect to `/bolt/login`. Every request to `/api/…` then answers `401` whatever credentials it carries; the admin is not affected (tested on Bolt 6.1: dashboard and content listings render, IRIs are generated). Sites in the lock-down variant (the API has consumers that log in) keep `http_basic`, but give the `api` firewall the same `login_throttling` as `main` (`max_attempts: 5`, `interval: '15 minutes'`).
+
 ---
 
 ### 5. Limit CORS to the API
@@ -190,6 +207,8 @@ bin/console debug:config security access_control
 ```
 The first entry must be `path: ^/api(/|$)` with `roles: [ROLE_NO_ACCESS]`, and no other rule matching `/api` may come before it.
 
+`bin/console debug:config security firewalls.api` must show no `http_basic` (or any other authenticator) — Step 4.
+
 ### 3. Run Verification Script
 Execute the bundled test script (set `BOLT_BASE_URL` to this project's running site for the HTTP checks; default `http://127.0.0.1:8000`):
 ```bash
@@ -199,6 +218,7 @@ Or verify manually via `curl` (every endpoint must be refused; `404` is acceptab
 - `curl -i http://127.0.0.1:8000/api` -> Expect `404` (the entrypoint is off; routing answers before the firewall)
 - `curl -i http://127.0.0.1:8000/api/contents` -> Expect `401` or `403`
 - `curl -i http://127.0.0.1:8000/api/contents/1` -> Expect `401` or `403`
+- `curl -i -u bolt-api-probe:x http://127.0.0.1:8000/api/contents` -> Expect `401` **without** a `WWW-Authenticate: Basic` header. With that header `/api` still checks passwords (Step 4).
 - `curl -i http://127.0.0.1:8000/api/docs.html` -> Expect `401`, `403` or `404`
 - `curl -i http://127.0.0.1:8000/api/docs.jsonopenapi` -> Expect `401`, `403` or `404`
 - `curl -i http://127.0.0.1:8000/api/graphql/graphiql` -> Expect `401`, `403` or `404`
@@ -213,3 +233,4 @@ Log in to `/bolt/` and open the dashboard and at least one content listing (`/bo
 - **Commenting out the `api_platform` route loader breaks the admin.** It looks like the cleanest way to remove the API, and older versions of this skill recommended it, but the admin generates IRIs from those routes. Block `/api` in the firewall instead.
 - **A warm cache hides the breakage.** The error appears only after `cache:clear` or a deploy, often days later and after unrelated commits. Always clear the cache and open the admin listings after changing API configuration.
 - **The firewall rule is the only thing blocking requests.** Removing or narrowing `^/api(/|$)` reopens the API (protected only by the `api:*` permissions). `verify.sh` checks the rule and the live endpoints; keep it in the audit.
+- **Blocking `/api` does not stop its login.** Bolt's `api` firewall authenticates HTTP basic credentials before `access_control` runs, so a blocked API still tells a right password (`403`) from a wrong one (`401`) — with a laxer throttle than the login form and without its ALTCHA. Remove `http_basic` from that firewall (Step 4); `verify.sh` fails while it is there.
