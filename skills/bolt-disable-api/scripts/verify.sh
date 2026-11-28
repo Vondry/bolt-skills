@@ -33,7 +33,7 @@ FAILED=0
 # 1. API Platform routes must stay registered: Bolt's admin listings generate IRIs from them
 #    ("Unable to generate an IRI for the item of type Bolt\Entity\Content" otherwise).
 #    The API is blocked by the firewall rule (check 4), not by removing routes.
-echo -n "[1/5] Checking that API Platform routes stay registered (needed by the admin)... "
+echo -n "[1/6] Checking that API Platform routes stay registered (needed by the admin)... "
 API_ROUTE_COUNT=$(php bin/console debug:router 2>/dev/null | grep -c " _api_" || true)
 
 if [ "${API_ROUTE_COUNT:-0}" -gt 0 ]; then
@@ -47,7 +47,7 @@ else
 fi
 
 # 2. Check YAML Linting
-echo -n "[2/5] Validating YAML configuration files... "
+echo -n "[2/6] Validating YAML configuration files... "
 if php bin/console lint:yaml config --parse-tags > /dev/null 2>&1; then
     echo "PASSED"
 else
@@ -56,7 +56,7 @@ else
 fi
 
 # 3. Check Configuration Flags
-echo -n "[3/5] Checking api_platform configuration flags... "
+echo -n "[3/6] Checking api_platform configuration flags... "
 # debug:config with a path prints the resolved value alone (independent of key order).
 config_value() {
     php bin/console debug:config api_platform "$1" 2>/dev/null | grep -vE '^[[:space:]]*(=+|Current configuration.*)?[[:space:]]*$' | tail -n 1 | tr -d '[:space:]' || true
@@ -80,7 +80,7 @@ fi
 
 # 4. Firewall: the first access_control rule matching /api must deny everyone. It is the only
 #    thing that blocks API requests, since the routes stay registered.
-echo -n "[4/5] Checking the ^/api(/|\$) firewall rule... "
+echo -n "[4/6] Checking the ^/api(/|\$) firewall rule... "
 FIRST_API_RULE=$(php bin/console debug:config security access_control 2>/dev/null | awk '
     /^[[:space:]]*path:/ { path = $2; inrule = (path ~ /^\^\/api/); next }
     inrule && /^[[:space:]]*- / { sub(/^[[:space:]]*- /, ""); print path " " $0; exit }
@@ -95,7 +95,25 @@ else
     FAILED=1
 fi
 
-# 5. Check HTTP Endpoints if server is reachable
+# 5. No login on /api: Bolt's stock `api` firewall authenticates HTTP basic credentials before
+#    access_control denies the request, so a blocked API still answers 401 to a wrong password and 403
+#    to the right one — a password oracle with its own, laxer throttle and without the login's ALTCHA.
+echo -n "[5/6] Checking that the api firewall has no login... "
+API_FIREWALL=$(php bin/console debug:config security firewalls.api 2>/dev/null || true)
+API_AUTH=$(echo "$API_FIREWALL" | grep -oE '^(http_basic|form_login|json_login|login_link|access_token|remote_user|x509|remember_me|custom_authenticators?):' | tr -d ':' | tr '\n' ' ' || true)
+if ! echo "$API_FIREWALL" | grep -qE '^pattern:'; then
+    echo "PASSED (no separate api firewall)"
+elif [ -z "$API_AUTH" ]; then
+    echo "PASSED (api firewall without authenticator)"
+else
+    echo "FAILED"
+    echo "  The api firewall logs users in ($API_AUTH): /api answers 401 to a wrong password and 403 to the"
+    echo "  right one, outside the login form's throttling and ALTCHA. Replace it with"
+    echo "  api: { pattern: ^/api, stateless: true } in config/packages/security.yaml (Step 4)."
+    FAILED=1
+fi
+
+# 6. Check HTTP Endpoints if server is reachable
 BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this project's running site
 # A local Apache with the project's root .htaccess (bolt-asset-caching/scripts/serve-apache.sh) answers
 # plain HTTP with the HTTPS redirect: tell it a TLS proxy is in front, as the bolt-htaccess and delivery
@@ -103,7 +121,7 @@ BASE_URL="${BOLT_BASE_URL:-http://127.0.0.1:8000}"  # set BOLT_BASE_URL to this 
 LOCAL_PROTO="X-Forwarded-Proto:"  # curl: "Name:" sends no header
 echo "$BASE_URL" | grep -qE '^http://(127\.0\.0\.1|localhost|\[::1\])(:|/|$)' && LOCAL_PROTO="X-Forwarded-Proto: https"
 live_curl() { curl -H "$LOCAL_PROTO" "$@"; }
-echo -n "[5/5] Checking HTTP endpoints against $BASE_URL... "
+echo -n "[6/6] Checking HTTP endpoints against $BASE_URL... "
 # 10 s: a production site on a cold cache (or behind a CDN) often needs more than 2 s; a closed
 # port still fails at once.
 if live_curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
@@ -139,6 +157,16 @@ if live_curl -s --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
     for ep in "${DATA_ENDPOINTS[@]}"; do
         check_endpoint "$ep" "401 403"
     done
+
+    # Credentials must not be checked: a Basic challenge means the api firewall still has http_basic.
+    AUTH_HEADERS=$(live_curl -s -D - -o /dev/null -u "bolt-api-probe:x" "$BASE_URL/api/contents" || true)
+    AUTH_STATUS=$(echo "$AUTH_HEADERS" | head -n 1 | awk '{print $2}')
+    if echo "$AUTH_HEADERS" | grep -qi '^www-authenticate: *basic'; then
+        echo "  /api/contents with credentials -> HTTP $AUTH_STATUS + WWW-Authenticate: Basic (FAILED - /api checks passwords, Step 4)"
+        FAILED=1
+    else
+        echo "  /api/contents with credentials -> HTTP $AUTH_STATUS, no Basic challenge (PASSED)"
+    fi
     for ep in "${DOC_ENDPOINTS[@]}"; do
         check_endpoint "$ep" "401 403 404"
     done

@@ -246,6 +246,15 @@ if (! is_array($main)) {
     out('PASS', sprintf('login_throttling: %s attempts per %s', $throttle['max_attempts'] ?? 5, $throttle['interval'] ?? '1 minute'));
 }
 
+// Bolt's stock api firewall logs in with HTTP basic, before access_control: even with /api blocked
+// it tells a right password (403) from a wrong one (401), with its own limiter and without ALTCHA.
+foreach ($packages['security']['firewalls'] ?? [] as $name => $firewall) {
+    if ($name === 'main' || ! is_array($firewall) || ! array_key_exists('http_basic', $firewall)) {
+        continue;
+    }
+    out('WARN', "firewall '{$name}' logs in with http_basic — even with /api blocked it answers 401 to a wrong password and 403 to the right one, outside the login form's throttling and ALTCHA. Without API consumers use {$name}: { pattern: ^/api, stateless: true } (bolt-disable-api Step 4); with consumers give it the login_throttling of main.");
+}
+
 $services = readYaml('config/services.yaml');
 $remember = (int) ($services['parameters']['bolt.remember_lifetime'] ?? 0);
 if ($remember > 604800) {

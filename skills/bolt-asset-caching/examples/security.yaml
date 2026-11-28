@@ -8,10 +8,11 @@ security:
       pattern: ^/(_(profiler|wdt)|css|images|js|thumbs)/
       security: false
 
+    # No login on /api (bolt-disable-api Step 4): the API is blocked by access_control, and an
+    # http_basic login here would still check passwords (401 wrong / 403 right).
     api:
       pattern: ^/api
-      http_basic: ~
-      login_throttling: ~
+      stateless: true
 
     main:
       pattern: ^/

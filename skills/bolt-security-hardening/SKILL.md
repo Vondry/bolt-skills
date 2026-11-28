@@ -140,6 +140,11 @@ The sixth wrong password for a username from one IP shows "Too many failed login
 try again in 15 minutes" (translated). Edit `security.yaml` directly — firewalls cannot be
 overridden from a second file.
 
+The throttle protects only the firewall it is set on. Bolt's stock `api` firewall has a login of its
+own (`http_basic: ~`) with its own limiter (5 per minute) and no ALTCHA, and it checks passwords even
+when `/api` is blocked (`401` wrong, `403` right). `bolt-disable-api` Step 4 removes that login; a site
+whose API has consumers keeps it with the same `login_throttling` as `main`. `verify.sh` warns about it.
+
 ### 3b. Remember-me lifetime (`config/services.yaml`)
 
 ```yaml

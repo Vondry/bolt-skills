@@ -151,8 +151,10 @@ In `public/.htaccess`, inside `<IfModule mod_rewrite.c>` directly after `Rewrite
     # Theme build folders: node_modules/ and .git/ are never served.
     RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
 
-    # Only the front controller runs PHP: a forgotten info.php or adminer.php is refused.
-    RewriteRule ^(?!index\.php$).+\.php$ - [F,L]
+    # Only the front controller runs PHP: a forgotten info.php or adminer.php is refused — also with
+    # a path after the name (/info.php/x, /files/a.php/b.jpg), which Apache still hands to PHP.
+    RewriteCond $0 !^index\.php$
+    RewriteRule \.(php\d*|phtml|phar|pht|phps)(/|$) - [NC,F,L]
 
     # theme/<theme>/: the built assets in css/, js/, img/, images/ and fonts/. Templates, theme.yaml,
     # package.json, build configs, TypeScript sources and anything at the theme root are denied.
@@ -174,7 +176,7 @@ In `public/.htaccess`, inside `<IfModule mod_rewrite.c>` directly after `Rewrite
 * **Theme folders:** the convention of `bolt-theme-init` puts browser files in `css/`, `js/` and `img/`. A theme that keeps public files elsewhere (a favicon at the theme root, `dist/`) — move them, or add the folder to the list.
 * **Upload types:** keep the `files/` list in line with `accept_file_types` in `config/bolt/config.yaml`. A type the site accepts but this list lacks uploads fine and then answers 403.
 * `css/tailwind/index.css` (the Tailwind source) stays reachable: it is CSS, contains nothing private, and the allowlist works by folder and type, not by file.
-* **PHP:** only `index.php` runs. Any other `*.php` anywhere in `public/` — a phpinfo page, an Adminer copy, a backup script left after an SFTP session — answers 403 instead of executing. Tested on Apache 2.4 with PHP-FPM: `/info.php` → 403, while `/`, `/index.php`, Bolt routes and built assets are served as before.
+* **PHP:** only `index.php` runs. Any other PHP file anywhere in `public/` — a phpinfo page, an Adminer copy, a backup script left after an SFTP session — answers 403 instead of executing. The rule matches the extension **followed by `/` or the end**: Apache hands `/info.php/x` to `info.php` (the rest becomes `PATH_INFO`), and `/files/shell.php/x.jpg` would even pass the `files/` allowlist, so a rule that only tests names ending in `.php` is bypassed by adding a path. It also covers `.phtml`, `.php5`, `.phar`, `.pht`, `.phps` (PHP handlers on many shared hosts), case-insensitively. `RewriteCond $0 !^index\.php$` keeps the internal rewrite to the front controller working; `/index.php/…` in the requested URL is redirected by the rules above it. Tested on Apache 2.4 with PHP-FPM and Bolt 6.1: `/info.php`, `/info.php/x`, `/files/shell.php/x.jpg`, `/theme/<theme>/css/x.php/a.css`, `/info.phtml` → 403, while `/`, Bolt routes, the admin, uploads, thumbnails and built assets are served as before.
 * **Nginx:** the same allowlist for Nginx is in `bolt-security-hardening/examples/docker/nginx_security.conf` (its PHP location passes only `index.php` to PHP-FPM).
 
 ---
@@ -228,9 +230,10 @@ Pages rendered by Symfony get `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `
         Header always set Referrer-Policy "strict-origin-when-cross-origin"
     </If>
 
-    # Uploads and thumbnails never run scripts — not even an HTML or SVG file opened directly.
+    # Uploads and thumbnails never run scripts — not even an HTML or SVG file opened directly, and
+    # not a thumbnail Bolt answers from PHP (an SVG "thumbnail" is the uploaded file itself).
     # PDFs are left out: Chrome refuses to show a PDF under a sandbox policy.
-    <If "%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# && %{REQUEST_FILENAME} !~ m#\.pdf$#i">
+    <If "(%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# || %{THE_REQUEST} =~ m#^\S+\s(/public)?/thumbs/#) && %{REQUEST_FILENAME} !~ m#\.pdf$#i && %{THE_REQUEST} !~ m#\.pdf[?\s]#i">
         Header always set Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
     </If>
 </IfModule>
@@ -239,6 +242,7 @@ Pages rendered by Symfony get `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `
 * **HSTS** comes from Apache, not from nelmio's `forced_ssl` (which loops behind TLS proxies). Start with `max-age=31536000`; add `includeSubDomains` / `preload` only when every subdomain serves HTTPS.
 * **Sandboxed uploads:** with `sandbox`, an SVG or HTML file opened directly has no origin and cannot run scripts — it cannot touch the admin session even if a malicious file got into `files/`. Images embedded with `<img>` are unaffected.
 * **Why the conditions test `REQUEST_FILENAME`:** after the root `.htaccess` rewrite, Apache's `REQUEST_URI` is `/public/files/…`, so `^/files/` would never match; the file path on disk works with both document-root layouts. PHP responses (`index.php`) are skipped so their nelmio headers are not sent twice.
+* **Thumbnails answered by PHP:** a thumbnail that is not on disk — in Bolt 6 that is every thumbnail (`bolt-asset-caching`, the save-path limitation) — is rendered by Bolt's `ImageController`, so `REQUEST_FILENAME` is `index.php` and the file condition misses it. For an SVG, Bolt returns the uploaded file itself as `image/svg+xml`, scripts included, with only nelmio's baseline CSP (no `script-src`): `/thumbs/<any size>/<file>.svg` would run an SVG's scripts on the site's origin. `%{THE_REQUEST}` (the request line as sent, unchanged by internal rewrites) catches those responses too, so the sandbox covers every thumbnail. Raster thumbnails render as before; the page's own responses are not affected.
 * Needs `mod_headers` (enabled on practically every host); without it the block is skipped.
 
 ---
@@ -324,9 +328,9 @@ The script performs:
 - **Root `.htaccess` Check:** Confirms `RewriteEngine on`, HTTPS redirect rules, the canonical-host redirect (`www`), and rewrite to `./public`.
 - **Public `.htaccess` Check:** Confirms `AddDefaultCharset UTF-8`, the front controller rules and the `%{THE_REQUEST}` redirects of `/index.php/…` (Pitfall 10).
 - **Allowlist Check:** Tests sample paths against the theme and upload allowlists — built assets and accepted uploads pass, templates, configs, sources, the theme root and `.html` / `.php` uploads are denied.
-- **Safety-net Check:** Tests the `FilesMatch` deny list against sensitive file names, confirms no public asset type is blocked, and that `node_modules`, `.git` and `.env*` are denied.
-- **Security Headers Check:** HSTS, `X-Powered-By` removal, nosniff for static files, sandboxed uploads.
-- **Live HTTP Check (if `BOLT_BASE_URL` answers):** theme sources and a fake upload path answer 403 / 404, a built asset answers 200, the headers of a static file, `/index.php/…` redirects to the clean path (Pitfall 10). That last request is sent only when the project's `public/.htaccess` has the Pitfall 10 rules: on a site without them it would itself poison Bolt's cached links for the cache lifetime. Upload the file before checking the site — if the server's copy lacks the rules, the check fails and its one request has that effect. Run it against Apache — PHP's built-in server and `symfony serve` ignore `.htaccess`.
+- **Safety-net Check:** Tests the `FilesMatch` deny list against sensitive file names, confirms no public asset type is blocked, and that `node_modules`, `.git` and `.env*` are denied. Fails when the PHP rule only matches names ending in `.php` (bypassed with `/info.php/x`, Step 2).
+- **Security Headers Check:** HSTS, `X-Powered-By` removal, nosniff for static files, sandboxed uploads. Fails when the sandbox `<If>` has no `%{THE_REQUEST}` condition for `thumbs/` (thumbnails rendered by PHP, Step 4).
+- **Live HTTP Check (if `BOLT_BASE_URL` answers):** theme sources and a fake upload path answer 403 / 404, a built asset answers 200, the headers of a static file, the sandbox policy on a thumbnail Bolt renders (`/thumbs/10×10/bolt-htaccess-probe.svg`), `/index.php/…` redirects to the clean path (Pitfall 10). That last request is sent only when the project's `public/.htaccess` has the Pitfall 10 rules: on a site without them it would itself poison Bolt's cached links for the cache lifetime. Upload the file before checking the site — if the server's copy lacks the rules, the check fails and its one request has that effect. Run it against Apache — PHP's built-in server and `symfony serve` ignore `.htaccess`.
 
 ### 2. Manual HTTP Testing
 If the site is running on staging (Apache):
@@ -388,7 +392,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://example.com/var/data/bolt.sqlit
 
 ### Pitfall 6: Header Conditions on `REQUEST_URI` Never Match
 - **Cause:** After the root `.htaccess` forwards a request into `public/`, Apache processes it as `/public/files/…`; after the front-controller rewrite, as `/public/index.php`.
-- **Fix:** Test the file on disk — `%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/#` — as the template does.
+- **Fix:** Test the file on disk — `%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/#` — as the template does, plus `%{THE_REQUEST}` for thumbnails that Bolt renders through `index.php` (Step 4).
 
 ### Pitfall 7: Headers Sent Twice
 - **Cause:** `Header setifempty` does not see headers set by PHP-FPM, so nosniff and Referrer-Policy were added to pages that already had them from nelmio.
@@ -407,3 +411,8 @@ curl -s -o /dev/null -w "%{http_code}\n" https://example.com/var/data/bolt.sqlit
 - **Symptom:** after someone requests `https://example.cz/index.php/page` (a bot, an old link, a security scanner), the canonical link of `/page` reads `https://example.cz/domains/example.cz/public/index.php/page`, and `/sitemap.xml` and `/llms.txt` list every URL with that prefix. It fixes itself after a minute and comes back with the next such request. `/index.php/<anything>` itself answers 200 with the homepage. Seen on WEDOS; a CDN in front keeps the broken `llms.txt` for its cache lifetime.
 - **Cause:** Symfony's `Request::getBaseUrl()` treats the script path (`SCRIPT_NAME`, here `/domains/example.cz/public/index.php`) as the base URL whenever the requested path contains `index.php`, and the folder prefix when the site is requested under `/domains/example.cz/public/` directly. Bolt caches canonical paths (`caching.canonical` in `config/bolt/config.yaml`), so the next visitors get the poisoned value. Symfony's own `/index.php` redirect in the template does not fire on such hosts: it requires an empty `REDIRECT_STATUS`, and the host's forwarding plus the root `.htaccess` are internal rewrites that set it.
 - **Fix:** the three `%{THE_REQUEST}` rules at the top of the rewrite block (Step 2, `examples/public.htaccess`): `/…/index.php/page` → 301 `/…/page`, any other path containing `index.php` → 404, `/domains/<requested host>[/public]/page` → 301 `/page`. `THE_REQUEST` is the request line as the visitor sent it, so internal rewrites never trigger them and the front controller keeps working. They belong in `public/.htaccess`, not the root file: a request for `/domains/<domain>/public/…` reaches `public/` without passing the project's root `.htaccess`. `verify.sh` section 2 fails without them, section 6 requests `/index.php/bolt-htaccess-probe?x=1` and expects a 301 to `/bolt-htaccess-probe?x=1` — only when the project's file has the rules, because on an unprotected site that request is itself the trigger (Bolt keeps the poisoned links for `caching: canonical` in `config/bolt/config.yaml`, 60 s in the bolt/project skeleton). After deploying, purge the CDN copy of `/llms.txt` (or wait for its `max-age`).
+
+### Pitfall 11: A Leftover PHP File Runs Despite the PHP Rule
+- **Symptom:** `/info.php` answers 403, but `/info.php/x` shows phpinfo — and `/files/shell.php/x.jpg` runs a PHP file that got into the uploads.
+- **Cause:** a rule that refuses only paths **ending** in `.php` (`RewriteRule ^(?!index\.php$).+\.php$ - [F,L]`, older versions of this template). Apache maps `/info.php/x` to the file `info.php` with `PATH_INFO=/x` and hands it to PHP; with a path ending in `.jpg` the request even passes the `files/` allowlist.
+- **Fix:** the rule of Step 2, which matches the extension followed by `/` or the end and also covers `.phtml`, `.php5`, `.phar`, `.pht`, `.phps`. `verify.sh` section 4 fails on the old rule.

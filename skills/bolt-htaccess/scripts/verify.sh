@@ -302,9 +302,18 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
         echo "  WARNING: public/.htaccess does not deny node_modules/ (add: RewriteRule (^|/)(node_modules|\\.git)(/|\$) - [F,L])"
         WARNINGS=$((WARNINGS + 1))
     fi
-    # Only the front controller may run PHP: a leftover info.php or adminer.php would execute.
-    if ! grep -qE 'RewriteRule[[:space:]]+\^\(\?!index' "$PUBLIC_HTACCESS"; then
-        echo "  WARNING: public/.htaccess runs any *.php in public/ (add: RewriteRule ^(?!index\\.php\$).+\\.php\$ - [F,L])"
+    # Only the front controller may run PHP: a leftover info.php or adminer.php would execute —
+    # also with a path after the name (/info.php/x, /files/a.php/b.jpg: Apache's PATH_INFO), so the
+    # rule must match the extension followed by "/" or the end, not only names ending in .php.
+    PHP_RULE_FIX='RewriteCond $0 !^index\.php$ + RewriteRule \.(php\d*|phtml|phar|pht|phps)(/|$) - [NC,F,L]'
+    if grep -E '^[[:space:]]*RewriteRule' "$PUBLIC_HTACCESS" | grep -F '\.(php' | grep -qF '(/|$)'; then
+        :
+    elif grep -qE 'RewriteRule[[:space:]]+\^\(\?!index' "$PUBLIC_HTACCESS"; then
+        echo "  ERROR: the PHP rule only refuses names that end in .php — /info.php/x or /files/shell.php/x.jpg"
+        echo "         still runs the file (PATH_INFO), and .phtml is not covered. Replace it with: $PHP_RULE_FIX (Step 2)"
+        FAILED=1
+    else
+        echo "  WARNING: public/.htaccess runs any PHP file in public/ (add: $PHP_RULE_FIX, Step 2)"
         WARNINGS=$((WARNINGS + 1))
     fi
     if ! grep -qE "FilesMatch[[:space:]]+\"\^\\\\\.env" "$PUBLIC_HTACCESS"; then
@@ -328,6 +337,14 @@ if [ -f "$PUBLIC_HTACCESS" ]; then
     grep -qE "Content-Security-Policy.*sandbox" "$PUBLIC_HTACCESS" || MISSING_HEADERS+=("sandbox policy for files/ and thumbs/")
     if [ ${#MISSING_HEADERS[@]} -eq 0 ]; then
         echo "PASSED (HSTS, X-Powered-By removed, nosniff, sandboxed uploads)"
+        # Thumbnails Bolt renders through index.php (every thumbnail in Bolt 6; an SVG one is the uploaded
+        # file itself) have REQUEST_FILENAME index.php: only the request line identifies them.
+        if ! grep -E '^[[:space:]]*<If ' "$PUBLIC_HTACCESS" | grep -F 'THE_REQUEST' | grep -qF 'thumbs/'; then
+            echo "  ERROR: the upload sandbox misses thumbnails Bolt answers from PHP — /thumbs/<size>/<file>.svg runs the"
+            echo "         SVG's scripts on the site's origin. Add || %{THE_REQUEST} =~ m#^\\S+\\s(/public)?/thumbs/# to the"
+            echo "         sandbox <If> (SKILL.md Step 4)."
+            FAILED=1
+        fi
         if grep -qE "<If \"%\{REQUEST_URI\} =~ m#\^/\(files" "$PUBLIC_HTACCESS"; then
             echo "  WARNING: the upload sandbox tests REQUEST_URI — after the root .htaccess rewrite it starts with /public/"
             echo "           and never matches. Test %{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# (SKILL.md Step 4)."
@@ -395,6 +412,20 @@ if live_curl -s -k --max-time 10 "$BASE_URL" > /dev/null 2>&1; then
             echo "  WARNING: /theme/$THEME_NAME/css/index.css -> HTTP $STATUS — the allowlist blocks the built stylesheet."
             WARNINGS=$((WARNINGS + 1))
         fi
+    fi
+
+    # A thumbnail Bolt renders through PHP (a missing one here: the header comes from .htaccess, whatever
+    # Bolt answers) must carry the sandbox policy too — for an SVG it is the uploaded file itself.
+    THUMB_PROBE="/thumbs/10%C3%9710/bolt-htaccess-probe.svg"
+    HEADERS=$(live_curl -s -k -D - -o /dev/null "$BASE_URL$THUMB_PROBE" || true)
+    STATUS=$(echo "$HEADERS" | head -n 1 | awk '{print $2}')
+    if [ "$STATUS" = "403" ]; then
+        echo "  $THUMB_PROBE -> HTTP 403 (svg not allowlisted for thumbs/)"
+    elif echo "$HEADERS" | grep -qiE "^content-security-policy:.*sandbox"; then
+        echo "  $THUMB_PROBE -> HTTP $STATUS with the sandbox policy (thumbnails rendered by PHP are sandboxed)"
+    else
+        echo "  ERROR: $THUMB_PROBE -> HTTP $STATUS without the sandbox policy — an SVG thumbnail runs its scripts (Step 4)"
+        FAILED=1
     fi
 
     # The front controller in the URL is redirected away before Symfony sees it (Pitfall 10).

@@ -44,8 +44,10 @@ AddDefaultCharset UTF-8
 
     # Uploads and thumbnails never run scripts — not even an HTML or SVG file opened directly
     # (the sandbox gives it no origin and no scripts). PDFs are left out: Chrome refuses to show a
-    # PDF under a sandbox policy.
-    <If "%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# && %{REQUEST_FILENAME} !~ m#\.pdf$#i">
+    # PDF under a sandbox policy. THE_REQUEST (the request line, unchanged by internal rewrites)
+    # also covers thumbnails Bolt renders through index.php — for an SVG that is the uploaded file
+    # itself, scripts included.
+    <If "(%{REQUEST_FILENAME} =~ m#/public/(files|thumbs)/# || %{THE_REQUEST} =~ m#^\S+\s(/public)?/thumbs/#) && %{REQUEST_FILENAME} !~ m#\.pdf$#i && %{THE_REQUEST} !~ m#\.pdf[?\s]#i">
         Header always set Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
     </If>
 </IfModule>
@@ -120,9 +122,11 @@ AddDefaultCharset UTF-8
     RewriteRule (^|/)(node_modules|\.git)(/|$) - [F,L]
 
     # Only the front controller runs PHP. A forgotten info.php, adminer.php or backup script in
-    # public/ is refused instead of executed (the allowlist below already covers theme/, files/
-    # and thumbs/).
-    RewriteRule ^(?!index\.php$).+\.php$ - [F,L]
+    # public/ is refused instead of executed — also with a path after the file name: Apache hands
+    # /info.php/x and /files/a.php/b.jpg to info.php / a.php (PATH_INFO), and the second one even
+    # passes the files/ allowlist below. .phtml, .php5, .phar … run as PHP on many hosts.
+    RewriteCond $0 !^index\.php$
+    RewriteRule \.(php\d*|phtml|phar|pht|phps)(/|$) - [NC,F,L]
 
     # Allowlist: in the folders that mix public files with sources or uploads, only known static
     # files are served and everything else is 403 — a forgotten file type stays private.
