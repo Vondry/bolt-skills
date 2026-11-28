@@ -2,7 +2,7 @@
 
 All notable changes to `tomvondracek/bolt-skills`. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.21.2 — 2026-11-28
 
 Three security gaps found in a review of the skills, each reproduced on a fresh Bolt 6.1.10 project behind Apache 2.4 + PHP-FPM.
 
